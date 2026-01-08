@@ -3,7 +3,7 @@ import { useShallow } from 'zustand/shallow';
 import type { Bin as BinType, Category, Layer, ResizeHandle } from '../../types';
 import { useUIStore, useLayoutStore } from '../../store';
 import { useResponsive } from '../../hooks';
-import { calcMaxGridUnits } from '../../constants';
+import { calcMaxGridUnits, DEFAULT_CATEGORY_COLOR } from '../../constants';
 import { getContrastColor } from '../../utils/color';
 
 const LONG_PRESS_DURATION = 500; // ms
@@ -174,7 +174,7 @@ function BinComponent({ bin, category, layer, drawer, isGhost, isSelected, onSta
     }
   };
 
-  const bgColor = category?.color || '#6b7280';
+  const bgColor = category?.color || DEFAULT_CATEGORY_COLOR;
   const textColor = getContrastColor(bgColor);
 
   // Selection and hover styles

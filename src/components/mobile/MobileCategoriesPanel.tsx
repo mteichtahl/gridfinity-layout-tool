@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useShallow } from 'zustand/shallow';
 import { useLayoutStore, useUIStore, useUndoableAction } from '../../store';
-import { CONSTRAINTS } from '../../constants';
+import { CONSTRAINTS, DEFAULT_CATEGORY_COLOR } from '../../constants';
 import { ConfirmDialog } from '../modals/ConfirmDialog';
 
 const COLOR_PALETTE = [
@@ -53,7 +53,7 @@ export function MobileCategoriesPanel() {
 
   const handleAddCategory = () => {
     execute(() => {
-      const id = addCategory({ name: 'New Category', color: '#6b7280' });
+      const id = addCategory({ name: 'New Category', color: DEFAULT_CATEGORY_COLOR });
       setActiveCategory(id);
       setEditingId(id);
     });

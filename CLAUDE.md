@@ -66,8 +66,51 @@ App.tsx
 ## Key Constants (`src/constants.ts`)
 
 - `STAGING_ID = "__staging__"` - Special layerId for staging area
-- `CONSTRAINTS` - Max grid 50, max 10 layers, max 20 categories, zoom 0.5-2.0
+- `DEFAULT_CATEGORY_COLOR = "#6b7280"` - Fallback color for undefined categories
+- `CONSTRAINTS` - Max grid 50, max 10 layers, max 20 categories, zoom 0.25-4.0
 - `BASE_CELL_SIZE = 32` - Pixels per grid cell at 100% zoom
+
+## Styling Architecture (`src/index.css`)
+
+### Tailwind v4 + CSS Variables
+
+Uses Tailwind CSS v4 with CSS-first configuration:
+
+```css
+@theme {
+  /* Semantic color mappings - use as bg-surface, text-content, border-stroke */
+  --color-surface: var(--bg-primary);
+  --color-content: var(--text-primary);
+  --color-stroke: var(--border-default);
+  /* Semantic colors: success, warning, error, info, accent */
+}
+
+@layer components {
+  /* All component styles (.btn, .panel, .badge, .input) */
+}
+```
+
+### CSS Variable Naming
+
+- **Surfaces** (backgrounds): `bg-surface`, `bg-surface-secondary`, `bg-surface-elevated`
+- **Content** (text): `text-content`, `text-content-secondary`, `text-content-tertiary`, `text-content-disabled`
+- **Strokes** (borders): `border-stroke`, `border-stroke-subtle`, `border-stroke-strong`
+- **Semantic**: `text-success`, `bg-error-muted`, `border-warning`, etc.
+
+### Component Classes
+
+- `.btn`, `.btn-primary`, `.btn-secondary`, `.btn-danger`, `.btn-ghost`, `.btn-icon`
+- `.panel` - Card-like container with gradient background
+- `.badge`, `.badge-info`, `.badge-warning`, `.badge-success`, `.badge-error`
+- `.input` - Form input styling
+- `.section-header` - Panel section headings
+
+### Typography Tokens
+
+- `--text-xxs`: 9px (tiny labels)
+- `--text-xs`: 11px (subtle labels)
+- `--text-sm`: 13px (secondary text)
+- `--text-base`: 14px (body)
 
 ## PRD Documentation
 

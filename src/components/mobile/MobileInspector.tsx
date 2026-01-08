@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useShallow } from 'zustand/shallow';
 import { useUIStore, useLayoutStore, useUndoableAction } from '../../store';
-import { STAGING_ID, CONSTRAINTS, calcMaxGridUnits } from '../../constants';
+import { STAGING_ID, CONSTRAINTS, calcMaxGridUnits, DEFAULT_CATEGORY_COLOR } from '../../constants';
 import { getLayerZStart } from '../../utils/collision';
 import { clamp } from '../../utils/validation';
 import { ConfirmDialog } from '../modals/ConfirmDialog';
@@ -203,7 +203,7 @@ export function MobileInspector() {
       <div className="flex items-center gap-3 mb-4">
         <div
           className="w-12 h-12 rounded-lg flex-shrink-0"
-          style={{ backgroundColor: category?.color || '#6b7280' }}
+          style={{ backgroundColor: category?.color || DEFAULT_CATEGORY_COLOR }}
         />
         <div>
           <h3 className="font-semibold text-content">

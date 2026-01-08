@@ -4,6 +4,7 @@ import { useUIStore, useLayoutStore } from '../../store';
 import { useGridCoords } from '../../hooks';
 import { Bin } from './Bin';
 import { getBlockedZones } from '../../utils/collision';
+import { DEFAULT_CATEGORY_COLOR } from '../../constants';
 import type { Coord, ResizeHandle } from '../../types';
 
 interface GridCanvasProps {
@@ -166,7 +167,7 @@ export function GridCanvas({ gridRef, cellSize, gap, onStartDraw, onStartDrag, o
               style={{
                 gridColumn: `${zone.x + 1} / span ${zone.width}`,
                 gridRow: `${drawer.depth - zone.y - zone.depth + 1} / span ${zone.depth}`,
-                backgroundColor: category?.color || '#6b7280',
+                backgroundColor: category?.color || DEFAULT_CATEGORY_COLOR,
                 opacity: 0.3,
                 zIndex: 8,
               }}

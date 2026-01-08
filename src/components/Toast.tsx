@@ -13,10 +13,10 @@ export function ToastContainer() {
           key={toast.id}
           className={`flex items-start gap-3 p-4 rounded-lg shadow-lg border ${
             toast.type === 'error'
-              ? 'bg-red-900/95 border-red-700 text-red-100'
+              ? 'bg-toast-error border-error text-on-dark'
               : toast.type === 'success'
-              ? 'bg-emerald-900/95 border-emerald-700 text-emerald-100'
-              : 'bg-zinc-800/95 border-zinc-700 text-zinc-100'
+              ? 'bg-toast-success border-success text-on-dark'
+              : 'bg-toast-default border-stroke text-on-dark'
           }`}
           role="alert"
         >

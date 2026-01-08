@@ -36,6 +36,11 @@ export function calcMaxGridUnits(printBedSizeMm: number, gridUnitMm: number): nu
 
 export const STAGING_ID = '__staging__';
 
+// === Default Colors ===
+
+/** Default category color (slate gray) - used as fallback when category is undefined */
+export const DEFAULT_CATEGORY_COLOR = '#6b7280';
+
 // === Default Categories ===
 
 export const DEFAULT_CATEGORIES: Category[] = [

@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
 import { useLayoutStore, useUIStore, useUndoableAction } from '../store';
 import { useToastStore } from '../store/toast';
-import { STAGING_ID, BASE_CELL_SIZE } from '../constants';
+import { STAGING_ID, BASE_CELL_SIZE, DEFAULT_CATEGORY_COLOR } from '../constants';
 import { getContrastColor } from '../utils/color';
 import { ConfirmDialog } from './modals/ConfirmDialog';
 
@@ -164,10 +164,7 @@ export function Staging() {
 
   return (
     <div
-      className="px-4 py-3 overflow-x-auto border-t-2 border-dashed border-stroke"
-      style={{
-        backgroundColor: 'var(--bg-tertiary)',
-      }}
+      className="px-4 py-3 overflow-x-auto border-t-2 border-dashed border-stroke bg-surface-secondary"
     >
       {/* Header */}
       <div className="flex items-center justify-between mb-2">
@@ -226,7 +223,7 @@ export function Staging() {
           {/* Staged bins */}
           {packedBins.map((bin) => {
             const category = getCategory(bin.category);
-            const bgColor = category?.color || '#6b7280';
+            const bgColor = category?.color || DEFAULT_CATEGORY_COLOR;
             const textColor = getContrastColor(bgColor);
             const isDragging = bin.id === draggingBinId;
 

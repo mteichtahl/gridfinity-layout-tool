@@ -98,7 +98,7 @@ export function Sidebar() {
                       onChange={(e) => setGridUnitMm(Number(e.target.value))}
                       min={1}
                       max={200}
-                      className="input-field w-12 py-0.5 px-1 text-xs text-right"
+                      className="input w-12 py-0.5 px-1 text-xs text-right"
                       title="Size of one grid unit in mm (standard Gridfinity = 42mm)"
                     />
                     <span className="text-content-tertiary">mm</span>
@@ -120,7 +120,7 @@ export function Sidebar() {
                       onChange={(e) => setHeightUnitMm(Number(e.target.value))}
                       min={1}
                       max={50}
-                      className="input-field w-12 py-0.5 px-1 text-xs text-right"
+                      className="input w-12 py-0.5 px-1 text-xs text-right"
                       title="Height of one vertical unit in mm (standard = 7mm)"
                     />
                     <span className="text-content-tertiary">mm</span>
@@ -143,7 +143,7 @@ export function Sidebar() {
                       min={42}
                       max={500}
                       step={10}
-                      className="input-field w-14 py-0.5 px-1 text-xs text-right"
+                      className="input w-14 py-0.5 px-1 text-xs text-right"
                       title={`Your 3D printer's bed size. Bins larger than ${calcMaxGridUnits(printBedSize, gridUnitMm)}×${calcMaxGridUnits(printBedSize, gridUnitMm)} will be split.`}
                     />
                     <span className="text-content-tertiary">mm</span>

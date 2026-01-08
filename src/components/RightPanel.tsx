@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useCallback } from 'react';
 import { useShallow } from 'zustand/shallow';
 import { useUIStore, useLayoutStore, useUndoableAction } from '../store';
-import { STAGING_ID, CONSTRAINTS, calcMaxGridUnits } from '../constants';
+import { STAGING_ID, CONSTRAINTS, calcMaxGridUnits, DEFAULT_CATEGORY_COLOR } from '../constants';
 import { generatePrintList, getTotalBins, getTotalPieces, getTotalFilament, getSpoolEstimate } from '../utils/split';
 import { getLayerZStart } from '../utils/collision';
 import { clamp } from '../utils/validation';
@@ -339,7 +339,7 @@ export function RightPanel() {
           <div className="flex items-center gap-2 mb-4">
             <div
               className="w-5 h-5 rounded flex-shrink-0 shadow-sm"
-              style={{ backgroundColor: category?.color || '#6b7280' }}
+              style={{ backgroundColor: category?.color || DEFAULT_CATEGORY_COLOR }}
               aria-hidden="true"
             />
             <h2 className="flex-1 text-lg font-semibold text-content">
@@ -541,7 +541,7 @@ export function RightPanel() {
             </svg>
             <h2 className="section-header m-0">Print List</h2>
             {printRows.length > 0 && (
-              <span className="badge bg-info-muted text-info">{totalBins}</span>
+              <span className="badge badge-info">{totalBins}</span>
             )}
           </button>
           {printRows.length > 0 && (
@@ -633,7 +633,7 @@ export function RightPanel() {
                                       <span
                                         key={catId}
                                         className="w-2.5 h-2.5 rounded-full flex-shrink-0"
-                                        style={{ backgroundColor: cat?.color || '#6b7280' }}
+                                        style={{ backgroundColor: cat?.color || DEFAULT_CATEGORY_COLOR }}
                                         aria-label={cat?.name || 'Unknown category'}
                                       />
                                     );

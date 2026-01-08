@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { useLayoutStore } from '../../store';
-import { calcMaxGridUnits } from '../../constants';
+import { calcMaxGridUnits, DEFAULT_CATEGORY_COLOR } from '../../constants';
 import { generatePrintList, getTotalBins, getTotalPieces, getTotalFilament, getSpoolEstimate } from '../../utils/split';
 import { exportPrintListTSV } from '../../utils/storage';
 
@@ -104,7 +104,7 @@ export function MobilePrintList() {
                     <div
                       key={catId}
                       className="w-4 h-4 rounded"
-                      style={{ backgroundColor: cat?.color || '#6b7280' }}
+                      style={{ backgroundColor: cat?.color || DEFAULT_CATEGORY_COLOR }}
                     />
                   );
                 })}

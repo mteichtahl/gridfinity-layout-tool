@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useShallow } from 'zustand/shallow';
 import { useUIStore, useLayoutStore } from '../store';
-import { BASE_CELL_SIZE } from '../constants';
+import { BASE_CELL_SIZE, DEFAULT_CATEGORY_COLOR } from '../constants';
 import { getContrastColor } from '../utils/color';
 
 /**
@@ -71,7 +71,7 @@ export function DragPreview() {
     >
       {draggedBins.map((bin) => {
         const category = categories.find(c => c.id === bin.category);
-        const bgColor = category?.color || '#6b7280';
+        const bgColor = category?.color || DEFAULT_CATEGORY_COLOR;
         const textColor = getContrastColor(bgColor);
 
         // Position relative to first bin

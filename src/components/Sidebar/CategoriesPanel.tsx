@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useShallow } from 'zustand/shallow';
 import { useLayoutStore, useUIStore, useUndoableAction } from '../../store';
-import { CONSTRAINTS } from '../../constants';
+import { CONSTRAINTS, DEFAULT_CATEGORY_COLOR } from '../../constants';
 import { ConfirmDialog } from '../modals/ConfirmDialog';
 
 // Curated color palette optimized for dark UI backgrounds
@@ -48,7 +48,7 @@ export function CategoriesPanel() {
 
   const handleAddCategory = () => {
     execute(() => {
-      const id = addCategory({ name: 'New Category', color: '#6b7280' });
+      const id = addCategory({ name: 'New Category', color: DEFAULT_CATEGORY_COLOR });
       setActiveCategory(id);
       setEditingId(id);
     });
@@ -191,7 +191,7 @@ export function CategoriesPanel() {
                     </svg>
                   </button>
                   {isActive && (
-                    <span className="badge bg-info-muted text-info text-[10px] py-0 px-1.5">
+                    <span className="badge badge-info text-[10px] py-0 px-1.5">
                       active
                     </span>
                   )}
