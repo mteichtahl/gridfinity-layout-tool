@@ -178,7 +178,7 @@ export function Staging() {
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
           </svg>
           <span className="text-sm text-content-secondary font-medium">
-            Staging
+            Stash
           </span>
           <span className="px-1.5 py-0.5 rounded text-xs bg-surface-hover text-content-tertiary">
             {stagingBins.length} {stagingBins.length === 1 ? 'bin' : 'bins'}
@@ -276,8 +276,8 @@ export function Staging() {
       {/* Clear confirmation dialog */}
       <ConfirmDialog
         isOpen={showClearConfirm}
-        title="Clear Staging"
-        message={`Delete all ${stagingBins.length} staged bins? This cannot be undone.`}
+        title="Clear Stash"
+        message={`Delete all ${stagingBins.length} stashed bins? This cannot be undone.`}
         confirmText="Clear All"
         destructive
         onConfirm={handleClearStaging}

@@ -230,7 +230,7 @@ export function MobileInspector() {
         <div className="flex gap-2">
           {selectedBins.some(b => b.layerId !== STAGING_ID) && (
             <button onClick={handleMoveToStaging} className="btn btn-secondary flex-1">
-              To Staging
+              To Stash
             </button>
           )}
           <button onClick={() => setConfirmDelete(true)} className="btn btn-danger flex-1">
@@ -438,7 +438,7 @@ export function MobileInspector() {
       <div className="flex gap-2">
         {bin.layerId !== STAGING_ID && (
           <button onClick={handleMoveToStaging} className="btn btn-secondary flex-1">
-            To Staging
+            To Stash
           </button>
         )}
         <button onClick={() => setConfirmDelete(true)} className="btn btn-danger flex-1">

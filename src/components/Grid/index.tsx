@@ -601,10 +601,10 @@ export function Grid() {
         isOpen={pendingResize !== null}
         title="Resize Grid"
         message={pendingResize
-          ? `${pendingResize.clippedBinIds.length} bin${pendingResize.clippedBinIds.length > 1 ? 's' : ''} will be moved to staging. Continue?`
+          ? `${pendingResize.clippedBinIds.length} bin${pendingResize.clippedBinIds.length > 1 ? 's' : ''} will be moved to stash. Continue?`
           : ''
         }
-        confirmText="Move to Staging"
+        confirmText="Move to Stash"
         onConfirm={confirmResize}
         onCancel={cancelResize}
       />

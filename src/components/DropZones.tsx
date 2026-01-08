@@ -169,7 +169,7 @@ export function DropZones() {
                 color: dropTarget === 'staging' ? 'white' : 'var(--text-primary)'
               }}
             >
-              Stage {binLabel}
+              Stash {binLabel}
             </div>
             <div
               className="transition-colors text-xs"
@@ -177,7 +177,7 @@ export function DropZones() {
                 color: dropTarget === 'staging' ? 'var(--text-on-dark-muted)' : 'var(--text-tertiary)'
               }}
             >
-              {stagingBinCount > 0 ? `${stagingBinCount} bins staged` : 'Temporary storage'}
+              {stagingBinCount > 0 ? `${stagingBinCount} bins stashed` : 'Temporary storage'}
             </div>
           </div>
         </div>

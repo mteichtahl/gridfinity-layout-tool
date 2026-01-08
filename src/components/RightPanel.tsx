@@ -384,7 +384,7 @@ export function RightPanel() {
                 onClick={handleMoveToStaging}
                 className="btn btn-secondary flex-1"
               >
-                To Staging
+                To Stash
               </button>
             )}
             <button
@@ -565,7 +565,7 @@ export function RightPanel() {
                   onClick={handleMoveToStaging}
                   className="btn btn-secondary flex-1"
                 >
-                  To Staging
+                  To Stash
                 </button>
               )}
               <button
