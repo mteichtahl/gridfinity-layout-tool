@@ -11,7 +11,17 @@ import { DropZones } from './components/DropZones';
 import { DragPreview } from './components/DragPreview';
 import { HelpModal } from './components/modals/HelpModal';
 import { ToastContainer } from './components/Toast';
-import { MobileHeader, BottomNavBar, BottomSheet, getPanelTitle } from './components/mobile';
+import {
+  MobileHeader,
+  BottomNavBar,
+  BottomSheet,
+  getPanelTitle,
+  MobileLayersPanel,
+  MobileCategoriesPanel,
+  MobileInspector,
+  MobilePrintList,
+  MobileSettingsPanel,
+} from './components/mobile';
 import { SHORTCUTS } from './constants';
 
 // Load layout once at module level to avoid effect setState issues
@@ -193,48 +203,20 @@ export default function App() {
 }
 
 /**
- * Placeholder content for mobile panels.
- * Will be replaced with actual panel content in Branch 4.
+ * Mobile panel content based on active panel type.
  */
 function MobilePanelContent({ panel }: { panel: string }) {
-  const selectedBinIds = useUIStore(state => state.selectedBinIds);
-
   switch (panel) {
     case 'layers':
-      return (
-        <div className="py-4 text-center" style={{ color: 'var(--text-secondary)' }}>
-          <p className="mb-2">Layer management coming soon</p>
-          <p className="text-sm">Tap bins on the grid to select them</p>
-        </div>
-      );
+      return <MobileLayersPanel />;
     case 'inspector':
-      return (
-        <div className="py-4 text-center" style={{ color: 'var(--text-secondary)' }}>
-          {selectedBinIds.length > 0 ? (
-            <p>{selectedBinIds.length} bin(s) selected</p>
-          ) : (
-            <p>No bin selected. Tap a bin to select it.</p>
-          )}
-        </div>
-      );
+      return <MobileInspector />;
     case 'categories':
-      return (
-        <div className="py-4 text-center" style={{ color: 'var(--text-secondary)' }}>
-          <p>Category management coming soon</p>
-        </div>
-      );
+      return <MobileCategoriesPanel />;
     case 'print':
-      return (
-        <div className="py-4 text-center" style={{ color: 'var(--text-secondary)' }}>
-          <p>Print list coming soon</p>
-        </div>
-      );
+      return <MobilePrintList />;
     case 'settings':
-      return (
-        <div className="py-4 text-center" style={{ color: 'var(--text-secondary)' }}>
-          <p>Settings coming soon</p>
-        </div>
-      );
+      return <MobileSettingsPanel />;
     default:
       return null;
   }
