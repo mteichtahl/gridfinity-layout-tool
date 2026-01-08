@@ -129,6 +129,36 @@ export function Overlay({ cellSize, gap }: OverlayProps) {
       const rectWidth = currentRect.width * cellSize + (currentRect.width - 1) * gap;
       const rectHeight = currentRect.depth * cellSize + (currentRect.depth - 1) * gap;
 
+      // Ghost outline of original size (dashed gray border)
+      const sizeChanged = currentRect.x !== originalBin.x ||
+                          currentRect.y !== originalBin.y ||
+                          currentRect.width !== originalBin.width ||
+                          currentRect.depth !== originalBin.depth;
+
+      if (sizeChanged) {
+        const origLeft = gap + originalBin.x * (cellSize + gap);
+        const origTop = gap + (drawer.depth - originalBin.y - originalBin.depth) * (cellSize + gap);
+        const origWidth = originalBin.width * cellSize + (originalBin.width - 1) * gap;
+        const origHeight = originalBin.depth * cellSize + (originalBin.depth - 1) * gap;
+
+        previews.push(
+          <div
+            key={`resize-ghost-${binId}`}
+            style={{
+              position: 'absolute',
+              left: origLeft,
+              top: origTop,
+              width: origWidth,
+              height: origHeight,
+              border: '2px dashed rgba(113, 113, 122, 0.6)',
+              pointerEvents: 'none',
+              borderRadius: '2px',
+            }}
+          />
+        );
+      }
+
+      // New size preview (solid border)
       previews.push(
         <div
           key={`resize-preview-${binId}`}
@@ -144,104 +174,6 @@ export function Overlay({ cellSize, gap }: OverlayProps) {
           }}
         />
       );
-
-      // Show removed areas when shrinking (red overlay on portions being cut)
-      const origRight = originalBin.x + originalBin.width;
-      const origTop = originalBin.y + originalBin.depth;
-      const newRight = currentRect.x + currentRect.width;
-      const newTop = currentRect.y + currentRect.depth;
-
-      // Right edge removed
-      if (newRight < origRight) {
-        const removedWidth = origRight - newRight;
-        const removedLeft = gap + newRight * (cellSize + gap);
-        const removedTop = gap + (drawer.depth - Math.min(origTop, newTop) - Math.min(originalBin.depth, currentRect.depth)) * (cellSize + gap);
-        const removedW = removedWidth * cellSize + (removedWidth - 1) * gap;
-        const removedH = Math.min(originalBin.depth, currentRect.depth) * cellSize + (Math.min(originalBin.depth, currentRect.depth) - 1) * gap;
-        previews.push(
-          <div
-            key={`resize-removed-right-${binId}`}
-            style={{
-              position: 'absolute',
-              left: removedLeft,
-              top: removedTop,
-              width: removedW,
-              height: removedH,
-              pointerEvents: 'none',
-              backgroundColor: 'rgba(239, 68, 68, 0.35)',
-            }}
-          />
-        );
-      }
-
-      // Left edge removed
-      if (currentRect.x > originalBin.x) {
-        const removedWidth = currentRect.x - originalBin.x;
-        const removedLeft = gap + originalBin.x * (cellSize + gap);
-        const removedTop = gap + (drawer.depth - Math.min(origTop, newTop) - Math.min(originalBin.depth, currentRect.depth)) * (cellSize + gap);
-        const removedW = removedWidth * cellSize + (removedWidth - 1) * gap;
-        const removedH = Math.min(originalBin.depth, currentRect.depth) * cellSize + (Math.min(originalBin.depth, currentRect.depth) - 1) * gap;
-        previews.push(
-          <div
-            key={`resize-removed-left-${binId}`}
-            style={{
-              position: 'absolute',
-              left: removedLeft,
-              top: removedTop,
-              width: removedW,
-              height: removedH,
-              pointerEvents: 'none',
-              backgroundColor: 'rgba(239, 68, 68, 0.35)',
-            }}
-          />
-        );
-      }
-
-      // Top edge removed (visually top = high y value)
-      if (newTop < origTop) {
-        const removedDepth = origTop - newTop;
-        const removedLeft = gap + originalBin.x * (cellSize + gap);
-        const removedTop = gap + (drawer.depth - origTop) * (cellSize + gap);
-        const removedW = originalBin.width * cellSize + (originalBin.width - 1) * gap;
-        const removedH = removedDepth * cellSize + (removedDepth - 1) * gap;
-        previews.push(
-          <div
-            key={`resize-removed-top-${binId}`}
-            style={{
-              position: 'absolute',
-              left: removedLeft,
-              top: removedTop,
-              width: removedW,
-              height: removedH,
-              pointerEvents: 'none',
-              backgroundColor: 'rgba(239, 68, 68, 0.35)',
-            }}
-          />
-        );
-      }
-
-      // Bottom edge removed (visually bottom = low y value)
-      if (currentRect.y > originalBin.y) {
-        const removedDepth = currentRect.y - originalBin.y;
-        const removedLeft = gap + originalBin.x * (cellSize + gap);
-        const removedTop = gap + (drawer.depth - currentRect.y) * (cellSize + gap);
-        const removedW = originalBin.width * cellSize + (originalBin.width - 1) * gap;
-        const removedH = removedDepth * cellSize + (removedDepth - 1) * gap;
-        previews.push(
-          <div
-            key={`resize-removed-bottom-${binId}`}
-            style={{
-              position: 'absolute',
-              left: removedLeft,
-              top: removedTop,
-              width: removedW,
-              height: removedH,
-              pointerEvents: 'none',
-              backgroundColor: 'rgba(239, 68, 68, 0.35)',
-            }}
-          />
-        );
-      }
     }
 
     // Use first bin's rect for tooltip

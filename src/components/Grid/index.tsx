@@ -111,6 +111,11 @@ export function Grid() {
     setPendingResize(null);
   }, [pendingResize, execute, updateBin, updateDrawer]);
 
+  // Cancel pending resize
+  const cancelResize = useCallback(() => {
+    setPendingResize(null);
+  }, []);
+
   // Dimension change handlers
   const handleDimensionChange = (field: 'width' | 'depth', delta: number) => {
     const newValue = Math.max(1, Math.min(CONSTRAINTS.GRID_MAX, drawer[field] + delta));
@@ -775,7 +780,7 @@ export function Grid() {
         }
         confirmText="Move to Staging"
         onConfirm={confirmResize}
-        onCancel={() => setPendingResize(null)}
+        onCancel={cancelResize}
       />
     </div>
   );
