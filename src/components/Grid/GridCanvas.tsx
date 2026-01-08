@@ -1,4 +1,5 @@
 import type { RefObject, PointerEvent, JSX } from 'react';
+import { useShallow } from 'zustand/shallow';
 import { useUIStore, useLayoutStore } from '../../store';
 import { useGridCoords } from '../../hooks';
 import { Bin } from './Bin';
@@ -19,17 +20,32 @@ interface GridCanvasProps {
  * Uses CSS Grid to render cells and bins.
  */
 export function GridCanvas({ gridRef, cellSize, gap, onStartDraw, onStartDrag, onStartResize }: GridCanvasProps) {
-  const drawer = useLayoutStore((state) => state.layout.drawer);
-  const bins = useLayoutStore((state) => state.layout.bins);
-  const layers = useLayoutStore((state) => state.layout.layers);
-  const categories = useLayoutStore((state) => state.layout.categories);
-  const activeLayerId = useUIStore((state) => state.activeLayerId);
-  const showOtherLayers = useUIStore((state) => state.showOtherLayers);
-  const selectedBinIds = useUIStore((state) => state.selectedBinIds);
+  const { drawer, bins, layers, categories } = useLayoutStore(
+    useShallow((state) => ({
+      drawer: state.layout.drawer,
+      bins: state.layout.bins,
+      layers: state.layout.layers,
+      categories: state.layout.categories,
+    }))
+  );
 
-  const setSelectedBin = useUIStore((state) => state.setSelectedBin);
-  const setActiveLayer = useUIStore((state) => state.setActiveLayer);
-  const paintSize = useUIStore((state) => state.paintSize);
+  const {
+    activeLayerId,
+    showOtherLayers,
+    selectedBinIds,
+    setSelectedBin,
+    setActiveLayer,
+    paintSize,
+  } = useUIStore(
+    useShallow((state) => ({
+      activeLayerId: state.activeLayerId,
+      showOtherLayers: state.showOtherLayers,
+      selectedBinIds: state.selectedBinIds,
+      setSelectedBin: state.setSelectedBin,
+      setActiveLayer: state.setActiveLayer,
+      paintSize: state.paintSize,
+    }))
+  );
 
   const { getGridCoords } = useGridCoords(gridRef);
 

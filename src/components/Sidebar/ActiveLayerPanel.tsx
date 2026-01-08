@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useShallow } from 'zustand/shallow';
 import { useLayoutStore, useUIStore, useUndoableAction } from '../../store';
 import { useToastStore } from '../../store/toast';
 import { ConfirmDialog } from '../modals/ConfirmDialog';
@@ -6,16 +7,32 @@ import { ConfirmDialog } from '../modals/ConfirmDialog';
 export function ActiveLayerPanel() {
   const [showClearConfirm, setShowClearConfirm] = useState(false);
   const [rotateRectangles, setRotateRectangles] = useState(false);
-  const layout = useLayoutStore(state => state.layout);
-  const activeLayerId = useUIStore(state => state.activeLayerId);
-  const activeCategoryId = useUIStore(state => state.activeCategoryId);
-  const paintSize = useUIStore(state => state.paintSize);
-  const togglePaintSize = useUIStore(state => state.togglePaintSize);
 
-  const fillLayer = useLayoutStore(state => state.fillLayer);
-  const fillLayerGaps = useLayoutStore(state => state.fillLayerGaps);
-  const clearLayer = useLayoutStore(state => state.clearLayer);
-  const setSelectedBins = useUIStore(state => state.setSelectedBins);
+  const { layout, fillLayer, fillLayerGaps, clearLayer } = useLayoutStore(
+    useShallow((state) => ({
+      layout: state.layout,
+      fillLayer: state.fillLayer,
+      fillLayerGaps: state.fillLayerGaps,
+      clearLayer: state.clearLayer,
+    }))
+  );
+
+  const {
+    activeLayerId,
+    activeCategoryId,
+    paintSize,
+    togglePaintSize,
+    setSelectedBins,
+  } = useUIStore(
+    useShallow((state) => ({
+      activeLayerId: state.activeLayerId,
+      activeCategoryId: state.activeCategoryId,
+      paintSize: state.paintSize,
+      togglePaintSize: state.togglePaintSize,
+      setSelectedBins: state.setSelectedBins,
+    }))
+  );
+
   const addToast = useToastStore(state => state.addToast);
 
   const { execute } = useUndoableAction();

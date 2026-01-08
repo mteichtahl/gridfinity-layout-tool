@@ -1,4 +1,5 @@
 import React, { useState, useMemo, useCallback, type CSSProperties } from 'react';
+import { useShallow } from 'zustand/shallow';
 import { useUIStore, useLayoutStore, useUndoableAction } from '../store';
 import { STAGING_ID, CONSTRAINTS, calcMaxGridUnits } from '../constants';
 import { generatePrintList, getTotalBins, getTotalPieces, getTotalFilament, getSpoolEstimate } from '../utils/split';
@@ -168,15 +169,23 @@ export function RightPanel() {
   const [copyFeedback, setCopyFeedback] = useState(false);
   const [expandedSplitRow, setExpandedSplitRow] = useState<number | null>(null);
 
-  const selectedBinIds = useUIStore(state => state.selectedBinIds);
-  const setSelectedBins = useUIStore(state => state.setSelectedBins);
-  const collapsed = useUIStore(state => state.rightPanelCollapsed);
-  const toggle = useUIStore(state => state.toggleRightPanel);
+  const { selectedBinIds, setSelectedBins, collapsed, toggle } = useUIStore(
+    useShallow((state) => ({
+      selectedBinIds: state.selectedBinIds,
+      setSelectedBins: state.setSelectedBins,
+      collapsed: state.rightPanelCollapsed,
+      toggle: state.toggleRightPanel,
+    }))
+  );
 
-  const layout = useLayoutStore(state => state.layout);
-  const updateBin = useLayoutStore(state => state.updateBin);
-  const deleteBin = useLayoutStore(state => state.deleteBin);
-  const moveBinToStaging = useLayoutStore(state => state.moveBinToStaging);
+  const { layout, updateBin, deleteBin, moveBinToStaging } = useLayoutStore(
+    useShallow((state) => ({
+      layout: state.layout,
+      updateBin: state.updateBin,
+      deleteBin: state.deleteBin,
+      moveBinToStaging: state.moveBinToStaging,
+    }))
+  );
 
   const { execute } = useUndoableAction();
 

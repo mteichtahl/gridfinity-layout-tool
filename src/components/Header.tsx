@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
+import { useShallow } from 'zustand/shallow';
 import { useLayoutStore, useHistoryStore, useUIStore } from '../store';
 import { useResponsive } from '../hooks';
 import { CONSTRAINTS } from '../constants';
@@ -11,21 +12,31 @@ interface HeaderProps {
 export function Header({ onHelpClick }: HeaderProps) {
   const { isTablet } = useResponsive();
 
-  const layout = useLayoutStore(state => state.layout);
-  const setName = useLayoutStore(state => state.setName);
-  const reset = useLayoutStore(state => state.reset);
+  const { layout, setName, reset } = useLayoutStore(
+    useShallow((state) => ({
+      layout: state.layout,
+      setName: state.setName,
+      reset: state.reset,
+    }))
+  );
 
-  // Undo/Redo state
-  const canUndo = useHistoryStore(state => state.canUndo);
-  const canRedo = useHistoryStore(state => state.canRedo);
-  const undo = useHistoryStore(state => state.undo);
-  const redo = useHistoryStore(state => state.redo);
+  const { canUndo, canRedo, undo, redo } = useHistoryStore(
+    useShallow((state) => ({
+      canUndo: state.canUndo,
+      canRedo: state.canRedo,
+      undo: state.undo,
+      redo: state.redo,
+    }))
+  );
 
-  // Tablet panel toggles
-  const leftPanelCollapsed = useUIStore(state => state.leftPanelCollapsed);
-  const rightPanelCollapsed = useUIStore(state => state.rightPanelCollapsed);
-  const toggleLeftPanel = useUIStore(state => state.toggleLeftPanel);
-  const toggleRightPanel = useUIStore(state => state.toggleRightPanel);
+  const { leftPanelCollapsed, rightPanelCollapsed, toggleLeftPanel, toggleRightPanel } = useUIStore(
+    useShallow((state) => ({
+      leftPanelCollapsed: state.leftPanelCollapsed,
+      rightPanelCollapsed: state.rightPanelCollapsed,
+      toggleLeftPanel: state.toggleLeftPanel,
+      toggleRightPanel: state.toggleRightPanel,
+    }))
+  );
 
   const [isEditing, setIsEditing] = useState(false);
   const [editValue, setEditValue] = useState(layout.name);

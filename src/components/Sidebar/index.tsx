@@ -1,3 +1,4 @@
+import { useShallow } from 'zustand/shallow';
 import { useUIStore, useLayoutStore } from '../../store';
 import { calcMaxGridUnits } from '../../constants';
 import { ActiveLayerPanel } from './ActiveLayerPanel';
@@ -5,15 +6,30 @@ import { LayersPanel } from './LayersPanel';
 import { CategoriesPanel } from './CategoriesPanel';
 
 export function Sidebar() {
-  const collapsed = useUIStore(state => state.leftPanelCollapsed);
-  const toggle = useUIStore(state => state.toggleLeftPanel);
+  const { collapsed, toggle } = useUIStore(
+    useShallow((state) => ({
+      collapsed: state.leftPanelCollapsed,
+      toggle: state.toggleLeftPanel,
+    }))
+  );
 
-  const gridUnitMm = useLayoutStore(state => state.layout.gridUnitMm);
-  const heightUnitMm = useLayoutStore(state => state.layout.heightUnitMm);
-  const printBedSize = useLayoutStore(state => state.layout.printBedSize);
-  const setGridUnitMm = useLayoutStore(state => state.setGridUnitMm);
-  const setHeightUnitMm = useLayoutStore(state => state.setHeightUnitMm);
-  const setPrintBedSize = useLayoutStore(state => state.setPrintBedSize);
+  const {
+    gridUnitMm,
+    heightUnitMm,
+    printBedSize,
+    setGridUnitMm,
+    setHeightUnitMm,
+    setPrintBedSize,
+  } = useLayoutStore(
+    useShallow((state) => ({
+      gridUnitMm: state.layout.gridUnitMm,
+      heightUnitMm: state.layout.heightUnitMm,
+      printBedSize: state.layout.printBedSize,
+      setGridUnitMm: state.setGridUnitMm,
+      setHeightUnitMm: state.setHeightUnitMm,
+      setPrintBedSize: state.setPrintBedSize,
+    }))
+  );
 
   return (
     <aside

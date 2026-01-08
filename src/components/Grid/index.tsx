@@ -1,4 +1,5 @@
 import { useRef, useState, useCallback, useEffect, type CSSProperties } from 'react';
+import { useShallow } from 'zustand/shallow';
 import { useUIStore, useLayoutStore, useUndoableAction } from '../../store';
 import { useInteraction, useResponsive } from '../../hooks';
 import { BASE_CELL_SIZE, STAGING_ID, CONSTRAINTS } from '../../constants';
@@ -29,24 +30,48 @@ export function Grid() {
   const { isMobile } = useResponsive();
   const gridRef = useRef<HTMLDivElement>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
-  const zoom = useUIStore((state) => state.zoom);
-  const setZoom = useUIStore((state) => state.setZoom);
-  const zoomIn = useUIStore((state) => state.zoomIn);
-  const zoomOut = useUIStore((state) => state.zoomOut);
-  const showOtherLayers = useUIStore((state) => state.showOtherLayers);
-  const toggleShowOtherLayers = useUIStore((state) => state.toggleShowOtherLayers);
-  const showLabels = useUIStore((state) => state.showLabels);
-  const toggleShowLabels = useUIStore((state) => state.toggleShowLabels);
-  const activeLayerId = useUIStore((state) => state.activeLayerId);
-  const paintSize = useUIStore((state) => state.paintSize);
-  const setPaintSize = useUIStore((state) => state.setPaintSize);
-  const setSelectedBins = useUIStore((state) => state.setSelectedBins);
+
+  const {
+    zoom,
+    setZoom,
+    zoomIn,
+    zoomOut,
+    showOtherLayers,
+    toggleShowOtherLayers,
+    showLabels,
+    toggleShowLabels,
+    activeLayerId,
+    paintSize,
+    setPaintSize,
+    setSelectedBins,
+  } = useUIStore(
+    useShallow((state) => ({
+      zoom: state.zoom,
+      setZoom: state.setZoom,
+      zoomIn: state.zoomIn,
+      zoomOut: state.zoomOut,
+      showOtherLayers: state.showOtherLayers,
+      toggleShowOtherLayers: state.toggleShowOtherLayers,
+      showLabels: state.showLabels,
+      toggleShowLabels: state.toggleShowLabels,
+      activeLayerId: state.activeLayerId,
+      paintSize: state.paintSize,
+      setPaintSize: state.setPaintSize,
+      setSelectedBins: state.setSelectedBins,
+    }))
+  );
+
+  const { drawer, layers, bins, updateDrawer, updateBin } = useLayoutStore(
+    useShallow((state) => ({
+      drawer: state.layout.drawer,
+      layers: state.layout.layers,
+      bins: state.layout.bins,
+      updateDrawer: state.updateDrawer,
+      updateBin: state.updateBin,
+    }))
+  );
+
   const clearSelection = useCallback(() => setSelectedBins([]), [setSelectedBins]);
-  const drawer = useLayoutStore((state) => state.layout.drawer);
-  const layers = useLayoutStore((state) => state.layout.layers);
-  const bins = useLayoutStore((state) => state.layout.bins);
-  const updateDrawer = useLayoutStore((state) => state.updateDrawer);
-  const updateBin = useLayoutStore((state) => state.updateBin);
   const { execute } = useUndoableAction();
 
   // Pending resize confirmation state
