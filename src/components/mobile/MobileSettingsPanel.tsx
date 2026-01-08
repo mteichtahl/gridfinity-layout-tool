@@ -1,7 +1,17 @@
-import { useState } from 'react';
+import { useState, type CSSProperties } from 'react';
 import { useLayoutStore } from '../../store';
 import { calcMaxGridUnits } from '../../constants';
 import { ConfirmDialog } from '../modals/ConfirmDialog';
+
+const STYLES = {
+  sectionHeading: { color: 'var(--text-tertiary)' } as CSSProperties,
+  label: { color: 'var(--text-secondary)' } as CSSProperties,
+  unitSuffix: { color: 'var(--text-tertiary)' } as CSSProperties,
+  hintText: { color: 'var(--text-disabled)' } as CSSProperties,
+  divider: { borderTop: '1px solid var(--border-subtle)' } as CSSProperties,
+  footerText: { color: 'var(--text-disabled)', lineHeight: '1.6' } as CSSProperties,
+  link: { color: 'var(--text-tertiary)' } as CSSProperties,
+} as const;
 
 /**
  * Mobile settings panel with grid configuration and app actions.
