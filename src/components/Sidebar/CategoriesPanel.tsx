@@ -170,6 +170,7 @@ export function CategoriesPanel() {
                       <button
                         onClick={(e) => handleDeleteCategory(category.id, category.name, e)}
                         className="btn btn-danger btn-sm flex-1 justify-center"
+                        aria-label={`Delete ${category.name} category`}
                       >
                         Delete
                       </button>
@@ -177,6 +178,7 @@ export function CategoriesPanel() {
                     <button
                       onClick={() => setEditingId(null)}
                       className="btn btn-secondary btn-sm flex-1 justify-center"
+                      aria-label="Finish editing category"
                     >
                       Done
                     </button>
