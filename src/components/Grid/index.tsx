@@ -33,6 +33,8 @@ export function Grid() {
     paintSize,
     setPaintSize,
     setSelectedBins,
+    leftPanelCollapsed,
+    toggleLeftPanel,
   } = useUIStore(
     useShallow((state) => ({
       zoom: state.zoom,
@@ -47,6 +49,8 @@ export function Grid() {
       paintSize: state.paintSize,
       setPaintSize: state.setPaintSize,
       setSelectedBins: state.setSelectedBins,
+      leftPanelCollapsed: state.leftPanelCollapsed,
+      toggleLeftPanel: state.toggleLeftPanel,
     }))
   );
 
@@ -82,34 +86,9 @@ export function Grid() {
   // Get active layer info
   const activeLayer = layers.find(l => l.id === activeLayerId);
   const layerBins = bins.filter(b => b.layerId === activeLayerId && b.layerId !== STAGING_ID);
+  const placedBins = bins.filter(b => b.layerId !== STAGING_ID);
   const isEmpty = layerBins.length === 0;
   const isFirstLayer = layers.length > 0 && activeLayerId === layers[0]?.id;
-
-  // Find bins that would be clipped by a resize
-  const getClippedBins = useCallback((newWidth: number, newDepth: number) => {
-    return bins.filter(b =>
-      b.layerId !== STAGING_ID && (
-        b.x + b.width > newWidth ||
-        b.y + b.depth > newDepth
-      )
-    );
-  }, [bins]);
-
-  // Attempt to resize, checking for clipped bins
-  const attemptResize = useCallback((newWidth: number, newDepth: number) => {
-    const clippedBins = getClippedBins(newWidth, newDepth);
-    if (clippedBins.length > 0) {
-      // Show confirmation dialog
-      setPendingResize({
-        newWidth,
-        newDepth,
-        clippedBinIds: clippedBins.map(b => b.id),
-      });
-    } else {
-      // No clipped bins, resize directly
-      execute(() => updateDrawer({ width: newWidth, depth: newDepth }));
-    }
-  }, [getClippedBins, execute, updateDrawer]);
 
   // Confirm pending resize - move clipped bins to staging
   const confirmResize = useCallback(() => {
@@ -129,16 +108,6 @@ export function Grid() {
   const cancelResize = useCallback(() => {
     setPendingResize(null);
   }, []);
-
-  // Dimension change handlers
-  const handleDimensionChange = (field: 'width' | 'depth', delta: number) => {
-    const newValue = clamp(drawer[field] + delta, 1, CONSTRAINTS.GRID_MAX);
-    if (newValue !== drawer[field]) {
-      const newWidth = field === 'width' ? newValue : drawer.width;
-      const newDepth = field === 'depth' ? newValue : drawer.depth;
-      attemptResize(newWidth, newDepth);
-    }
-  };
 
   // Grid edge resize state
   const [resizeDirection, setResizeDirection] = useState<ResizeDirection>(null);
@@ -303,168 +272,86 @@ export function Grid() {
         <MobileGridToolbar onFitToScreen={fitToScreen} />
       ) : (
         <div
-          className="flex items-center justify-between px-4 py-3 bg-surface-secondary border-b border-stroke-subtle"
+          className="flex items-center justify-between px-4 py-[7.5px] bg-surface-secondary border-b border-stroke-subtle"
         >
-          {/* Left: Layer indicator */}
+          {/* Left: Layer indicator + Paint mode */}
           <div className="flex items-center gap-3">
-            {activeLayer && (
-              <div
-                className="flex items-center gap-2 px-3 py-1.5 rounded-md bg-surface-elevated border border-stroke-subtle"
+            {layers.length > 1 && activeLayer && (
+              <button
+                onClick={() => leftPanelCollapsed && toggleLeftPanel()}
+                className="flex items-center gap-2 px-3 py-1.5 rounded-md bg-surface-elevated border border-stroke-subtle transition-colors hover:bg-surface-hover"
+                title={leftPanelCollapsed ? "Show layers panel" : activeLayer.name}
               >
-                <div
-                  className="w-2 h-2 rounded-full bg-accent"
-                />
+                <div className="w-2 h-2 rounded-full bg-accent" />
                 <span className="text-sm font-medium">
                   {activeLayer.name}
                 </span>
                 <span className="text-xs text-content-tertiary">
                   {activeLayer.height}u
                 </span>
+                {leftPanelCollapsed && (
+                  <svg className="w-3 h-3 text-content-tertiary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                  </svg>
+                )}
+              </button>
+            )}
+            {/* Paint mode indicator (only shown when active) */}
+            {paintSize && (
+              <div
+                className="flex items-center gap-2 px-3 py-1.5 rounded-md bg-primary-muted border border-accent"
+              >
+                <svg className="w-4 h-4 text-accent" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                </svg>
+                <span className="text-sm text-accent font-medium">
+                  Paint {paintSize.width}×{paintSize.depth}
+                </span>
+                <button
+                  onClick={() => setPaintSize(null)}
+                  className="p-0.5 ml-1 rounded text-accent/70 hover:text-accent transition-colors"
+                  aria-label="Exit paint mode"
+                >
+                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
               </div>
             )}
-            {/* Tool mode indicator */}
-            <div
-              className="flex items-center gap-2 px-3 py-1.5 rounded-md"
-              style={{
-                backgroundColor: paintSize ? 'var(--color-primary-muted)' : 'var(--bg-elevated)',
-                border: `1px solid ${paintSize ? 'var(--color-primary)' : 'var(--border-subtle)'}`,
-              }}
-            >
-              {paintSize ? (
-                <>
-                  {/* Paint brush icon */}
-                  <svg className="w-4 h-4 text-accent" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
-                  </svg>
-                  <span className="text-sm text-accent font-medium">
-                    Paint {paintSize.width}×{paintSize.depth}
-                  </span>
-                  <button
-                    onClick={() => setPaintSize(null)}
-                    className="btn btn-ghost p-0.5 ml-1 min-w-auto min-h-auto"
-                    aria-label="Exit paint mode"
-                  >
-                    <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                    </svg>
-                  </button>
-                </>
-              ) : (
-                <>
-                  {/* Pencil/draw icon */}
-                  <svg className="w-4 h-4 text-content-tertiary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                  </svg>
-                  <span className="text-sm text-content-tertiary">
-                    Draw
-                  </span>
-                </>
-              )}
-            </div>
-
-            {/* Grid dimensions */}
-            <div
-              className="flex items-center gap-1 px-2 py-1 rounded-md bg-surface-elevated border border-stroke-subtle"
-            >
-              <span className="text-xs text-content-tertiary">Grid</span>
-              <div className="flex items-center">
-                <button
-                  onClick={() => handleDimensionChange('width', -1)}
-                  disabled={drawer.width <= 1}
-                  className="btn btn-ghost btn-icon p-1 min-w-[28px] min-h-[28px]"
-                  aria-label="Decrease width"
-                >
-                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 12H4" />
-                  </svg>
-                </button>
-                <span
-                  className="min-w-[28px] text-center font-medium tabular-nums text-sm text-content"
-                >
-                  {drawer.width}
-                </span>
-                <button
-                  onClick={() => handleDimensionChange('width', 1)}
-                  disabled={drawer.width >= CONSTRAINTS.GRID_MAX}
-                  className="btn btn-ghost btn-icon p-1 min-w-[28px] min-h-[28px]"
-                  aria-label="Increase width"
-                >
-                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-                  </svg>
-                </button>
-              </div>
-              <span className="text-xs text-content-tertiary">×</span>
-              <div className="flex items-center">
-                <button
-                  onClick={() => handleDimensionChange('depth', -1)}
-                  disabled={drawer.depth <= 1}
-                  className="btn btn-ghost btn-icon p-1 min-w-[28px] min-h-[28px]"
-                  aria-label="Decrease depth"
-                >
-                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 12H4" />
-                  </svg>
-                </button>
-                <span
-                  className="min-w-[28px] text-center font-medium tabular-nums text-sm text-content"
-                >
-                  {drawer.depth}
-                </span>
-                <button
-                  onClick={() => handleDimensionChange('depth', 1)}
-                  disabled={drawer.depth >= CONSTRAINTS.GRID_MAX}
-                  className="btn btn-ghost btn-icon p-1 min-w-[28px] min-h-[28px]"
-                  aria-label="Increase depth"
-                >
-                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-                  </svg>
-                </button>
-              </div>
-            </div>
           </div>
 
           {/* Right: View controls */}
           <div className="flex items-center gap-4">
-            {/* Show labels toggle */}
-            <label
-              className="flex items-center gap-2 cursor-pointer select-none transition-colors text-sm text-content-secondary"
-              title="Show bin labels on the grid"
-            >
-              <input
-                type="checkbox"
-                checked={showLabels}
-                onChange={toggleShowLabels}
-                className="w-4 h-4 rounded accent-accent"
-              />
-              Labels
-            </label>
-
-            {/* Show other layers toggle */}
-            <label
-              className="flex items-center gap-2 cursor-pointer select-none transition-colors text-sm text-content-secondary"
-              title="Show ghost outlines of bins on layers below (helps see blocked zones)"
-            >
-              <input
-                type="checkbox"
-                checked={showOtherLayers}
-                onChange={toggleShowOtherLayers}
-                className="w-4 h-4 rounded accent-accent"
-              />
-              Layers below
-            </label>
+            {/* View toggles */}
+            {placedBins.length > 0 && (
+              <label className="flex items-center gap-2 cursor-pointer select-none text-sm text-content-secondary">
+                <input
+                  type="checkbox"
+                  checked={showLabels}
+                  onChange={toggleShowLabels}
+                  className="w-4 h-4 rounded accent-accent"
+                />
+                Labels
+              </label>
+            )}
+            {layers.length > 1 && (
+              <label className="flex items-center gap-2 cursor-pointer select-none text-sm text-content-secondary">
+                <input
+                  type="checkbox"
+                  checked={showOtherLayers}
+                  onChange={toggleShowOtherLayers}
+                  className="w-4 h-4 rounded accent-accent"
+                />
+                Show layers below
+              </label>
+            )}
 
             {/* Zoom controls */}
-            <div
-              className="flex items-center gap-1"
-              role="group"
-              aria-label="Zoom controls"
-            >
+            <div className="flex items-center gap-1" role="group" aria-label="Zoom controls">
               <button
                 onClick={zoomOut}
                 disabled={!canZoomOut}
-                className="btn btn-secondary btn-icon p-1 min-w-[28px] min-h-[28px]"
+                className="btn btn-ghost p-1.5"
                 aria-label="Zoom out"
                 title="Zoom out (−)"
               >
@@ -472,15 +359,13 @@ export function Grid() {
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 12H4" />
                 </svg>
               </button>
-              <span
-                className="min-w-[52px] text-center font-medium text-sm text-content-secondary"
-              >
+              <span className="min-w-[44px] text-center text-sm text-content-secondary tabular-nums">
                 {Math.round(zoom * 100)}%
               </span>
               <button
                 onClick={zoomIn}
                 disabled={!canZoomIn}
-                className="btn btn-secondary btn-icon p-1 min-w-[28px] min-h-[28px]"
+                className="btn btn-ghost p-1.5"
                 aria-label="Zoom in"
                 title="Zoom in (+)"
               >
@@ -490,7 +375,7 @@ export function Grid() {
               </button>
               <button
                 onClick={fitToScreen}
-                className="btn btn-secondary px-2.5 py-1.5 text-xs"
+                className="btn btn-ghost px-2.5 py-1.5 text-sm"
                 aria-label="Fit grid to screen"
                 title="Fit to screen"
               >
@@ -531,7 +416,7 @@ export function Grid() {
                 <button
                   key={`row-${num}`}
                   type="button"
-                  className="flex items-center justify-center select-none transition-colors rounded-sm font-medium text-content-tertiary tabular-nums bg-transparent border-0 cursor-pointer hover:bg-surface-hover hover:text-content-secondary"
+                  className="flex items-center justify-center select-none transition-colors rounded-sm font-medium text-content-tertiary tabular-nums bg-transparent border-0 cursor-pointer hover:text-content"
                   style={{
                     width: labelSize,
                     gridRow: index + 1,
@@ -601,14 +486,9 @@ export function Grid() {
                     <p className="text-xs text-content-disabled">
                       {isFirstLayer
                         ? (isMobile ? 'Or use Layers tab to select a size' : 'Or select a size from the Bin Palette on the left')
-                        : 'Striped cells are blocked by tall bins from layers below'
+                        : 'Striped areas are blocked by bins below'
                       }
                     </p>
-                    {!isFirstLayer && (
-                      <p className="text-content-disabled mt-1" style={{ fontSize: '10px' }}>
-                        Toggle "Layers below" to see blocked zones
-                      </p>
-                    )}
                   </div>
                 </div>
               )}
@@ -697,7 +577,7 @@ export function Grid() {
                   <button
                     key={`col-${num}`}
                     type="button"
-                    className="flex items-center justify-center select-none transition-colors rounded-sm font-medium text-content-tertiary tabular-nums bg-transparent border-0 cursor-pointer hover:bg-surface-hover hover:text-content-secondary"
+                    className="flex items-center justify-center select-none transition-colors rounded-sm font-medium text-content-tertiary tabular-nums bg-transparent border-0 cursor-pointer hover:text-content"
                     style={{
                       height: labelSize,
                       gridColumn: index + 1,

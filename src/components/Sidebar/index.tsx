@@ -1,9 +1,8 @@
 import { useShallow } from 'zustand/shallow';
 import { useUIStore, useLayoutStore } from '../../store';
 import { calcMaxGridUnits } from '../../constants';
-import { useAdvancedLayerMode } from '../../hooks/useAdvancedLayerMode';
 import { ActiveLayerPanel } from './ActiveLayerPanel';
-import { LayersPanel } from './LayersPanel';
+import { LayerPanel } from './LayerPanel';
 import { CategoriesPanel } from './CategoriesPanel';
 
 export function Sidebar() {
@@ -13,8 +12,6 @@ export function Sidebar() {
       toggle: state.toggleLeftPanel,
     }))
   );
-
-  const showAdvancedLayers = useAdvancedLayerMode();
 
   const {
     gridUnitMm,
@@ -37,7 +34,7 @@ export function Sidebar() {
   return (
     <aside
       className="flex-shrink-0 flex flex-col transition-all duration-200 ease-in-out bg-surface-secondary border-r border-stroke-subtle"
-      style={{ width: collapsed ? '40px' : '256px' }}
+      style={{ width: collapsed ? '40px' : '288px' }}
     >
       {collapsed ? (
         // Collapsed state - just show expand button
@@ -56,9 +53,9 @@ export function Sidebar() {
       ) : (
         // Expanded state
         <>
-          <div className="flex items-center justify-between px-4 py-3 border-b border-stroke-subtle">
-            <h2 className="text-sm font-semibold text-content-secondary uppercase tracking-wide">
-              Layout
+          <div className="flex items-center gap-3 px-4 py-3 border-b border-stroke-subtle">
+            <h2 className="flex-1 text-xs font-semibold text-content-tertiary uppercase tracking-wider">
+              Tools
             </h2>
             <button
               onClick={toggle}
@@ -71,16 +68,22 @@ export function Sidebar() {
               </svg>
             </button>
           </div>
-          <div className="flex-1 overflow-y-auto scrollbar-thin p-4 flex flex-col gap-4">
-            <ActiveLayerPanel />
-            {showAdvancedLayers && <LayersPanel />}
-            <CategoriesPanel />
+          <div className="flex-1 overflow-y-auto scrollbar-thin flex flex-col">
+            <div className="px-4 py-4 border-b border-stroke-subtle">
+              <ActiveLayerPanel />
+            </div>
+            <div className="px-4 py-4 border-b border-stroke-subtle">
+              <LayerPanel />
+            </div>
+            <div className="px-4 py-4 border-b border-stroke-subtle">
+              <CategoriesPanel />
+            </div>
 
             {/* Grid Settings */}
-            <div className="mt-auto pt-4 border-t border-stroke-subtle">
-              <h3 className="text-xs font-medium text-content-tertiary uppercase tracking-wide mb-2">
+            <div className="mt-auto px-4 py-4">
+              <h2 className="text-sm font-semibold text-content-secondary tracking-wide mb-3">
                 Grid Settings
-              </h3>
+              </h2>
               <div className="text-xs text-content-secondary">
                 <div className="flex items-center justify-between mb-2">
                   <label
@@ -126,7 +129,7 @@ export function Sidebar() {
                     <span className="text-content-tertiary">mm</span>
                   </div>
                 </div>
-                <div className="flex items-center justify-between mt-2 pt-2 border-t border-stroke-subtle">
+                <div className="flex items-center justify-between mt-2">
                   <label
                     htmlFor="printBedSize"
                     className="text-content-tertiary"
@@ -152,45 +155,39 @@ export function Sidebar() {
                 <div className="text-[10px] text-content-disabled mt-1 text-right">
                   Max bin size: {calcMaxGridUnits(printBedSize, gridUnitMm)}×{calcMaxGridUnits(printBedSize, gridUnitMm)}
                 </div>
-                <div className="mt-2 pt-2 border-t border-stroke-subtle text-content-disabled text-[10px] leading-relaxed">
-                  <a
-                    href="https://www.youtube.com/c/ZackFreedman"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-content-tertiary hover:underline"
-                  >
-                    Gridfinity
-                  </a>
-                  {' '}by Zack Freedman ·{' '}
-                  <a
-                    href="https://www.extrabold.tools/gridfinity-baseplate"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-content-tertiary hover:underline"
-                  >
-                    Baseplates
-                  </a>
-                  <br />
-                  Tool by{' '}
-                  <a
-                    href="https://www.linkedin.com/in/andyhmai/"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-content-tertiary hover:underline"
-                  >
-                    Andy Aragon
-                  </a>
-                  {' '}·{' '}
-                  <a
-                    href="https://ko-fi.com/andyaragon"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-accent hover:underline"
-                  >
-                    🧵 Tip
-                  </a>
-                </div>
               </div>
+            </div>
+
+            {/* Attribution */}
+            <div className="px-4 py-4 border-t border-stroke-subtle text-content-disabled text-[10px] leading-relaxed">
+              Gridfinity by{' '}
+              <a
+                href="https://www.youtube.com/c/ZackFreedman"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-content-tertiary hover:underline"
+              >
+                Zack Freedman
+              </a>
+              <br />
+              Tool by{' '}
+              <a
+                href="https://www.linkedin.com/in/andyhmai/"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-content-tertiary hover:underline"
+              >
+                Andy Aragon
+              </a>
+              {' '}·{' '}
+              <a
+                href="https://ko-fi.com/andyaragon"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-accent hover:underline"
+              >
+                Tip
+              </a>
             </div>
           </div>
         </>

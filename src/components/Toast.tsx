@@ -11,7 +11,7 @@ export function ToastContainer() {
       {toasts.map((toast) => (
         <div
           key={toast.id}
-          className={`flex items-start gap-3 p-4 rounded-lg shadow-lg border ${
+          className={`flex items-center gap-3 p-4 rounded-lg shadow-lg border ${
             toast.type === 'error'
               ? 'bg-toast-error border-error text-on-dark'
               : toast.type === 'success'
@@ -22,7 +22,7 @@ export function ToastContainer() {
         >
           {toast.type === 'error' && (
             <svg
-              className="w-5 h-5 flex-shrink-0 mt-0.5"
+              className="w-5 h-5 flex-shrink-0"
               fill="none"
               viewBox="0 0 24 24"
               stroke="currentColor"
@@ -38,7 +38,7 @@ export function ToastContainer() {
           )}
           {toast.type === 'success' && (
             <svg
-              className="w-5 h-5 flex-shrink-0 mt-0.5"
+              className="w-5 h-5 flex-shrink-0"
               fill="none"
               viewBox="0 0 24 24"
               stroke="currentColor"

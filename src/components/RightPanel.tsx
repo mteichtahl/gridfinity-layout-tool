@@ -6,7 +6,6 @@ import { generatePrintList, getTotalBins, getTotalPieces, getTotalFilament, getS
 import { getLayerZStart } from '../utils/collision';
 import { clamp } from '../utils/validation';
 import { exportPrintListTSV } from '../utils/storage';
-import { useAdvancedLayerMode } from '../hooks/useAdvancedLayerMode';
 import { ConfirmDialog } from './modals/ConfirmDialog';
 import type { PrintPiece } from '../types';
 
@@ -126,7 +125,6 @@ export function RightPanel() {
   );
 
   const { execute } = useUndoableAction();
-  const showAdvancedLayers = useAdvancedLayerMode();
 
   // Single selection vs multi-selection
   const selectedBins = layout.bins.filter(b => selectedBinIds.includes(b.id));
@@ -174,6 +172,19 @@ export function RightPanel() {
     execute(() => {
       for (const b of selectedBins) {
         updateBin(b.id, { category: categoryId });
+      }
+    });
+  };
+
+  const handleUpdateMultiHeight = (delta: number) => {
+    if (selectedBins.length === 0) return;
+    execute(() => {
+      for (const b of selectedBins) {
+        const binLayer = layout.layers.find(l => l.id === b.layerId);
+        const minHeight = binLayer?.height || 1;
+        const binMaxHeight = layout.drawer.height - getLayerZStart(b.layerId, layout.layers);
+        const newHeight = clamp(b.height + delta, minHeight, binMaxHeight);
+        updateBin(b.id, { height: newHeight });
       }
     });
   };
@@ -257,7 +268,7 @@ export function RightPanel() {
       {/* Header */}
       <div className="flex items-center gap-3 px-4 py-3 border-b border-stroke-subtle">
         {collapseButton}
-        <h2 className="text-sm font-semibold text-content-secondary uppercase tracking-wider">
+        <h2 className="text-xs font-semibold text-content-tertiary uppercase tracking-wider">
           Inspector
         </h2>
       </div>
@@ -296,24 +307,74 @@ export function RightPanel() {
             <label className="block mb-1 text-xs text-content-tertiary">
               Category
             </label>
-            <select
-              value={
-                // Show common category if all selected bins have the same one, otherwise empty
-                selectedBins.every(b => b.category === selectedBins[0]?.category)
-                  ? selectedBins[0]?.category || ''
-                  : ''
-              }
-              onChange={(e) => handleUpdateMultiCategory(e.target.value)}
-              className="input w-full"
-              aria-label="Category for selected bins"
-            >
-              {!selectedBins.every(b => b.category === selectedBins[0]?.category) && (
-                <option value="" disabled>Mixed categories</option>
+            <div className="relative">
+              {selectedBins.every(b => b.category === selectedBins[0]?.category) ? (
+                <div
+                  className="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 rounded pointer-events-none"
+                  style={{ backgroundColor: layout.categories.find(c => c.id === selectedBins[0]?.category)?.color || DEFAULT_CATEGORY_COLOR }}
+                />
+              ) : (
+                <div className="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 rounded pointer-events-none bg-surface-hover border border-stroke-subtle" />
               )}
-              {layout.categories.map(c => (
-                <option key={c.id} value={c.id}>{c.name}</option>
-              ))}
-            </select>
+              <select
+                value={
+                  // Show common category if all selected bins have the same one, otherwise empty
+                  selectedBins.every(b => b.category === selectedBins[0]?.category)
+                    ? selectedBins[0]?.category || ''
+                    : ''
+                }
+                onChange={(e) => handleUpdateMultiCategory(e.target.value)}
+                className="input w-full pl-8 pr-8 appearance-none"
+                aria-label="Category for selected bins"
+              >
+                {!selectedBins.every(b => b.category === selectedBins[0]?.category) && (
+                  <option value="" disabled>Mixed categories</option>
+                )}
+                {layout.categories.map(c => (
+                  <option key={c.id} value={c.id}>{c.name}</option>
+                ))}
+              </select>
+              <svg
+                className="absolute right-2.5 top-1/2 -translate-y-1/2 w-4 h-4 pointer-events-none text-content-tertiary"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+              </svg>
+            </div>
+          </div>
+
+          {/* Height control for multiple bins */}
+          <div className="mb-3">
+            <label className="block mb-1 text-xs text-content-tertiary">
+              Height
+            </label>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => handleUpdateMultiHeight(-1)}
+                className="btn btn-secondary w-10 h-10 p-0 min-w-[40px] min-h-[40px]"
+                aria-label="Decrease height"
+              >
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 12H4" />
+                </svg>
+              </button>
+              <span className="flex-1 text-center font-semibold text-lg text-content">
+                {selectedBins.every(b => b.height === selectedBins[0]?.height)
+                  ? `${selectedBins[0]?.height}u`
+                  : 'Mixed'}
+              </span>
+              <button
+                onClick={() => handleUpdateMultiHeight(1)}
+                className="btn btn-secondary w-10 h-10 p-0 min-w-[40px] min-h-[40px]"
+                aria-label="Increase height"
+              >
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                </svg>
+              </button>
+            </div>
           </div>
 
           {/* Actions for multiple bins */}
@@ -387,42 +448,40 @@ export function RightPanel() {
               </div>
             </div>
 
-            {/* Height control with +/- buttons - only in advanced mode */}
-            {showAdvancedLayers && (
-              <div>
-                <label className="block mb-1 text-xs text-content-tertiary">
-                  Height
-                </label>
-                <div className="flex items-center gap-2">
-                  <button
-                    onClick={() => handleUpdateBin('height', bin.height - 1)}
-                    disabled={bin.height <= (layer?.height ?? 1)}
-                    className="btn btn-secondary w-10 h-10 p-0 min-w-[40px] min-h-[40px]"
-                    aria-label="Decrease height"
-                  >
-                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 12H4" />
-                    </svg>
-                  </button>
-                  <span className="flex-1 text-center font-semibold text-lg text-content">
-                    {bin.height}u
-                  </span>
-                  <button
-                    onClick={() => handleUpdateBin('height', bin.height + 1)}
-                    disabled={bin.height >= maxBinHeight}
-                    className="btn btn-secondary w-10 h-10 p-0 min-w-[40px] min-h-[40px]"
-                    aria-label="Increase height"
-                  >
-                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-                    </svg>
-                  </button>
-                </div>
-                <div className="text-center mt-1 text-xs text-content-disabled">
-                  Range: {layer?.height}u – {maxBinHeight}u
-                </div>
+            {/* Height control with +/- buttons */}
+            <div>
+              <label className="block mb-1 text-xs text-content-tertiary">
+                Height
+              </label>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => handleUpdateBin('height', bin.height - 1)}
+                  disabled={bin.height <= (layer?.height ?? 1)}
+                  className="btn btn-secondary w-10 h-10 p-0 min-w-[40px] min-h-[40px]"
+                  aria-label="Decrease height"
+                >
+                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 12H4" />
+                  </svg>
+                </button>
+                <span className="flex-1 text-center font-semibold text-lg text-content">
+                  {bin.height}u
+                </span>
+                <button
+                  onClick={() => handleUpdateBin('height', bin.height + 1)}
+                  disabled={bin.height >= maxBinHeight}
+                  className="btn btn-secondary w-10 h-10 p-0 min-w-[40px] min-h-[40px]"
+                  aria-label="Increase height"
+                >
+                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                  </svg>
+                </button>
               </div>
-            )}
+              <div className="text-center mt-1 text-xs text-content-disabled">
+                Range: {layer?.height}u – {maxBinHeight}u
+              </div>
+            </div>
 
             {/* Split warning */}
             {needsSplit && (
@@ -439,16 +498,30 @@ export function RightPanel() {
               <label className="block mb-1 text-xs text-content-tertiary">
                 Category
               </label>
-              <select
-                value={bin.category}
-                onChange={(e) => handleUpdateBin('category', e.target.value)}
-                className="input w-full"
-                aria-label="Bin category"
-              >
-                {layout.categories.map(c => (
-                  <option key={c.id} value={c.id}>{c.name}</option>
-                ))}
-              </select>
+              <div className="relative">
+                <div
+                  className="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 rounded pointer-events-none"
+                  style={{ backgroundColor: category?.color || DEFAULT_CATEGORY_COLOR }}
+                />
+                <select
+                  value={bin.category}
+                  onChange={(e) => handleUpdateBin('category', e.target.value)}
+                  className="input w-full pl-8 pr-8 appearance-none"
+                  aria-label="Bin category"
+                >
+                  {layout.categories.map(c => (
+                    <option key={c.id} value={c.id}>{c.name}</option>
+                  ))}
+                </select>
+                <svg
+                  className="absolute right-2.5 top-1/2 -translate-y-1/2 w-4 h-4 pointer-events-none text-content-tertiary"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                </svg>
+              </div>
             </div>
 
             {/* Label */}
@@ -475,7 +548,7 @@ export function RightPanel() {
                 value={bin.notes}
                 onChange={(e) => handleUpdateBin('notes', e.target.value.slice(0, CONSTRAINTS.NOTES_MAX_LENGTH))}
                 className="input w-full"
-                placeholder="Optional notes"
+                placeholder="e.g., 2 dividers, STL link, contents"
                 aria-label="Bin notes"
                 rows={3}
                 style={STYLES.textareaResize}

@@ -2,22 +2,26 @@ import { useState } from 'react';
 import { useShallow } from 'zustand/shallow';
 import { useLayoutStore, useUIStore, useUndoableAction } from '../../store';
 import { useToastStore } from '../../store/toast';
-import { useAdvancedLayerMode } from '../../hooks/useAdvancedLayerMode';
-import { ConfirmDialog } from '../modals/ConfirmDialog';
+
+// Square sizes
+const SQUARE_SIZES = [1, 2, 3, 4, 5, 6];
+
+// Rectangle sizes (width × depth where width < depth)
+const RECTANGLE_SIZES = [
+  { w: 1, d: 2 }, { w: 1, d: 3 }, { w: 1, d: 4 }, { w: 1, d: 5 }, { w: 1, d: 6 },
+  { w: 2, d: 3 }, { w: 2, d: 4 }, { w: 2, d: 5 }, { w: 2, d: 6 },
+  { w: 3, d: 4 }, { w: 3, d: 5 }, { w: 3, d: 6 },
+  { w: 4, d: 5 }, { w: 4, d: 6 },
+  { w: 5, d: 6 },
+];
 
 export function ActiveLayerPanel() {
-  const [showClearConfirm, setShowClearConfirm] = useState(false);
-  const [rotateRectangles, setRotateRectangles] = useState(false);
+  const [rotated, setRotated] = useState(false);
 
-  const showAdvancedLayers = useAdvancedLayerMode();
-
-  const { layout, fillLayer, fillLayerGaps, clearLayer, addLayer } = useLayoutStore(
+  const { layout, fillLayer } = useLayoutStore(
     useShallow((state) => ({
       layout: state.layout,
       fillLayer: state.fillLayer,
-      fillLayerGaps: state.fillLayerGaps,
-      clearLayer: state.clearLayer,
-      addLayer: state.addLayer,
     }))
   );
 
@@ -26,21 +30,16 @@ export function ActiveLayerPanel() {
     activeCategoryId,
     paintSize,
     togglePaintSize,
-    setSelectedBins,
-    setActiveLayer,
   } = useUIStore(
     useShallow((state) => ({
       activeLayerId: state.activeLayerId,
       activeCategoryId: state.activeCategoryId,
       paintSize: state.paintSize,
       togglePaintSize: state.togglePaintSize,
-      setSelectedBins: state.setSelectedBins,
-      setActiveLayer: state.setActiveLayer,
     }))
   );
 
   const addToast = useToastStore(state => state.addToast);
-
   const { execute } = useUndoableAction();
 
   const isPaintActive = (w: number, d: number) =>
@@ -48,12 +47,6 @@ export function ActiveLayerPanel() {
 
   const activeLayer = layout.layers.find(l => l.id === activeLayerId);
   const layerBins = layout.bins.filter(b => b.layerId === activeLayerId);
-  const binCount = layerBins.length;
-
-  // Calculate coverage for Fill Gaps button state
-  const totalCells = layout.drawer.width * layout.drawer.depth;
-  const coveredCells = layerBins.reduce((sum, b) => sum + b.width * b.depth, 0);
-  const coverage = totalCells > 0 ? Math.round((coveredCells / totalCells) * 100) : 0;
 
   const handleFill = (width: number, depth: number) => {
     if (!activeLayerId) return;
@@ -61,7 +54,6 @@ export function ActiveLayerPanel() {
     execute(() => {
       fillLayer(activeLayerId, width, depth, activeCategoryId);
     });
-    // Count will be updated after state change, so use a timeout
     setTimeout(() => {
       const afterCount = useLayoutStore.getState().layout.bins.filter(b => b.layerId === activeLayerId).length;
       const added = afterCount - beforeCount;
@@ -71,184 +63,82 @@ export function ActiveLayerPanel() {
     }, 0);
   };
 
-  const handleFillGaps = () => {
-    if (!activeLayerId) return;
-    const beforeCount = layerBins.length;
-    execute(() => {
-      fillLayerGaps(activeLayerId, activeCategoryId);
-    });
-    setTimeout(() => {
-      const afterCount = useLayoutStore.getState().layout.bins.filter(b => b.layerId === activeLayerId).length;
-      const added = afterCount - beforeCount;
-      if (added > 0) {
-        addToast(`Filled ${added} gaps with 1×1 bins`, 'success');
-      }
-    }, 0);
-  };
-
-  const handleClear = () => {
-    if (!activeLayerId || layerBins.length === 0) return;
-    const count = layerBins.length;
-    execute(() => {
-      clearLayer(activeLayerId);
-      setSelectedBins([]);
-    });
-    addToast(`Cleared ${count} bins from layer`, 'success');
-  };
-
-  const handleAddLevel = () => {
-    execute(() => {
-      const id = addLayer();
-      if (id) {
-        setActiveLayer(id);
-      }
-    });
-  };
-
   if (!activeLayer) return null;
 
-  return (
-    <div className="panel p-4">
-      {/* Bin Palette header */}
-      <h2 className="section-header m-0 mb-3">
-        Bin Palette
-      </h2>
-
-      {/* Bin size grid - organized by shape */}
-      <div className="space-y-3">
-        {/* Squares row */}
-        <div>
-          <div className="text-[10px] text-content-disabled mb-1.5">Squares</div>
-          <div className="flex gap-1.5">
-            {[1, 2, 3, 4, 5, 6].map(size => {
-              const isActive = isPaintActive(size, size);
-              return (
-                <button
-                  key={`${size}×${size}`}
-                  onClick={() => togglePaintSize({ width: size, depth: size })}
-                  onDoubleClick={() => handleFill(size, size)}
-                  className={`btn flex-1 flex flex-col items-center justify-center gap-0.5 min-w-0 h-[44px] p-1 ${isActive ? 'btn-primary' : 'btn-secondary'}`}
-                  aria-label={`${isActive ? 'Deselect' : 'Select'} ${size}×${size} for painting`}
-                  title={`Click to paint ${size}×${size} bins. Double-click to fill layer.`}
-                >
-                  <div
-                    className="rounded-sm"
-                    style={{
-                      width: `${6 + size * 2}px`,
-                      height: `${6 + size * 2}px`,
-                      backgroundColor: isActive ? 'var(--overlay-light)' : '#94a3b8',
-                    }}
-                  />
-                  <span className={`text-[9px] ${isActive ? '' : 'text-content-secondary'}`}>{size}×{size}</span>
-                </button>
-              );
-            })}
-          </div>
-        </div>
-
-        {/* Rectangles - organized by width */}
-        <div>
-          <div className="text-[10px] text-content-disabled mb-1.5 flex items-center justify-between">
-            <span>Rectangles</span>
-            <button
-              onClick={() => setRotateRectangles(!rotateRectangles)}
-              className={`btn py-0.5 px-1.5 text-[9px] flex items-center gap-[3px] ${rotateRectangles ? 'btn-primary' : 'btn-secondary'}`}
-              aria-label={rotateRectangles ? 'Show vertical rectangles' : 'Show horizontal rectangles'}
-              title={rotateRectangles ? 'Vertical (taller)' : 'Horizontal (wider)'}
-            >
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M21 12a9 9 0 0 0-9-9M3 12a9 9 0 0 1 9-9M21 12a9 9 0 0 1-9 9M3 12a9 9 0 0 0 9 9" />
-                <polyline points="16 3 21 3 21 8" />
-                <polyline points="8 21 3 21 3 16" />
-              </svg>
-              {rotateRectangles ? 'Wide' : 'Tall'}
-            </button>
-          </div>
-          <div className="grid grid-cols-5 gap-1.5">
-            {[
-              [1,2], [1,3], [1,4], [1,5], [1,6],
-              [2,3], [2,4], [2,5], [2,6],
-              [3,4], [3,5], [3,6],
-              [4,5], [4,6],
-              [5,6],
-            ].map(([baseW, baseD]) => {
-              // When rotated, swap width and depth to make horizontal rectangles
-              const w = rotateRectangles ? baseD : baseW;
-              const d = rotateRectangles ? baseW : baseD;
-              const isActive = isPaintActive(w, d);
-              return (
-                <button
-                  key={`${w}×${d}`}
-                  onClick={() => togglePaintSize({ width: w, depth: d })}
-                  onDoubleClick={() => handleFill(w, d)}
-                  className={`btn flex flex-col items-center justify-center gap-0.5 min-w-0 h-[44px] p-1 ${isActive ? 'btn-primary' : 'btn-secondary'}`}
-                  aria-label={`${isActive ? 'Deselect' : 'Select'} ${w}×${d} for painting`}
-                  title={`Click to paint ${w}×${d} bins. Double-click to fill layer.`}
-                >
-                  <div
-                    className="rounded-sm"
-                    style={{
-                      width: `${6 + w * 2}px`,
-                      height: `${6 + d * 2}px`,
-                      backgroundColor: isActive ? 'var(--overlay-light)' : '#94a3b8',
-                    }}
-                  />
-                  <span className={`text-[9px] ${isActive ? '' : 'text-content-secondary'}`}>{w}×{d}</span>
-                </button>
-              );
-            })}
-          </div>
-        </div>
-      </div>
-
-      {/* Fill Gaps and Clear */}
-      <div className="flex gap-2 mt-3">
-        <button
-          onClick={handleFillGaps}
-          disabled={coverage === 100}
-          className={`btn flex-1 justify-center ${coverage === 100 ? 'bg-[var(--bg-disabled)] text-content-disabled' : ''}`}
-          style={coverage === 100 ? undefined : {
-            background: 'linear-gradient(180deg, var(--color-success) 0%, #16a34a 100%)',
-            color: '#fff',
+  // Helper to render a size button with proportional preview
+  const SizeButton = ({ w, d, className = '' }: { w: number; d: number; className?: string }) => {
+    const isActive = isPaintActive(w, d);
+    // Pure proportional sizing for correct aspect ratios
+    // Multiplier of 4 ensures 6x6 (24x24px) fits within narrow grid cells
+    const previewWidth = w * 4;
+    const previewHeight = d * 4;
+    return (
+      <button
+        onClick={() => togglePaintSize({ width: w, depth: d })}
+        className={`flex flex-col items-center justify-end gap-1 h-[60px] p-1.5 rounded transition-colors ${isActive ? 'bg-accent/20' : 'hover:bg-surface-hover'} ${className}`}
+        aria-label={`${isActive ? 'Deselect' : 'Select'} ${w}×${d} for painting`}
+        title={`Click to paint ${w}×${d} bins`}
+      >
+        <div
+          className="rounded-[1px]"
+          style={{
+            width: previewWidth,
+            height: previewHeight,
+            backgroundColor: isActive ? 'var(--color-accent)' : 'var(--text-tertiary)',
           }}
-          aria-label="Fill gaps with 1×1 bins"
-          title="Fill remaining empty cells with 1×1 bins"
-        >
-          Fill Gaps
-        </button>
-        <button
-          onClick={() => setShowClearConfirm(true)}
-          disabled={layerBins.length === 0}
-          className="btn btn-danger flex-1 justify-center"
-          aria-label={`Clear all ${layerBins.length} bins from layer`}
-          title="Remove all bins from this layer"
-        >
-          Clear
-        </button>
+        />
+        <span className={`text-[9px] ${isActive ? 'text-accent' : 'text-content-tertiary'}`}>{w}×{d}</span>
+      </button>
+    );
+  };
+
+  // Get rectangle dimensions based on rotation state
+  const getRectDims = (w: number, d: number) => rotated ? { w: d, d: w } : { w, d };
+
+  return (
+    <div>
+      {/* Bin Palette header */}
+      <h2 className="text-sm font-semibold text-content-secondary tracking-wide mb-3" title="Select a size, then click or drag on the grid to place bins">Bin Palette</h2>
+
+      {/* Squares section */}
+      <div className="text-xs text-content-tertiary mb-1.5">Squares</div>
+      <div className="grid grid-cols-6 gap-1.5">
+        {SQUARE_SIZES.map(size => (
+          <SizeButton key={`${size}×${size}`} w={size} d={size} className="w-full" />
+        ))}
       </div>
 
-      {/* Add another level - only in simple mode */}
-      {!showAdvancedLayers && (
+      {/* Rectangles section */}
+      <div className="flex items-center justify-between mt-3 mb-1.5">
+        <span className="text-xs text-content-tertiary">Rectangles</span>
         <button
-          onClick={handleAddLevel}
-          className="btn btn-secondary w-full justify-center mt-3 text-xs"
+          onClick={() => setRotated(!rotated)}
+          className="text-xs text-content-tertiary hover:text-content flex items-center gap-1 transition-colors"
+          title={rotated ? 'Showing tall bins (click for wide)' : 'Showing wide bins (click for tall)'}
         >
-          <svg className="w-4 h-4 mr-1.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+          <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
           </svg>
-          Add another level
+          {rotated ? 'Tall' : 'Wide'}
+        </button>
+      </div>
+      <div className="grid grid-cols-5 gap-1.5">
+        {RECTANGLE_SIZES.map(({ w, d }) => {
+          const dims = getRectDims(w, d);
+          return <SizeButton key={`${w}×${d}`} w={dims.w} d={dims.d} className="w-full" />;
+        })}
+      </div>
+
+      {/* Fill button when size selected */}
+      {paintSize && (
+        <button
+          onClick={() => handleFill(paintSize.width, paintSize.depth)}
+          className="btn btn-primary w-full justify-center mt-3 text-sm"
+          title={`Fill empty space with ${paintSize.width}×${paintSize.depth} bins`}
+        >
+          Fill with {paintSize.width}×{paintSize.depth}
         </button>
       )}
-
-      <ConfirmDialog
-        isOpen={showClearConfirm}
-        title="Clear Layer"
-        message={`Are you sure you want to remove all ${binCount} bin${binCount !== 1 ? 's' : ''} from "${activeLayer.name}"? This action can be undone.`}
-        confirmText="Clear All"
-        destructive
-        onConfirm={handleClear}
-        onCancel={() => setShowClearConfirm(false)}
-      />
     </div>
   );
 }

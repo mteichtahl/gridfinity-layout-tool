@@ -85,13 +85,14 @@ export function CategoriesPanel() {
   const canAddCategory = categories.length < CONSTRAINTS.CATEGORIES_MAX;
 
   return (
-    <div className="panel p-4">
+    <div>
       <div className="flex justify-between items-center mb-3">
-        <h2 className="section-header m-0">Categories</h2>
+        <h2 className="text-sm font-semibold text-content-secondary tracking-wide" title="Color-code your bins by category. New bins use the selected category.">Categories</h2>
         <button
           onClick={handleAddCategory}
           disabled={!canAddCategory}
           className="btn btn-ghost w-7 h-7 p-0 min-w-0 min-h-0"
+          title="Add a new category"
           aria-label="Add new category"
         >
           <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -115,6 +116,7 @@ export function CategoriesPanel() {
               role="button"
               tabIndex={0}
               aria-pressed={isActive}
+              title={isActive ? `${category.name} (selected for new bins)` : `Click to select ${category.name} for new bins`}
               onKeyDown={(e) => {
                 if (e.key === 'Enter' || e.key === ' ') {
                   e.preventDefault();
@@ -191,14 +193,9 @@ export function CategoriesPanel() {
                     </svg>
                   </button>
                   {isActive && (
-                    <span className="badge badge-info text-[10px] py-0 px-1.5">
-                      active
-                    </span>
-                  )}
-                  {inUse && !isActive && (
-                    <span className="text-xs text-content-disabled">
-                      in use
-                    </span>
+                    <svg className="w-4 h-4 text-accent flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                    </svg>
                   )}
                 </>
               )}

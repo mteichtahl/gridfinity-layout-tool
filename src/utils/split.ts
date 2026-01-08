@@ -111,20 +111,19 @@ export function generatePrintList(
   // Filter out staging bins
   const placedBins = bins.filter(b => b.layerId !== STAGING_ID);
 
-  // Group by size, height, and label (labeled bins are not grouped together)
-  const groups = new Map<string, { width: number; depth: number; height: number; count: number; categoryIds: Set<string>; label: string; notes: string }>();
+  // Group by size, height, category, and label (labeled bins are not grouped together)
+  const groups = new Map<string, { width: number; depth: number; height: number; count: number; categoryId: string; label: string; notes: string }>();
 
   for (const bin of placedBins) {
-    // Labeled bins get their own row; unlabeled bins are grouped together
+    // Labeled bins get their own row; unlabeled bins are grouped by size+height+category
     const key = bin.label
-      ? `${bin.width}×${bin.depth}×${bin.height}:${bin.id}` // Unique key for labeled bins
-      : `${bin.width}×${bin.depth}×${bin.height}`;
+      ? `${bin.width}×${bin.depth}×${bin.height}:${bin.category}:${bin.id}` // Unique key for labeled bins
+      : `${bin.width}×${bin.depth}×${bin.height}:${bin.category}`;
     const existing = groups.get(key);
     if (existing) {
       existing.count++;
-      existing.categoryIds.add(bin.category);
     } else {
-      groups.set(key, { width: bin.width, depth: bin.depth, height: bin.height, count: 1, categoryIds: new Set([bin.category]), label: bin.label, notes: bin.notes });
+      groups.set(key, { width: bin.width, depth: bin.depth, height: bin.height, count: 1, categoryId: bin.category, label: bin.label, notes: bin.notes });
     }
   }
 
@@ -152,7 +151,7 @@ export function generatePrintList(
       totalPieces,
       needsSplit,
       filament,
-      categoryIds: Array.from(group.categoryIds),
+      categoryIds: [group.categoryId],
       labels: group.label ? [group.label] : [],
       notes: group.notes,
     });

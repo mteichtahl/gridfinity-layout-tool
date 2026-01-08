@@ -30,12 +30,15 @@ export function fillAllWithSize(
         break;
       }
 
-      const actualWidth = Math.min(binWidth, layout.drawer.width - x);
-      const actualDepth = Math.min(binDepth, layout.drawer.depth - y);
+      // Skip if the full bin size doesn't fit within drawer bounds
+      if (x + binWidth > layout.drawer.width || y + binDepth > layout.drawer.depth) {
+        skippedCells++;
+        continue;
+      }
 
       let alreadyCovered = false;
-      for (let cx = x; cx < x + actualWidth && !alreadyCovered; cx++) {
-        for (let cy = y; cy < y + actualDepth && !alreadyCovered; cy++) {
+      for (let cx = x; cx < x + binWidth && !alreadyCovered; cx++) {
+        for (let cy = y; cy < y + binDepth && !alreadyCovered; cy++) {
           if (covered.has(`${cx},${cy}`)) {
             alreadyCovered = true;
           }
@@ -52,7 +55,7 @@ export function fillAllWithSize(
       };
 
       const result = canPlaceBin(
-        { x, y, width: actualWidth, depth: actualDepth, height: layer.height },
+        { x, y, width: binWidth, depth: binDepth, height: layer.height },
         layerId,
         tempLayout
       );
@@ -63,8 +66,8 @@ export function fillAllWithSize(
           layerId,
           x,
           y,
-          width: actualWidth,
-          depth: actualDepth,
+          width: binWidth,
+          depth: binDepth,
           height: layer.height,
           category: categoryId,
           label: '',
@@ -72,8 +75,8 @@ export function fillAllWithSize(
         };
         newBins.push(newBin);
 
-        for (let cx = x; cx < x + actualWidth; cx++) {
-          for (let cy = y; cy < y + actualDepth; cy++) {
+        for (let cx = x; cx < x + binWidth; cx++) {
+          for (let cy = y; cy < y + binDepth; cy++) {
             covered.add(`${cx},${cy}`);
           }
         }
