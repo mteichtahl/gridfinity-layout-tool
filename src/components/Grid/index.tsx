@@ -35,6 +35,7 @@ export function Grid() {
     setSelectedBins,
     leftPanelCollapsed,
     toggleLeftPanel,
+    interaction,
   } = useUIStore(
     useShallow((state) => ({
       zoom: state.zoom,
@@ -51,6 +52,7 @@ export function Grid() {
       setSelectedBins: state.setSelectedBins,
       leftPanelCollapsed: state.leftPanelCollapsed,
       toggleLeftPanel: state.toggleLeftPanel,
+      interaction: state.interaction,
     }))
   );
 
@@ -456,8 +458,8 @@ export function Grid() {
               />
               <Overlay gridRef={gridRef} cellSize={cellSize} gap={gap} />
 
-              {/* Empty state overlay */}
-              {isEmpty && (
+              {/* Empty state overlay - hide while dragging */}
+              {isEmpty && !interaction && (
                 <div
                   className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none z-[5]"
                 >

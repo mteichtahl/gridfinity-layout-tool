@@ -1,4 +1,5 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useRef, useEffect } from 'react';
+import { useShallow } from 'zustand/shallow';
 import { useLayoutStore, useUIStore, useUndoableAction } from '../store';
 import { useToastStore } from '../store/toast';
 import { STAGING_ID, BASE_CELL_SIZE, DEFAULT_CATEGORY_COLOR } from '../constants';
@@ -69,12 +70,19 @@ function packBins(bins: PackedBin[], gridWidth: number): PackedBin[] {
 export function Staging() {
   const layout = useLayoutStore(state => state.layout);
   const deleteBin = useLayoutStore(state => state.deleteBin);
-  const zoom = useUIStore(state => state.zoom);
-  const interaction = useUIStore(state => state.interaction);
-  const setInteraction = useUIStore(state => state.setInteraction);
+  const { zoom, interaction, setInteraction, dropTarget, setDropTarget } = useUIStore(
+    useShallow((state) => ({
+      zoom: state.zoom,
+      interaction: state.interaction,
+      setInteraction: state.setInteraction,
+      dropTarget: state.dropTarget,
+      setDropTarget: state.setDropTarget,
+    }))
+  );
   const { execute } = useUndoableAction();
   const [showClearConfirm, setShowClearConfirm] = useState(false);
   const addToast = useToastStore(state => state.addToast);
+  const containerRef = useRef<HTMLDivElement>(null);
 
   const stagingBins = useMemo(() =>
     layout.bins.filter(bin => bin.layerId === STAGING_ID),
@@ -135,7 +143,33 @@ export function Staging() {
   };
 
   const isDraggingStagingBin = interaction?.type === 'stagingDrag';
+  const isDraggingFromGrid = interaction?.type === 'drag';
   const draggingBinId = isDraggingStagingBin ? interaction.binId : null;
+  const isDropTarget = dropTarget === 'staging';
+
+  // Track pointer position to set drop target when hovering over stash
+  useEffect(() => {
+    if (!isDraggingFromGrid) return;
+
+    const handlePointerMove = (e: PointerEvent) => {
+      const rect = containerRef.current?.getBoundingClientRect();
+      if (!rect) return;
+
+      const isOver = e.clientX >= rect.left &&
+        e.clientX <= rect.right &&
+        e.clientY >= rect.top &&
+        e.clientY <= rect.bottom;
+
+      if (isOver && dropTarget !== 'staging') {
+        setDropTarget('staging');
+      } else if (!isOver && dropTarget === 'staging') {
+        setDropTarget(null);
+      }
+    };
+
+    document.addEventListener('pointermove', handlePointerMove);
+    return () => document.removeEventListener('pointermove', handlePointerMove);
+  }, [isDraggingFromGrid, dropTarget, setDropTarget]);
 
   // Generate grid cells for visual reference
   const cells: React.JSX.Element[] = [];
@@ -157,14 +191,41 @@ export function Staging() {
     }
   }
 
-  // Don't render anything if no bins are staged
-  if (stagingBins.length === 0) {
+  // Show when bins are staged OR when dragging from grid (as drop target)
+  const hasBins = stagingBins.length > 0;
+  if (!hasBins && !isDraggingFromGrid) {
     return null;
+  }
+
+  // Empty drop zone when dragging but no bins stashed
+  if (!hasBins && isDraggingFromGrid) {
+    return (
+      <div
+        ref={containerRef}
+        className={`px-4 py-3 flex-shrink-0 border-t-2 border-dashed transition-colors ${
+          isDropTarget
+            ? 'border-accent bg-accent/10'
+            : 'border-stroke bg-surface-secondary'
+        }`}
+      >
+        <div className="flex items-center justify-center gap-2 py-2 text-sm text-content-tertiary">
+          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
+          </svg>
+          <span>{isDropTarget ? 'Drop to stash' : 'Drop here to stash'}</span>
+        </div>
+      </div>
+    );
   }
 
   return (
     <div
-      className="px-4 py-3 flex-shrink-0 overflow-x-auto border-t-2 border-dashed border-stroke bg-surface-secondary"
+      ref={containerRef}
+      className={`px-4 py-3 flex-shrink-0 overflow-x-auto border-t-2 border-dashed transition-colors ${
+        isDropTarget
+          ? 'border-accent bg-accent/10'
+          : 'border-stroke bg-surface-secondary'
+      }`}
     >
       {/* Header */}
       <div className="flex items-center justify-between mb-2">
