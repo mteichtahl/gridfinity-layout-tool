@@ -1,4 +1,4 @@
-import type { RefObject, MouseEvent } from 'react';
+import type { RefObject, PointerEvent } from 'react';
 import React from 'react';
 import { useUIStore, useLayoutStore } from '../../store';
 import { useGridCoords } from '../../hooks';
@@ -46,7 +46,7 @@ export function GridCanvas({ gridRef, cellSize, gap, onStartDraw, onStartDrag, o
   const blockedZones = getBlockedZones(activeLayerId, bins, layers);
 
   // Capture phase handler for paint mode - runs before Bin components can stop propagation
-  const handleMouseDownCapture = (e: MouseEvent<HTMLDivElement>) => {
+  const handlePointerDownCapture = (e: PointerEvent<HTMLDivElement>) => {
     if (e.button !== 0) return;
 
     // In paint mode, intercept all clicks to start paint interaction
@@ -61,7 +61,7 @@ export function GridCanvas({ gridRef, cellSize, gap, onStartDraw, onStartDrag, o
   };
 
   // Bubble phase handler for normal draw mode
-  const handleMouseDown = (e: MouseEvent<HTMLDivElement>) => {
+  const handlePointerDown = (e: PointerEvent<HTMLDivElement>) => {
     // Only start draw on left click on empty space (paint mode handled in capture)
     if (e.button !== 0 || paintSize) return;
     if ((e.target as HTMLElement).closest('[data-bin-id]')) return;
@@ -100,9 +100,9 @@ export function GridCanvas({ gridRef, cellSize, gap, onStartDraw, onStartDrag, o
   return (
     <div
       className="absolute inset-0"
-      onMouseDownCapture={handleMouseDownCapture}
-      onMouseDown={handleMouseDown}
-      style={{ cursor: paintSize ? 'cell' : 'crosshair' }}
+      onPointerDownCapture={handlePointerDownCapture}
+      onPointerDown={handlePointerDown}
+      style={{ cursor: paintSize ? 'cell' : 'crosshair', touchAction: 'none' }}
     >
       {/* CSS Grid container */}
       <div

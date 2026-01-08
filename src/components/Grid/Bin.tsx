@@ -1,4 +1,4 @@
-import type { MouseEvent } from 'react';
+import type { PointerEvent } from 'react';
 import type { Bin as BinType, Category, Layer, ResizeHandle } from '../../types';
 import { useUIStore, useLayoutStore } from '../../store';
 import { calcMaxGridUnits } from '../../constants';
@@ -75,7 +75,7 @@ export function Bin({ bin, category, layer, drawer, isGhost, isSelected, onStart
   const dimensionFontSize = Math.round(14 * fontScale);
   const labelFontSize = Math.round(12 * fontScale);
 
-  const handleMouseDown = (e: MouseEvent<HTMLDivElement>) => {
+  const handlePointerDown = (e: PointerEvent<HTMLDivElement>) => {
     if (isGhost) return;
     e.preventDefault();
     e.stopPropagation();
@@ -100,7 +100,7 @@ export function Bin({ bin, category, layer, drawer, isGhost, isSelected, onStart
     }
   };
 
-  const handleResizeMouseDown = (e: MouseEvent<HTMLDivElement>, handle: ResizeHandle) => {
+  const handleResizePointerDown = (e: PointerEvent<HTMLDivElement>, handle: ResizeHandle) => {
     e.preventDefault();
     e.stopPropagation();
     if (e.button === 0) {
@@ -139,13 +139,14 @@ export function Bin({ bin, category, layer, drawer, isGhost, isSelected, onStart
         borderRadius: 'var(--radius-sm)',
         border: isSelected ? 'none' : '1px solid rgba(0,0,0,0.2)',
         cursor: isGhost ? 'default' : 'move',
+        touchAction: 'none',
         pointerEvents: isGhost || isBeingDragged ? 'none' : 'auto',
         opacity: isGhost ? 0.3 : isBeingDragged ? 0.3 : 1,
         zIndex: isGhost ? 5 : isSelected ? 20 : 10,
         boxShadow: getBoxShadow(),
         transform: getTransform(),
       }}
-      onMouseDown={handleMouseDown}
+      onPointerDown={handlePointerDown}
       role="button"
       aria-label={`Bin ${bin.width} by ${bin.depth}${bin.label ? `, labeled ${bin.label}` : ''}${category ? `, category ${category.name}` : ''}`}
       aria-pressed={isSelected}
@@ -242,7 +243,7 @@ export function Bin({ bin, category, layer, drawer, isGhost, isSelected, onStart
               cursor: 'ew-resize',
               boxShadow: 'var(--shadow-sm)',
             }}
-            onMouseDown={(e) => handleResizeMouseDown(e, 'e')}
+            onPointerDown={(e) => handleResizePointerDown(e, 'e')}
             role="slider"
             aria-label="Resize width"
             aria-orientation="horizontal"
@@ -261,7 +262,7 @@ export function Bin({ bin, category, layer, drawer, isGhost, isSelected, onStart
               cursor: 'ns-resize',
               boxShadow: 'var(--shadow-sm)',
             }}
-            onMouseDown={(e) => handleResizeMouseDown(e, 's')}
+            onPointerDown={(e) => handleResizePointerDown(e, 's')}
             role="slider"
             aria-label="Resize depth"
             aria-orientation="vertical"
@@ -279,7 +280,7 @@ export function Bin({ bin, category, layer, drawer, isGhost, isSelected, onStart
               cursor: 'nwse-resize',
               boxShadow: 'var(--shadow-md)',
             }}
-            onMouseDown={(e) => handleResizeMouseDown(e, 'se')}
+            onPointerDown={(e) => handleResizePointerDown(e, 'se')}
             role="slider"
             aria-label="Resize width and depth"
           />

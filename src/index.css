@@ -133,6 +133,94 @@
   --transition-normal: 150ms ease-out;
   --transition-slow: 250ms ease-out;
   --transition-spring: 200ms cubic-bezier(0.34, 1.56, 0.64, 1);
+
+  /* ===========================================
+     RESPONSIVE BREAKPOINTS
+     =========================================== */
+  --breakpoint-sm: 640px;
+  --breakpoint-md: 768px;
+  --breakpoint-lg: 1024px;
+  --breakpoint-xl: 1280px;
+
+  /* Mobile-specific sizing */
+  --bottom-nav-height: 56px;
+  --mobile-header-height: 48px;
+  --sheet-handle-height: 24px;
+}
+
+/* ===========================================
+   RESPONSIVE OVERRIDES - Tablet (768-1023px)
+   =========================================== */
+@media (min-width: 768px) and (max-width: 1023px) {
+  :root {
+    --sidebar-width: 280px;
+    --right-panel-width: 300px;
+  }
+}
+
+/* ===========================================
+   RESPONSIVE OVERRIDES - Mobile (<768px)
+   =========================================== */
+@media (max-width: 767px) {
+  :root {
+    /* Panels hidden on mobile - use sheets instead */
+    --sidebar-width: 0px;
+    --right-panel-width: 0px;
+    /* Smaller spacing on mobile */
+    --space-panel: 12px;
+    --space-section: 16px;
+    /* Slightly smaller text */
+    --text-base: 0.8125rem;
+  }
+
+  /* Ensure touch targets are large enough */
+  button,
+  [role="button"],
+  input[type="checkbox"],
+  input[type="radio"] {
+    min-height: var(--touch-target);
+    min-width: var(--touch-target);
+  }
+
+  /* Stack form elements */
+  .mobile-stack {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  /* Full-width inputs on mobile */
+  .mobile-full-width {
+    width: 100%;
+  }
+}
+
+/* ===========================================
+   SAFE AREA SUPPORT (notched devices)
+   =========================================== */
+@supports (padding-bottom: env(safe-area-inset-bottom)) {
+  .safe-area-bottom {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+
+  .safe-area-top {
+    padding-top: env(safe-area-inset-top);
+  }
+}
+
+/* ===========================================
+   TOUCH-SPECIFIC STYLES
+   =========================================== */
+@media (pointer: coarse) {
+  /* Larger resize handles on touch devices */
+  .resize-handle {
+    width: 32px !important;
+    height: 32px !important;
+  }
+
+  /* Disable hover effects that don't work well on touch */
+  .hover-only {
+    display: none;
+  }
 }
 
 /* ===========================================

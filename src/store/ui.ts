@@ -4,6 +4,8 @@ import { CONSTRAINTS } from '../constants';
 
 export type DropTarget = 'trash' | 'staging' | null;
 
+export type MobilePanel = 'layers' | 'inspector' | 'categories' | 'print' | 'settings' | null;
+
 export interface PaintSize {
   width: number;
   depth: number;
@@ -31,6 +33,9 @@ interface UIState {
   // Paint mode
   paintSize: PaintSize | null;
 
+  // Mobile
+  activeMobilePanel: MobilePanel;
+
   // Actions
   setActiveLayer: (id: string) => void;
   setSelectedBin: (id: string | null) => void; // Single select (clears others)
@@ -55,6 +60,11 @@ interface UIState {
   // Paint mode actions
   setPaintSize: (size: PaintSize | null) => void;
   togglePaintSize: (size: PaintSize) => void;
+
+  // Mobile panel actions
+  setActiveMobilePanel: (panel: MobilePanel) => void;
+  closeMobilePanel: () => void;
+  toggleMobilePanel: (panel: MobilePanel) => void;
 }
 
 export const useUIStore = create<UIState>((set) => ({
@@ -69,6 +79,7 @@ export const useUIStore = create<UIState>((set) => ({
   interaction: null,
   dropTarget: null,
   paintSize: null,
+  activeMobilePanel: null,
 
   setActiveLayer: (id) => set({
     activeLayerId: id,
@@ -142,5 +153,14 @@ export const useUIStore = create<UIState>((set) => ({
     paintSize: state.paintSize?.width === size.width && state.paintSize?.depth === size.depth
       ? null
       : size
+  })),
+
+  // Mobile panel actions
+  setActiveMobilePanel: (panel) => set({ activeMobilePanel: panel }),
+
+  closeMobilePanel: () => set({ activeMobilePanel: null }),
+
+  toggleMobilePanel: (panel) => set(state => ({
+    activeMobilePanel: state.activeMobilePanel === panel ? null : panel
   })),
 }));

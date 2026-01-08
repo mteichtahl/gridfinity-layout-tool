@@ -123,7 +123,7 @@ export function Staging() {
   };
 
   // Handle bin drag start from staging
-  const handleBinMouseDown = (binId: string, e: React.MouseEvent) => {
+  const handleBinPointerDown = (binId: string, e: React.PointerEvent) => {
     if (e.button !== 0) return;
     e.preventDefault();
     e.stopPropagation();
@@ -265,6 +265,7 @@ export function Staging() {
                 data-staging-bin-id={bin.id}
                 className="relative flex flex-col items-center justify-center transition-all duration-150 cursor-move"
                 style={{
+                  touchAction: 'none',
                   gridColumn: `${bin.x + 1} / span ${bin.width}`,
                   gridRow: `${gridHeight - bin.y - bin.depth + 1} / span ${bin.depth}`,
                   backgroundColor: bgColor,
@@ -275,7 +276,7 @@ export function Staging() {
                   boxShadow: '0 2px 4px rgba(0,0,0,0.2)',
                   zIndex: 10,
                 }}
-                onMouseDown={(e) => handleBinMouseDown(bin.id, e)}
+                onPointerDown={(e) => handleBinPointerDown(bin.id, e)}
                 title={`${bin.label || 'Unlabeled'} — ${bin.width}×${bin.depth}×${bin.height}u\nDrag to place on grid`}
               >
                 {/* Size label */}

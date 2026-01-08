@@ -116,11 +116,11 @@ export function useInteraction(gridRef: RefObject<HTMLDivElement | null>) {
     setInteraction(null);
   }, [setInteraction]);
 
-  // Document-level mouse tracking
+  // Document-level pointer tracking (unified mouse/touch/pen)
   useEffect(() => {
     if (!interaction) return;
 
-    const handleMouseMove = (e: MouseEvent) => {
+    const handlePointerMove = (e: PointerEvent) => {
       const coords = getGridCoords(e.clientX, e.clientY);
       if (!coords) return;
       const clamped = clampCoords(coords);
@@ -247,7 +247,7 @@ export function useInteraction(gridRef: RefObject<HTMLDivElement | null>) {
       }
     };
 
-    const handleMouseUp = () => {
+    const handlePointerUp = () => {
       // Read drop target directly from store to ensure we have the latest value
       const currentDropTarget = useUIStore.getState().dropTarget;
 
@@ -471,12 +471,14 @@ export function useInteraction(gridRef: RefObject<HTMLDivElement | null>) {
       setInteraction(null);
     };
 
-    document.addEventListener('mousemove', handleMouseMove);
-    document.addEventListener('mouseup', handleMouseUp);
+    document.addEventListener('pointermove', handlePointerMove);
+    document.addEventListener('pointerup', handlePointerUp);
+    document.addEventListener('pointercancel', handlePointerUp);
 
     return () => {
-      document.removeEventListener('mousemove', handleMouseMove);
-      document.removeEventListener('mouseup', handleMouseUp);
+      document.removeEventListener('pointermove', handlePointerMove);
+      document.removeEventListener('pointerup', handlePointerUp);
+      document.removeEventListener('pointercancel', handlePointerUp);
     };
   }, [interaction, layout, activeLayerId, activeCategoryId, addBin, updateBin, deleteBin, setInteraction, setDropTarget, setSelectedBin, setSelectedBins, getGridCoords, clampCoords, isInBounds, execute]);
 

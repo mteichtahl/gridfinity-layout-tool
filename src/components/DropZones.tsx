@@ -38,7 +38,7 @@ export function DropZones() {
       return;
     }
 
-    const handleMouseMove = (e: MouseEvent) => {
+    const handlePointerMove = (e: PointerEvent) => {
       const trashRect = trashRef.current?.getBoundingClientRect();
       const stagingRect = stagingRef.current?.getBoundingClientRect();
 
@@ -63,8 +63,8 @@ export function DropZones() {
       }
     };
 
-    document.addEventListener('mousemove', handleMouseMove);
-    return () => document.removeEventListener('mousemove', handleMouseMove);
+    document.addEventListener('pointermove', handlePointerMove);
+    return () => document.removeEventListener('pointermove', handlePointerMove);
   }, [isDragging, setDropTarget]);
 
   if (!isDragging || !interaction) {

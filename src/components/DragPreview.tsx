@@ -22,13 +22,13 @@ export function DragPreview() {
       return;
     }
 
-    const handleMouseMove = (e: MouseEvent) => {
+    const handlePointerMove = (e: PointerEvent) => {
       setMousePos({ x: e.clientX, y: e.clientY });
     };
 
     // Set initial position
-    document.addEventListener('mousemove', handleMouseMove);
-    return () => document.removeEventListener('mousemove', handleMouseMove);
+    document.addEventListener('pointermove', handlePointerMove);
+    return () => document.removeEventListener('pointermove', handlePointerMove);
   }, [interaction?.type]);
 
   if (!interaction || !mousePos) return null;
