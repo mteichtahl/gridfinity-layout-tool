@@ -1,10 +1,11 @@
 import { useRef, useState, useCallback, useEffect } from 'react';
 import { useUIStore, useLayoutStore, useUndoableAction } from '../../store';
-import { useInteraction } from '../../hooks';
+import { useInteraction, useResponsive } from '../../hooks';
 import { BASE_CELL_SIZE, STAGING_ID, CONSTRAINTS } from '../../constants';
 import { GridCanvas } from './GridCanvas';
 import { Overlay } from './Overlay';
 import { ConfirmDialog } from '../modals/ConfirmDialog';
+import { MobileGridToolbar } from '../mobile';
 
 type ResizeDirection = 'width' | 'depth' | 'both' | null;
 
@@ -13,6 +14,7 @@ type ResizeDirection = 'width' | 'depth' | 'both' | null;
  * Displays the drawer grid with bins, handles user interactions.
  */
 export function Grid() {
+  const { isMobile } = useResponsive();
   const gridRef = useRef<HTMLDivElement>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const zoom = useUIStore((state) => state.zoom);
@@ -263,236 +265,240 @@ export function Grid() {
 
   return (
     <div className="flex flex-col h-full" style={{ backgroundColor: 'var(--bg-primary)' }}>
-      {/* Toolbar */}
-      <div
-        className="flex items-center justify-between px-4 py-3"
-        style={{
-          backgroundColor: 'var(--bg-secondary)',
-          borderBottom: '1px solid var(--border-subtle)',
-        }}
-      >
-        {/* Left: Layer indicator */}
-        <div className="flex items-center gap-3">
-          {activeLayer && (
+      {/* Toolbar - mobile vs desktop */}
+      {isMobile ? (
+        <MobileGridToolbar onFitToScreen={fitToScreen} />
+      ) : (
+        <div
+          className="flex items-center justify-between px-4 py-3"
+          style={{
+            backgroundColor: 'var(--bg-secondary)',
+            borderBottom: '1px solid var(--border-subtle)',
+          }}
+        >
+          {/* Left: Layer indicator */}
+          <div className="flex items-center gap-3">
+            {activeLayer && (
+              <div
+                className="flex items-center gap-2 px-3 py-1.5 rounded-md"
+                style={{
+                  backgroundColor: 'var(--bg-elevated)',
+                  border: '1px solid var(--border-subtle)',
+                }}
+              >
+                <div
+                  className="w-2 h-2 rounded-full"
+                  style={{ backgroundColor: 'var(--color-primary)' }}
+                />
+                <span style={{ fontSize: 'var(--text-sm)', fontWeight: 'var(--font-medium)' }}>
+                  {activeLayer.name}
+                </span>
+                <span style={{ fontSize: 'var(--text-xs)', color: 'var(--text-tertiary)' }}>
+                  {activeLayer.height}u
+                </span>
+              </div>
+            )}
+            {/* Tool mode indicator */}
             <div
               className="flex items-center gap-2 px-3 py-1.5 rounded-md"
+              style={{
+                backgroundColor: paintSize ? 'var(--color-primary-muted)' : 'var(--bg-elevated)',
+                border: `1px solid ${paintSize ? 'var(--color-primary)' : 'var(--border-subtle)'}`,
+              }}
+            >
+              {paintSize ? (
+                <>
+                  {/* Paint brush icon */}
+                  <svg className="w-4 h-4" style={{ color: 'var(--color-primary)' }} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                  </svg>
+                  <span style={{ fontSize: 'var(--text-sm)', color: 'var(--color-primary)', fontWeight: 'var(--font-medium)' }}>
+                    Paint {paintSize.width}×{paintSize.depth}
+                  </span>
+                  <button
+                    onClick={() => setPaintSize(null)}
+                    className="btn btn-ghost p-0.5 ml-1"
+                    style={{ minWidth: 'auto', minHeight: 'auto' }}
+                    aria-label="Exit paint mode"
+                  >
+                    <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                  </button>
+                </>
+              ) : (
+                <>
+                  {/* Pencil/draw icon */}
+                  <svg className="w-4 h-4" style={{ color: 'var(--text-tertiary)' }} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                  </svg>
+                  <span style={{ fontSize: 'var(--text-sm)', color: 'var(--text-tertiary)' }}>
+                    Draw
+                  </span>
+                </>
+              )}
+            </div>
+
+            {/* Grid dimensions */}
+            <div
+              className="flex items-center gap-1 px-2 py-1 rounded-md"
               style={{
                 backgroundColor: 'var(--bg-elevated)',
                 border: '1px solid var(--border-subtle)',
               }}
             >
-              <div
-                className="w-2 h-2 rounded-full"
-                style={{ backgroundColor: 'var(--color-primary)' }}
-              />
-              <span style={{ fontSize: 'var(--text-sm)', fontWeight: 'var(--font-medium)' }}>
-                {activeLayer.name}
-              </span>
-              <span style={{ fontSize: 'var(--text-xs)', color: 'var(--text-tertiary)' }}>
-                {activeLayer.height}u
-              </span>
-            </div>
-          )}
-          {/* Tool mode indicator */}
-          <div
-            className="flex items-center gap-2 px-3 py-1.5 rounded-md"
-            style={{
-              backgroundColor: paintSize ? 'var(--color-primary-muted)' : 'var(--bg-elevated)',
-              border: `1px solid ${paintSize ? 'var(--color-primary)' : 'var(--border-subtle)'}`,
-            }}
-          >
-            {paintSize ? (
-              <>
-                {/* Paint brush icon */}
-                <svg className="w-4 h-4" style={{ color: 'var(--color-primary)' }} fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
-                </svg>
-                <span style={{ fontSize: 'var(--text-sm)', color: 'var(--color-primary)', fontWeight: 'var(--font-medium)' }}>
-                  Paint {paintSize.width}×{paintSize.depth}
-                </span>
+              <span style={{ fontSize: 'var(--text-xs)', color: 'var(--text-tertiary)' }}>Grid</span>
+              <div className="flex items-center">
                 <button
-                  onClick={() => setPaintSize(null)}
-                  className="btn btn-ghost p-0.5 ml-1"
-                  style={{ minWidth: 'auto', minHeight: 'auto' }}
-                  aria-label="Exit paint mode"
+                  onClick={() => handleDimensionChange('width', -1)}
+                  disabled={drawer.width <= 1}
+                  className="btn btn-ghost btn-icon"
+                  style={{ padding: '4px', minWidth: '28px', minHeight: '28px' }}
+                  aria-label="Decrease width"
                 >
-                  <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 12H4" />
                   </svg>
                 </button>
-              </>
-            ) : (
-              <>
-                {/* Pencil/draw icon */}
-                <svg className="w-4 h-4" style={{ color: 'var(--text-tertiary)' }} fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                </svg>
-                <span style={{ fontSize: 'var(--text-sm)', color: 'var(--text-tertiary)' }}>
-                  Draw
+                <span
+                  className="min-w-[28px] text-center font-medium tabular-nums"
+                  style={{ fontSize: 'var(--text-sm)', color: 'var(--text-primary)' }}
+                >
+                  {drawer.width}
                 </span>
-              </>
-            )}
-          </div>
-
-          {/* Grid dimensions */}
-          <div
-            className="flex items-center gap-1 px-2 py-1 rounded-md"
-            style={{
-              backgroundColor: 'var(--bg-elevated)',
-              border: '1px solid var(--border-subtle)',
-            }}
-          >
-            <span style={{ fontSize: 'var(--text-xs)', color: 'var(--text-tertiary)' }}>Grid</span>
-            <div className="flex items-center">
-              <button
-                onClick={() => handleDimensionChange('width', -1)}
-                disabled={drawer.width <= 1}
-                className="btn btn-ghost btn-icon"
-                style={{ padding: '4px', minWidth: '28px', minHeight: '28px' }}
-                aria-label="Decrease width"
-              >
-                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 12H4" />
-                </svg>
-              </button>
-              <span
-                className="min-w-[28px] text-center font-medium tabular-nums"
-                style={{ fontSize: 'var(--text-sm)', color: 'var(--text-primary)' }}
-              >
-                {drawer.width}
-              </span>
-              <button
-                onClick={() => handleDimensionChange('width', 1)}
-                disabled={drawer.width >= CONSTRAINTS.GRID_MAX}
-                className="btn btn-ghost btn-icon"
-                style={{ padding: '4px', minWidth: '28px', minHeight: '28px' }}
-                aria-label="Increase width"
-              >
-                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-                </svg>
-              </button>
-            </div>
-            <span style={{ fontSize: 'var(--text-xs)', color: 'var(--text-tertiary)' }}>×</span>
-            <div className="flex items-center">
-              <button
-                onClick={() => handleDimensionChange('depth', -1)}
-                disabled={drawer.depth <= 1}
-                className="btn btn-ghost btn-icon"
-                style={{ padding: '4px', minWidth: '28px', minHeight: '28px' }}
-                aria-label="Decrease depth"
-              >
-                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 12H4" />
-                </svg>
-              </button>
-              <span
-                className="min-w-[28px] text-center font-medium tabular-nums"
-                style={{ fontSize: 'var(--text-sm)', color: 'var(--text-primary)' }}
-              >
-                {drawer.depth}
-              </span>
-              <button
-                onClick={() => handleDimensionChange('depth', 1)}
-                disabled={drawer.depth >= CONSTRAINTS.GRID_MAX}
-                className="btn btn-ghost btn-icon"
-                style={{ padding: '4px', minWidth: '28px', minHeight: '28px' }}
-                aria-label="Increase depth"
-              >
-                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-                </svg>
-              </button>
+                <button
+                  onClick={() => handleDimensionChange('width', 1)}
+                  disabled={drawer.width >= CONSTRAINTS.GRID_MAX}
+                  className="btn btn-ghost btn-icon"
+                  style={{ padding: '4px', minWidth: '28px', minHeight: '28px' }}
+                  aria-label="Increase width"
+                >
+                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                  </svg>
+                </button>
+              </div>
+              <span style={{ fontSize: 'var(--text-xs)', color: 'var(--text-tertiary)' }}>×</span>
+              <div className="flex items-center">
+                <button
+                  onClick={() => handleDimensionChange('depth', -1)}
+                  disabled={drawer.depth <= 1}
+                  className="btn btn-ghost btn-icon"
+                  style={{ padding: '4px', minWidth: '28px', minHeight: '28px' }}
+                  aria-label="Decrease depth"
+                >
+                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 12H4" />
+                  </svg>
+                </button>
+                <span
+                  className="min-w-[28px] text-center font-medium tabular-nums"
+                  style={{ fontSize: 'var(--text-sm)', color: 'var(--text-primary)' }}
+                >
+                  {drawer.depth}
+                </span>
+                <button
+                  onClick={() => handleDimensionChange('depth', 1)}
+                  disabled={drawer.depth >= CONSTRAINTS.GRID_MAX}
+                  className="btn btn-ghost btn-icon"
+                  style={{ padding: '4px', minWidth: '28px', minHeight: '28px' }}
+                  aria-label="Increase depth"
+                >
+                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                  </svg>
+                </button>
+              </div>
             </div>
           </div>
-        </div>
 
-        {/* Right: View controls */}
-        <div className="flex items-center gap-4">
-          {/* Show labels toggle */}
-          <label
-            className="flex items-center gap-2 cursor-pointer select-none transition-colors"
-            style={{ fontSize: 'var(--text-sm)', color: 'var(--text-secondary)' }}
-            title="Show bin labels on the grid"
-          >
-            <input
-              type="checkbox"
-              checked={showLabels}
-              onChange={toggleShowLabels}
-              className="w-4 h-4 rounded"
-              style={{
-                accentColor: 'var(--color-primary)',
-              }}
-            />
-            Labels
-          </label>
-
-          {/* Show other layers toggle */}
-          <label
-            className="flex items-center gap-2 cursor-pointer select-none transition-colors"
-            style={{ fontSize: 'var(--text-sm)', color: 'var(--text-secondary)' }}
-            title="Show ghost outlines of bins on layers below (helps see blocked zones)"
-          >
-            <input
-              type="checkbox"
-              checked={showOtherLayers}
-              onChange={toggleShowOtherLayers}
-              className="w-4 h-4 rounded"
-              style={{
-                accentColor: 'var(--color-primary)',
-              }}
-            />
-            Layers below
-          </label>
-
-          {/* Zoom controls */}
-          <div
-            className="flex items-center gap-1"
-            role="group"
-            aria-label="Zoom controls"
-          >
-            <button
-              onClick={zoomOut}
-              disabled={!canZoomOut}
-              className="btn btn-secondary btn-icon"
-              style={{ padding: '6px', minWidth: '32px', minHeight: '32px' }}
-              aria-label="Zoom out"
-              title="Zoom out (−)"
-            >
-              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 12H4" />
-              </svg>
-            </button>
-            <span
-              className="min-w-[52px] text-center font-medium"
+          {/* Right: View controls */}
+          <div className="flex items-center gap-4">
+            {/* Show labels toggle */}
+            <label
+              className="flex items-center gap-2 cursor-pointer select-none transition-colors"
               style={{ fontSize: 'var(--text-sm)', color: 'var(--text-secondary)' }}
+              title="Show bin labels on the grid"
             >
-              {Math.round(zoom * 100)}%
-            </span>
-            <button
-              onClick={zoomIn}
-              disabled={!canZoomIn}
-              className="btn btn-secondary btn-icon"
-              style={{ padding: '6px', minWidth: '32px', minHeight: '32px' }}
-              aria-label="Zoom in"
-              title="Zoom in (+)"
+              <input
+                type="checkbox"
+                checked={showLabels}
+                onChange={toggleShowLabels}
+                className="w-4 h-4 rounded"
+                style={{
+                  accentColor: 'var(--color-primary)',
+                }}
+              />
+              Labels
+            </label>
+
+            {/* Show other layers toggle */}
+            <label
+              className="flex items-center gap-2 cursor-pointer select-none transition-colors"
+              style={{ fontSize: 'var(--text-sm)', color: 'var(--text-secondary)' }}
+              title="Show ghost outlines of bins on layers below (helps see blocked zones)"
             >
-              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-              </svg>
-            </button>
-            <button
-              onClick={fitToScreen}
-              className="btn btn-secondary"
-              style={{ padding: '6px 10px', fontSize: 'var(--text-xs)' }}
-              aria-label="Fit grid to screen"
-              title="Fit to screen"
+              <input
+                type="checkbox"
+                checked={showOtherLayers}
+                onChange={toggleShowOtherLayers}
+                className="w-4 h-4 rounded"
+                style={{
+                  accentColor: 'var(--color-primary)',
+                }}
+              />
+              Layers below
+            </label>
+
+            {/* Zoom controls */}
+            <div
+              className="flex items-center gap-1"
+              role="group"
+              aria-label="Zoom controls"
             >
-              Fit
-            </button>
+              <button
+                onClick={zoomOut}
+                disabled={!canZoomOut}
+                className="btn btn-secondary btn-icon"
+                style={{ padding: '6px', minWidth: '32px', minHeight: '32px' }}
+                aria-label="Zoom out"
+                title="Zoom out (−)"
+              >
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 12H4" />
+                </svg>
+              </button>
+              <span
+                className="min-w-[52px] text-center font-medium"
+                style={{ fontSize: 'var(--text-sm)', color: 'var(--text-secondary)' }}
+              >
+                {Math.round(zoom * 100)}%
+              </span>
+              <button
+                onClick={zoomIn}
+                disabled={!canZoomIn}
+                className="btn btn-secondary btn-icon"
+                style={{ padding: '6px', minWidth: '32px', minHeight: '32px' }}
+                aria-label="Zoom in"
+                title="Zoom in (+)"
+              >
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                </svg>
+              </button>
+              <button
+                onClick={fitToScreen}
+                className="btn btn-secondary"
+                style={{ padding: '6px 10px', fontSize: 'var(--text-xs)' }}
+                aria-label="Fit grid to screen"
+                title="Fit to screen"
+              >
+                Fit
+              </button>
+            </div>
           </div>
         </div>
-      </div>
+      )}
 
       {/* Grid container with scroll - click background to deselect */}
       <div
