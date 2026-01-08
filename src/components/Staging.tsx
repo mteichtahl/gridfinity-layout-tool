@@ -164,7 +164,7 @@ export function Staging() {
 
   return (
     <div
-      className="px-4 py-3 overflow-x-auto overflow-y-hidden border-t-2 border-dashed border-stroke bg-surface-secondary"
+      className="px-4 py-3 flex-shrink-0 overflow-x-auto border-t-2 border-dashed border-stroke bg-surface-secondary"
     >
       {/* Header */}
       <div className="flex items-center justify-between mb-2">
