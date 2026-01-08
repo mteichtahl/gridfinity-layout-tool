@@ -54,7 +54,7 @@ export function Overlay({ cellSize, gap }: OverlayProps) {
           height: rectHeight,
           border: '2px dashed #f59e0b',
           pointerEvents: 'none',
-          backgroundColor: 'rgba(245, 158, 11, 0.1)',
+          backgroundColor: 'var(--color-amber-10)',
         }}
       />
     );
@@ -156,8 +156,8 @@ export function Overlay({ cellSize, gap }: OverlayProps) {
               top: origTop,
               width: origWidth,
               height: origHeight,
-              border: '2px dashed rgba(255, 255, 255, 0.8)',
-              boxShadow: '0 0 0 1px rgba(0, 0, 0, 0.4)',
+              border: '2px dashed var(--text-on-dark-muted)',
+              boxShadow: '0 0 0 1px var(--overlay-light)',
               pointerEvents: 'none',
               borderRadius: '2px',
               zIndex: 30,
@@ -271,7 +271,7 @@ export function Overlay({ cellSize, gap }: OverlayProps) {
           height: areaPixelHeight,
           border: `2px dashed ${hasRemainder ? '#f59e0b' : '#10b981'}`,
           pointerEvents: 'none',
-          backgroundColor: hasRemainder ? 'rgba(245, 158, 11, 0.05)' : 'rgba(16, 185, 129, 0.05)',
+          backgroundColor: hasRemainder ? 'var(--color-amber-5)' : 'var(--color-green-5)',
         }}
       />
     );
@@ -299,7 +299,7 @@ export function Overlay({ cellSize, gap }: OverlayProps) {
                 height: rectHeight,
                 border: '1px solid #10b981',
                 pointerEvents: 'none',
-                backgroundColor: 'rgba(16, 185, 129, 0.15)',
+                backgroundColor: 'var(--color-green-15)',
               }}
             />
           );
@@ -326,7 +326,7 @@ export function Overlay({ cellSize, gap }: OverlayProps) {
               top: stripTop,
               width: stripWidth,
               height: stripHeight,
-              backgroundColor: 'rgba(239, 68, 68, 0.2)',
+              backgroundColor: 'var(--color-red-20)',
               pointerEvents: 'none',
             }}
           />
@@ -350,7 +350,7 @@ export function Overlay({ cellSize, gap }: OverlayProps) {
               top: stripTop,
               width: stripWidth,
               height: stripHeight,
-              backgroundColor: 'rgba(239, 68, 68, 0.2)',
+              backgroundColor: 'var(--color-red-20)',
               pointerEvents: 'none',
             }}
           />

@@ -119,7 +119,7 @@ export function Staging() {
     const g = parseInt(hex.substr(2, 2), 16);
     const b = parseInt(hex.substr(4, 2), 16);
     const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
-    return luminance > 0.5 ? 'rgba(0,0,0,0.85)' : 'rgba(255,255,255,0.95)';
+    return luminance > 0.5 ? 'var(--text-on-light)' : 'var(--text-on-dark)';
   };
 
   // Handle bin drag start from staging
@@ -235,7 +235,7 @@ export function Staging() {
           width: gridWidth * (cellSize + gap) + gap,
           height: gridHeight * (cellSize + gap) + gap,
           backgroundColor: 'var(--staging-bg)',
-          boxShadow: 'inset 0 2px 4px rgba(0,0,0,0.1)',
+          boxShadow: 'var(--shadow-sm)',
         }}
       >
         {/* CSS Grid container */}
@@ -270,10 +270,10 @@ export function Staging() {
                   gridRow: `${gridHeight - bin.y - bin.depth + 1} / span ${bin.depth}`,
                   backgroundColor: bgColor,
                   borderRadius: 'var(--radius-sm)',
-                  border: '1px solid rgba(0,0,0,0.2)',
+                  border: '1px solid var(--border-on-color)',
                   opacity: isDragging ? 0.3 : 1,
                   pointerEvents: isDragging ? 'none' : 'auto',
-                  boxShadow: '0 2px 4px rgba(0,0,0,0.2)',
+                  boxShadow: 'var(--shadow-sm)',
                   zIndex: 10,
                 }}
                 onPointerDown={(e) => handleBinPointerDown(bin.id, e)}
@@ -286,7 +286,7 @@ export function Staging() {
                 >
                   <div
                     className="text-sm font-semibold"
-                    style={{ textShadow: '0 1px 2px rgba(0,0,0,0.1)' }}
+                    style={{ textShadow: 'var(--shadow-sm)' }}
                   >
                     {bin.width}×{bin.depth}
                   </div>

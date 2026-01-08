@@ -31,7 +31,7 @@ function getContrastColor(hexColor: string): string {
   // Calculate relative luminance
   const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
 
-  return luminance > 0.5 ? 'rgba(0,0,0,0.85)' : 'rgba(255,255,255,0.95)';
+  return luminance > 0.5 ? 'var(--text-on-light)' : 'var(--text-on-dark)';
 }
 
 /**
@@ -198,9 +198,9 @@ function BinComponent({ bin, category, layer, drawer, isGhost, isSelected, onSta
   const getBoxShadow = () => {
     if (isGhost) return 'none';
     if (isSelected) {
-      return '0 0 0 2px var(--selection-ring), 0 0 20px var(--selection-glow), 0 4px 12px rgba(0,0,0,0.3)';
+      return '0 0 0 2px var(--selection-ring), 0 0 20px var(--selection-glow), var(--shadow-lg)';
     }
-    return '0 2px 4px rgba(0,0,0,0.2)';
+    return 'var(--shadow-sm)';
   };
 
   const getTransform = () => {
@@ -220,7 +220,7 @@ function BinComponent({ bin, category, layer, drawer, isGhost, isSelected, onSta
         gridRow: `${drawer.depth - bin.y - bin.depth + 1} / span ${bin.depth}`,
         backgroundColor: bgColor,
         borderRadius: 'var(--radius-sm)',
-        border: isSelected ? 'none' : '1px solid rgba(0,0,0,0.2)',
+        border: isSelected ? 'none' : '1px solid var(--border-on-color)',
         cursor: isGhost ? 'default' : 'move',
         touchAction: 'none',
         pointerEvents: isGhost || isBeingDragged ? 'none' : 'auto',
@@ -276,7 +276,7 @@ function BinComponent({ bin, category, layer, drawer, isGhost, isSelected, onSta
             className="font-semibold flex items-center justify-center gap-0.5 leading-tight"
             style={{
               fontSize: `${dimensionFontSize}px`,
-              textShadow: '0 1px 2px rgba(0,0,0,0.1)',
+              textShadow: 'var(--shadow-sm)',
             }}
           >
             {dimensionsText}
@@ -287,7 +287,7 @@ function BinComponent({ bin, category, layer, drawer, isGhost, isSelected, onSta
                 style={{
                   fontSize: `${Math.round(labelFontSize * 0.9)}px`,
                   padding: '0px 3px',
-                  backgroundColor: 'rgba(0,0,0,0.6)',
+                  backgroundColor: 'var(--overlay-medium)',
                   color: 'var(--color-warning)',
                   fontWeight: 'var(--font-medium)',
                 }}

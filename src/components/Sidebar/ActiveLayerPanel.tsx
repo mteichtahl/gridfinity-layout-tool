@@ -126,7 +126,7 @@ export function ActiveLayerPanel() {
                     style={{
                       width: `${6 + size * 2}px`,
                       height: `${6 + size * 2}px`,
-                      backgroundColor: isActive ? 'rgba(0,0,0,0.3)' : '#94a3b8',
+                      backgroundColor: isActive ? 'var(--overlay-light)' : '#94a3b8',
                       borderRadius: '2px',
                     }}
                   />
@@ -182,7 +182,7 @@ export function ActiveLayerPanel() {
                     style={{
                       width: `${6 + w * 2}px`,
                       height: `${6 + d * 2}px`,
-                      backgroundColor: isActive ? 'rgba(0,0,0,0.3)' : '#94a3b8',
+                      backgroundColor: isActive ? 'var(--overlay-light)' : '#94a3b8',
                       borderRadius: '2px',
                     }}
                   />

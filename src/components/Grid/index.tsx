@@ -37,7 +37,7 @@ const STYLES = {
   checkboxAccent: { accentColor: 'var(--color-primary)' } as CSSProperties,
   // Empty state
   emptyStateOverlay: { zIndex: 5 } as CSSProperties,
-  emptyStateBox: { backgroundColor: 'rgba(15, 15, 18, 0.85)', backdropFilter: 'blur(4px)' } as CSSProperties,
+  emptyStateBox: { backgroundColor: 'var(--bg-primary)', opacity: 0.95, backdropFilter: 'blur(4px)' } as CSSProperties,
   emptyStateIcon: { backgroundColor: 'var(--bg-hover)' } as CSSProperties,
   emptyStateTitle: { color: 'var(--text-secondary)', fontSize: 'var(--text-sm)' } as CSSProperties,
   emptyStateHint: { color: 'var(--text-disabled)', fontSize: 'var(--text-xs)' } as CSSProperties,

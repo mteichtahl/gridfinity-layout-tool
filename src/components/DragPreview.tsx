@@ -93,7 +93,7 @@ export function DragPreview() {
               height,
               backgroundColor: bgColor,
               opacity: 0.85,
-              boxShadow: '0 8px 32px rgba(0,0,0,0.3), 0 0 0 2px rgba(255,255,255,0.2)',
+              boxShadow: 'var(--shadow-floating), 0 0 0 2px var(--highlight-ring)',
               transform: 'scale(1.02)',
             }}
           >
@@ -120,5 +120,5 @@ function getContrastColor(hexColor: string): string {
   const g = parseInt(hex.substr(2, 2), 16);
   const b = parseInt(hex.substr(4, 2), 16);
   const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
-  return luminance > 0.5 ? 'rgba(0,0,0,0.85)' : 'rgba(255,255,255,0.95)';
+  return luminance > 0.5 ? 'var(--text-on-light)' : 'var(--text-on-dark)';
 }

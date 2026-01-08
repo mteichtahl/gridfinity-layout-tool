@@ -45,7 +45,7 @@ export function TabletPanelOverlay({ isOpen, onClose, side, children }: TabletPa
       <div
         className="fixed inset-0 z-40 transition-opacity duration-300"
         style={{
-          backgroundColor: 'rgba(0, 0, 0, 0.5)',
+          backgroundColor: 'var(--overlay-medium)',
           opacity: isOpen ? 1 : 0,
           pointerEvents: isOpen ? 'auto' : 'none',
         }}

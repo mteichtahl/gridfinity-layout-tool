@@ -73,7 +73,7 @@ export function ConfirmDialog({
   return (
     <div
       className="fixed inset-0 flex items-center justify-center z-50 animate-fade-in"
-      style={{ backgroundColor: 'rgba(0, 0, 0, 0.7)' }}
+      style={{ backgroundColor: 'var(--overlay-dark)' }}
       onClick={onCancel}
       role="presentation"
     >

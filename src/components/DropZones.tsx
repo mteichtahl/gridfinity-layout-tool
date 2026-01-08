@@ -87,7 +87,7 @@ export function DropZones() {
     <div
       className="fixed bottom-0 left-0 right-0 flex justify-center gap-4 p-4 pointer-events-none z-50"
       style={{
-        background: 'linear-gradient(to top, rgba(0,0,0,0.5) 0%, transparent 100%)',
+        background: 'var(--overlay-gradient)',
       }}
     >
       {/* Trash drop zone */}
@@ -100,7 +100,7 @@ export function DropZones() {
             : 'var(--bg-elevated)',
           border: `2px dashed ${dropTarget === 'trash' ? 'var(--color-error)' : 'var(--border-default)'}`,
           boxShadow: dropTarget === 'trash'
-            ? '0 0 20px rgba(239, 68, 68, 0.4)'
+            ? 'var(--glow-red)'
             : 'var(--shadow-lg)',
           transform: dropTarget === 'trash' ? 'scale(1.05)' : 'scale(1)',
           minWidth: 160,
@@ -131,7 +131,7 @@ export function DropZones() {
             className="transition-colors"
             style={{
               fontSize: 'var(--text-xs)',
-              color: dropTarget === 'trash' ? 'rgba(255,255,255,0.8)' : 'var(--text-tertiary)'
+              color: dropTarget === 'trash' ? 'var(--text-on-dark-muted)' : 'var(--text-tertiary)'
             }}
           >
             Drop here to remove
@@ -150,7 +150,7 @@ export function DropZones() {
               : 'var(--bg-elevated)',
             border: `2px dashed ${dropTarget === 'staging' ? 'var(--color-primary)' : 'var(--border-default)'}`,
             boxShadow: dropTarget === 'staging'
-              ? '0 0 20px rgba(59, 130, 246, 0.4)'
+              ? 'var(--glow-blue)'
               : 'var(--shadow-lg)',
             transform: dropTarget === 'staging' ? 'scale(1.05)' : 'scale(1)',
             minWidth: 160,
@@ -181,7 +181,7 @@ export function DropZones() {
               className="transition-colors"
               style={{
                 fontSize: 'var(--text-xs)',
-                color: dropTarget === 'staging' ? 'rgba(255,255,255,0.8)' : 'var(--text-tertiary)'
+                color: dropTarget === 'staging' ? 'var(--text-on-dark-muted)' : 'var(--text-tertiary)'
               }}
             >
               {stagingBinCount > 0 ? `${stagingBinCount} bins staged` : 'Temporary storage'}

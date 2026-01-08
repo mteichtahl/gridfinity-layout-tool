@@ -88,7 +88,7 @@ export function BinContextMenu({ bin, position, onClose }: BinContextMenuProps) 
       {/* Backdrop */}
       <div
         className="fixed inset-0 z-50"
-        style={{ backgroundColor: 'rgba(0, 0, 0, 0.3)' }}
+        style={{ backgroundColor: 'var(--overlay-light)' }}
         onClick={onClose}
       />
 
