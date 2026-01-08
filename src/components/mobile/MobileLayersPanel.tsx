@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useLayoutStore, useUIStore, useUndoableAction } from '../../store';
 import { CONSTRAINTS } from '../../constants';
+import { getDisplayLayers } from '../../utils/collision';
 import { ConfirmDialog } from '../modals/ConfirmDialog';
 
 /**
@@ -26,7 +27,7 @@ export function MobileLayersPanel() {
   const { execute } = useUndoableAction();
 
   const totalLayerHeight = layers.reduce((sum, l) => sum + l.height, 0);
-  const displayLayers = [...layers].reverse();
+  const displayLayers = getDisplayLayers(layers);
 
   const handleAddLayer = () => {
     execute(() => {

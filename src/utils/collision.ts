@@ -2,6 +2,14 @@ import type { Bin, Layer, Rect3D, BlockedZone } from '../types';
 import { STAGING_ID } from '../constants';
 
 /**
+ * Reverse layers for display purposes.
+ * Layers are stored bottom-to-top but displayed top-to-bottom in the UI.
+ */
+export function getDisplayLayers<T>(layers: T[]): T[] {
+  return [...layers].reverse();
+}
+
+/**
  * Calculate the Z-axis start position for a layer.
  * Layers stack from bottom (index 0) upward.
  */

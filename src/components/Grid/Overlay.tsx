@@ -121,7 +121,8 @@ export function Overlay({ cellSize, gap }: OverlayProps) {
     // Draw preview for each bin being resized
     for (const binId of binIds) {
       const currentRect = currentRects.get(binId);
-      if (!currentRect) continue;
+      const originalBin = bins.find((b) => b.id === binId);
+      if (!currentRect || !originalBin) continue;
 
       const left = gap + currentRect.x * (cellSize + gap);
       const top = gap + (drawer.depth - currentRect.y - currentRect.depth) * (cellSize + gap);
@@ -143,6 +144,104 @@ export function Overlay({ cellSize, gap }: OverlayProps) {
           }}
         />
       );
+
+      // Show removed areas when shrinking (red overlay on portions being cut)
+      const origRight = originalBin.x + originalBin.width;
+      const origTop = originalBin.y + originalBin.depth;
+      const newRight = currentRect.x + currentRect.width;
+      const newTop = currentRect.y + currentRect.depth;
+
+      // Right edge removed
+      if (newRight < origRight) {
+        const removedWidth = origRight - newRight;
+        const removedLeft = gap + newRight * (cellSize + gap);
+        const removedTop = gap + (drawer.depth - Math.min(origTop, newTop) - Math.min(originalBin.depth, currentRect.depth)) * (cellSize + gap);
+        const removedW = removedWidth * cellSize + (removedWidth - 1) * gap;
+        const removedH = Math.min(originalBin.depth, currentRect.depth) * cellSize + (Math.min(originalBin.depth, currentRect.depth) - 1) * gap;
+        previews.push(
+          <div
+            key={`resize-removed-right-${binId}`}
+            style={{
+              position: 'absolute',
+              left: removedLeft,
+              top: removedTop,
+              width: removedW,
+              height: removedH,
+              pointerEvents: 'none',
+              backgroundColor: 'rgba(239, 68, 68, 0.35)',
+            }}
+          />
+        );
+      }
+
+      // Left edge removed
+      if (currentRect.x > originalBin.x) {
+        const removedWidth = currentRect.x - originalBin.x;
+        const removedLeft = gap + originalBin.x * (cellSize + gap);
+        const removedTop = gap + (drawer.depth - Math.min(origTop, newTop) - Math.min(originalBin.depth, currentRect.depth)) * (cellSize + gap);
+        const removedW = removedWidth * cellSize + (removedWidth - 1) * gap;
+        const removedH = Math.min(originalBin.depth, currentRect.depth) * cellSize + (Math.min(originalBin.depth, currentRect.depth) - 1) * gap;
+        previews.push(
+          <div
+            key={`resize-removed-left-${binId}`}
+            style={{
+              position: 'absolute',
+              left: removedLeft,
+              top: removedTop,
+              width: removedW,
+              height: removedH,
+              pointerEvents: 'none',
+              backgroundColor: 'rgba(239, 68, 68, 0.35)',
+            }}
+          />
+        );
+      }
+
+      // Top edge removed (visually top = high y value)
+      if (newTop < origTop) {
+        const removedDepth = origTop - newTop;
+        const removedLeft = gap + originalBin.x * (cellSize + gap);
+        const removedTop = gap + (drawer.depth - origTop) * (cellSize + gap);
+        const removedW = originalBin.width * cellSize + (originalBin.width - 1) * gap;
+        const removedH = removedDepth * cellSize + (removedDepth - 1) * gap;
+        previews.push(
+          <div
+            key={`resize-removed-top-${binId}`}
+            style={{
+              position: 'absolute',
+              left: removedLeft,
+              top: removedTop,
+              width: removedW,
+              height: removedH,
+              pointerEvents: 'none',
+              backgroundColor: 'rgba(239, 68, 68, 0.35)',
+            }}
+          />
+        );
+      }
+
+      // Bottom edge removed (visually bottom = low y value)
+      if (currentRect.y > originalBin.y) {
+        const removedDepth = currentRect.y - originalBin.y;
+        const removedLeft = gap + originalBin.x * (cellSize + gap);
+        const removedTop = gap + (drawer.depth - currentRect.y) * (cellSize + gap);
+        const removedW = originalBin.width * cellSize + (originalBin.width - 1) * gap;
+        const removedH = removedDepth * cellSize + (removedDepth - 1) * gap;
+        previews.push(
+          <div
+            key={`resize-removed-bottom-${binId}`}
+            style={{
+              position: 'absolute',
+              left: removedLeft,
+              top: removedTop,
+              width: removedW,
+              height: removedH,
+              pointerEvents: 'none',
+              backgroundColor: 'rgba(239, 68, 68, 0.35)',
+            }}
+          />
+        );
+      }
     }
 
     // Use first bin's rect for tooltip
