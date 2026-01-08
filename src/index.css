@@ -762,10 +762,12 @@ input[type="number"] {
 }
 
 .empty-state-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
   width: 48px;
   height: 48px;
   margin-bottom: var(--space-lg);
-  padding: var(--space-md);
   background: var(--bg-hover);
   border-radius: var(--radius-lg);
   color: var(--text-tertiary);
