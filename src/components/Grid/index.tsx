@@ -1,0 +1,752 @@
+import { useRef, useState, useCallback, useEffect } from 'react';
+import { useUIStore, useLayoutStore, useUndoableAction } from '../../store';
+import { useInteraction } from '../../hooks';
+import { BASE_CELL_SIZE, STAGING_ID, CONSTRAINTS } from '../../constants';
+import { GridCanvas } from './GridCanvas';
+import { Overlay } from './Overlay';
+import { ConfirmDialog } from '../modals/ConfirmDialog';
+
+type ResizeDirection = 'width' | 'depth' | 'both' | null;
+
+/**
+ * Main grid container with zoom controls, layer indicator, and row/column numbering.
+ * Displays the drawer grid with bins, handles user interactions.
+ */
+export function Grid() {
+  const gridRef = useRef<HTMLDivElement>(null);
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const zoom = useUIStore((state) => state.zoom);
+  const setZoom = useUIStore((state) => state.setZoom);
+  const zoomIn = useUIStore((state) => state.zoomIn);
+  const zoomOut = useUIStore((state) => state.zoomOut);
+  const showOtherLayers = useUIStore((state) => state.showOtherLayers);
+  const toggleShowOtherLayers = useUIStore((state) => state.toggleShowOtherLayers);
+  const showLabels = useUIStore((state) => state.showLabels);
+  const toggleShowLabels = useUIStore((state) => state.toggleShowLabels);
+  const activeLayerId = useUIStore((state) => state.activeLayerId);
+  const paintSize = useUIStore((state) => state.paintSize);
+  const setPaintSize = useUIStore((state) => state.setPaintSize);
+  const setSelectedBins = useUIStore((state) => state.setSelectedBins);
+  const clearSelection = useCallback(() => setSelectedBins([]), [setSelectedBins]);
+  const drawer = useLayoutStore((state) => state.layout.drawer);
+  const layers = useLayoutStore((state) => state.layout.layers);
+  const bins = useLayoutStore((state) => state.layout.bins);
+  const updateDrawer = useLayoutStore((state) => state.updateDrawer);
+  const updateBin = useLayoutStore((state) => state.updateBin);
+  const { execute } = useUndoableAction();
+
+  // Pending resize confirmation state
+  const [pendingResize, setPendingResize] = useState<{
+    newWidth: number;
+    newDepth: number;
+    clippedBinIds: string[];
+  } | null>(null);
+
+  // Single interaction hook instance for the entire grid
+  const { startDraw, startDrag, startResize } = useInteraction(gridRef);
+
+  const cellSize = Math.round(BASE_CELL_SIZE * zoom);
+  const gap = 1; // 1px gap between cells
+
+  const canZoomOut = zoom > CONSTRAINTS.ZOOM_MIN;
+  const canZoomIn = zoom < CONSTRAINTS.ZOOM_MAX;
+
+  // Get active layer info
+  const activeLayer = layers.find(l => l.id === activeLayerId);
+  const layerBins = bins.filter(b => b.layerId === activeLayerId && b.layerId !== STAGING_ID);
+  const isEmpty = layerBins.length === 0;
+  const isFirstLayer = layers.length > 0 && activeLayerId === layers[0]?.id;
+
+  // Find bins that would be clipped by a resize
+  const getClippedBins = useCallback((newWidth: number, newDepth: number) => {
+    return bins.filter(b =>
+      b.layerId !== STAGING_ID && (
+        b.x + b.width > newWidth ||
+        b.y + b.depth > newDepth
+      )
+    );
+  }, [bins]);
+
+  // Attempt to resize, checking for clipped bins
+  const attemptResize = useCallback((newWidth: number, newDepth: number) => {
+    const clippedBins = getClippedBins(newWidth, newDepth);
+    if (clippedBins.length > 0) {
+      // Show confirmation dialog
+      setPendingResize({
+        newWidth,
+        newDepth,
+        clippedBinIds: clippedBins.map(b => b.id),
+      });
+    } else {
+      // No clipped bins, resize directly
+      execute(() => updateDrawer({ width: newWidth, depth: newDepth }));
+    }
+  }, [getClippedBins, execute, updateDrawer]);
+
+  // Confirm pending resize - move clipped bins to staging
+  const confirmResize = useCallback(() => {
+    if (!pendingResize) return;
+    execute(() => {
+      // Move clipped bins to staging
+      for (const binId of pendingResize.clippedBinIds) {
+        updateBin(binId, { layerId: STAGING_ID });
+      }
+      // Apply the resize
+      updateDrawer({ width: pendingResize.newWidth, depth: pendingResize.newDepth });
+    });
+    setPendingResize(null);
+  }, [pendingResize, execute, updateBin, updateDrawer]);
+
+  // Dimension change handlers
+  const handleDimensionChange = (field: 'width' | 'depth', delta: number) => {
+    const newValue = Math.max(1, Math.min(CONSTRAINTS.GRID_MAX, drawer[field] + delta));
+    if (newValue !== drawer[field]) {
+      const newWidth = field === 'width' ? newValue : drawer.width;
+      const newDepth = field === 'depth' ? newValue : drawer.depth;
+      attemptResize(newWidth, newDepth);
+    }
+  };
+
+  // Grid edge resize state
+  const [resizeDirection, setResizeDirection] = useState<ResizeDirection>(null);
+  const [resizeStart, setResizeStart] = useState<{ x: number; y: number; width: number; depth: number } | null>(null);
+
+  // Use ref to track current drawer dimensions without causing effect re-runs
+  const drawerRef = useRef(drawer);
+  drawerRef.current = drawer;
+
+  const handleResizeStart = useCallback((direction: ResizeDirection, e: React.MouseEvent) => {
+    e.preventDefault();
+    setResizeDirection(direction);
+    setResizeStart({ x: e.clientX, y: e.clientY, width: drawerRef.current.width, depth: drawerRef.current.depth });
+  }, []);
+
+  useEffect(() => {
+    if (!resizeDirection || !resizeStart) return;
+
+    const handleMouseMove = (e: MouseEvent) => {
+      const dx = e.clientX - resizeStart.x;
+      const dy = e.clientY - resizeStart.y;
+      const cellStep = cellSize + gap;
+
+      const updates: Partial<typeof drawer> = {};
+      const currentDrawer = drawerRef.current;
+
+      if (resizeDirection === 'width' || resizeDirection === 'both') {
+        const widthDelta = Math.round(dx / cellStep);
+        const newWidth = Math.max(1, Math.min(CONSTRAINTS.GRID_MAX, resizeStart.width + widthDelta));
+        if (newWidth !== currentDrawer.width) updates.width = newWidth;
+      }
+
+      if (resizeDirection === 'depth' || resizeDirection === 'both') {
+        // Depth increases downward visually (positive dy = increase depth)
+        const depthDelta = Math.round(dy / cellStep);
+        const newDepth = Math.max(1, Math.min(CONSTRAINTS.GRID_MAX, resizeStart.depth + depthDelta));
+        if (newDepth !== currentDrawer.depth) updates.depth = newDepth;
+      }
+
+      if (Object.keys(updates).length > 0) {
+        updateDrawer(updates);
+      }
+    };
+
+    const handleMouseUp = () => {
+      // Read current state directly from store to ensure we have the latest values
+      const currentState = useLayoutStore.getState().layout;
+      const currentDrawer = currentState.drawer;
+      // Calculate clipped bins directly to avoid stale closure
+      const clippedBins = currentState.bins.filter(b =>
+        b.layerId !== STAGING_ID && (
+          b.x + b.width > currentDrawer.width ||
+          b.y + b.depth > currentDrawer.depth
+        )
+      );
+      if (clippedBins.length > 0) {
+        // Show confirmation dialog - user can confirm to stage bins or cancel to revert
+        setPendingResize({
+          newWidth: currentDrawer.width,
+          newDepth: currentDrawer.depth,
+          clippedBinIds: clippedBins.map(b => b.id),
+        });
+        // Revert to original size temporarily (user will confirm or cancel)
+        updateDrawer({ width: resizeStart.width, depth: resizeStart.depth });
+      }
+      setResizeDirection(null);
+      setResizeStart(null);
+    };
+
+    document.addEventListener('mousemove', handleMouseMove);
+    document.addEventListener('mouseup', handleMouseUp);
+    return () => {
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', handleMouseUp);
+    };
+  }, [resizeDirection, resizeStart, cellSize, gap, updateDrawer]);
+
+  // Label sizing - scales with zoom but has minimum size for readability
+  const labelSize = Math.max(20, Math.round(24 * zoom));
+  const labelFontSize = Math.max(9, Math.round(11 * zoom));
+
+  // Fit grid to screen - calculate optimal zoom to fit drawer in viewport
+  const fitToScreen = useCallback(() => {
+    const container = scrollContainerRef.current;
+    if (!container) return;
+
+    // Available space (minus padding)
+    const padding = 48; // 24px padding on each side
+    const availableWidth = container.clientWidth - padding;
+    const availableHeight = container.clientHeight - padding;
+
+    // Grid dimensions at zoom=1 (including labels and gaps)
+    const labelGutter = 28; // Space for row/column labels
+    const gridWidth = drawer.width * BASE_CELL_SIZE + (drawer.width - 1) * gap + labelGutter;
+    const gridHeight = drawer.depth * BASE_CELL_SIZE + (drawer.depth - 1) * gap + labelGutter;
+
+    // Calculate zoom to fit both dimensions
+    const zoomToFitWidth = availableWidth / gridWidth;
+    const zoomToFitHeight = availableHeight / gridHeight;
+    const optimalZoom = Math.min(zoomToFitWidth, zoomToFitHeight);
+
+    // Clamp to valid zoom range and round to nearest 0.05
+    const clampedZoom = Math.max(
+      CONSTRAINTS.ZOOM_MIN,
+      Math.min(CONSTRAINTS.ZOOM_MAX, Math.round(optimalZoom * 20) / 20)
+    );
+
+    setZoom(clampedZoom);
+  }, [drawer.width, drawer.depth, gap, setZoom]);
+
+  // Fit to screen on initial mount and when drawer size changes
+  useEffect(() => {
+    // Delay to ensure container is fully rendered
+    const timer = setTimeout(fitToScreen, 100);
+    return () => clearTimeout(timer);
+  }, [fitToScreen, drawer.width, drawer.depth]);
+
+  // Select all bins that occupy a given row (1-indexed row number)
+  const handleRowClick = useCallback((rowNum: number) => {
+    // Convert 1-indexed to 0-indexed Y coordinate
+    const rowY = rowNum - 1;
+    // Find all bins on the active layer that occupy this row
+    const binsInRow = bins.filter(b =>
+      b.layerId === activeLayerId &&
+      b.layerId !== STAGING_ID &&
+      rowY >= b.y && rowY < b.y + b.depth
+    );
+    if (binsInRow.length > 0) {
+      setSelectedBins(binsInRow.map(b => b.id));
+    }
+  }, [bins, activeLayerId, setSelectedBins]);
+
+  // Select all bins that occupy a given column (1-indexed column number)
+  const handleColumnClick = useCallback((colNum: number) => {
+    // Convert 1-indexed to 0-indexed X coordinate
+    const colX = colNum - 1;
+    // Find all bins on the active layer that occupy this column
+    const binsInCol = bins.filter(b =>
+      b.layerId === activeLayerId &&
+      b.layerId !== STAGING_ID &&
+      colX >= b.x && colX < b.x + b.width
+    );
+    if (binsInCol.length > 0) {
+      setSelectedBins(binsInCol.map(b => b.id));
+    }
+  }, [bins, activeLayerId, setSelectedBins]);
+
+  // Generate column numbers (1-indexed, displayed at bottom)
+  const columnLabels = Array.from({ length: drawer.width }, (_, i) => i + 1);
+
+  // Generate row numbers (1-indexed, displayed on left)
+  // Visual row at top = highest Y coordinate (drawer.depth)
+  // Bottom row = Y coordinate 1
+  const rowLabels = Array.from({ length: drawer.depth }, (_, i) => drawer.depth - i);
+
+  return (
+    <div className="flex flex-col h-full" style={{ backgroundColor: 'var(--bg-primary)' }}>
+      {/* Toolbar */}
+      <div
+        className="flex items-center justify-between px-4 py-3"
+        style={{
+          backgroundColor: 'var(--bg-secondary)',
+          borderBottom: '1px solid var(--border-subtle)',
+        }}
+      >
+        {/* Left: Layer indicator */}
+        <div className="flex items-center gap-3">
+          {activeLayer && (
+            <div
+              className="flex items-center gap-2 px-3 py-1.5 rounded-md"
+              style={{
+                backgroundColor: 'var(--bg-elevated)',
+                border: '1px solid var(--border-subtle)',
+              }}
+            >
+              <div
+                className="w-2 h-2 rounded-full"
+                style={{ backgroundColor: 'var(--color-primary)' }}
+              />
+              <span style={{ fontSize: 'var(--text-sm)', fontWeight: 'var(--font-medium)' }}>
+                {activeLayer.name}
+              </span>
+              <span style={{ fontSize: 'var(--text-xs)', color: 'var(--text-tertiary)' }}>
+                {activeLayer.height}u
+              </span>
+            </div>
+          )}
+          {/* Tool mode indicator */}
+          <div
+            className="flex items-center gap-2 px-3 py-1.5 rounded-md"
+            style={{
+              backgroundColor: paintSize ? 'var(--color-primary-muted)' : 'var(--bg-elevated)',
+              border: `1px solid ${paintSize ? 'var(--color-primary)' : 'var(--border-subtle)'}`,
+            }}
+          >
+            {paintSize ? (
+              <>
+                {/* Paint brush icon */}
+                <svg className="w-4 h-4" style={{ color: 'var(--color-primary)' }} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                </svg>
+                <span style={{ fontSize: 'var(--text-sm)', color: 'var(--color-primary)', fontWeight: 'var(--font-medium)' }}>
+                  Paint {paintSize.width}×{paintSize.depth}
+                </span>
+                <button
+                  onClick={() => setPaintSize(null)}
+                  className="btn btn-ghost p-0.5 ml-1"
+                  style={{ minWidth: 'auto', minHeight: 'auto' }}
+                  aria-label="Exit paint mode"
+                >
+                  <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </>
+            ) : (
+              <>
+                {/* Pencil/draw icon */}
+                <svg className="w-4 h-4" style={{ color: 'var(--text-tertiary)' }} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                </svg>
+                <span style={{ fontSize: 'var(--text-sm)', color: 'var(--text-tertiary)' }}>
+                  Draw
+                </span>
+              </>
+            )}
+          </div>
+
+          {/* Grid dimensions */}
+          <div
+            className="flex items-center gap-1 px-2 py-1 rounded-md"
+            style={{
+              backgroundColor: 'var(--bg-elevated)',
+              border: '1px solid var(--border-subtle)',
+            }}
+          >
+            <span style={{ fontSize: 'var(--text-xs)', color: 'var(--text-tertiary)' }}>Grid</span>
+            <div className="flex items-center">
+              <button
+                onClick={() => handleDimensionChange('width', -1)}
+                disabled={drawer.width <= 1}
+                className="btn btn-ghost btn-icon"
+                style={{ padding: '4px', minWidth: '28px', minHeight: '28px' }}
+                aria-label="Decrease width"
+              >
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 12H4" />
+                </svg>
+              </button>
+              <span
+                className="min-w-[28px] text-center font-medium tabular-nums"
+                style={{ fontSize: 'var(--text-sm)', color: 'var(--text-primary)' }}
+              >
+                {drawer.width}
+              </span>
+              <button
+                onClick={() => handleDimensionChange('width', 1)}
+                disabled={drawer.width >= CONSTRAINTS.GRID_MAX}
+                className="btn btn-ghost btn-icon"
+                style={{ padding: '4px', minWidth: '28px', minHeight: '28px' }}
+                aria-label="Increase width"
+              >
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                </svg>
+              </button>
+            </div>
+            <span style={{ fontSize: 'var(--text-xs)', color: 'var(--text-tertiary)' }}>×</span>
+            <div className="flex items-center">
+              <button
+                onClick={() => handleDimensionChange('depth', -1)}
+                disabled={drawer.depth <= 1}
+                className="btn btn-ghost btn-icon"
+                style={{ padding: '4px', minWidth: '28px', minHeight: '28px' }}
+                aria-label="Decrease depth"
+              >
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 12H4" />
+                </svg>
+              </button>
+              <span
+                className="min-w-[28px] text-center font-medium tabular-nums"
+                style={{ fontSize: 'var(--text-sm)', color: 'var(--text-primary)' }}
+              >
+                {drawer.depth}
+              </span>
+              <button
+                onClick={() => handleDimensionChange('depth', 1)}
+                disabled={drawer.depth >= CONSTRAINTS.GRID_MAX}
+                className="btn btn-ghost btn-icon"
+                style={{ padding: '4px', minWidth: '28px', minHeight: '28px' }}
+                aria-label="Increase depth"
+              >
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                </svg>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {/* Right: View controls */}
+        <div className="flex items-center gap-4">
+          {/* Show labels toggle */}
+          <label
+            className="flex items-center gap-2 cursor-pointer select-none transition-colors"
+            style={{ fontSize: 'var(--text-sm)', color: 'var(--text-secondary)' }}
+            title="Show bin labels on the grid"
+          >
+            <input
+              type="checkbox"
+              checked={showLabels}
+              onChange={toggleShowLabels}
+              className="w-4 h-4 rounded"
+              style={{
+                accentColor: 'var(--color-primary)',
+              }}
+            />
+            Labels
+          </label>
+
+          {/* Show other layers toggle */}
+          <label
+            className="flex items-center gap-2 cursor-pointer select-none transition-colors"
+            style={{ fontSize: 'var(--text-sm)', color: 'var(--text-secondary)' }}
+            title="Show ghost outlines of bins on layers below (helps see blocked zones)"
+          >
+            <input
+              type="checkbox"
+              checked={showOtherLayers}
+              onChange={toggleShowOtherLayers}
+              className="w-4 h-4 rounded"
+              style={{
+                accentColor: 'var(--color-primary)',
+              }}
+            />
+            Layers below
+          </label>
+
+          {/* Zoom controls */}
+          <div
+            className="flex items-center gap-1"
+            role="group"
+            aria-label="Zoom controls"
+          >
+            <button
+              onClick={zoomOut}
+              disabled={!canZoomOut}
+              className="btn btn-secondary btn-icon"
+              style={{ padding: '6px', minWidth: '32px', minHeight: '32px' }}
+              aria-label="Zoom out"
+              title="Zoom out (−)"
+            >
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 12H4" />
+              </svg>
+            </button>
+            <span
+              className="min-w-[52px] text-center font-medium"
+              style={{ fontSize: 'var(--text-sm)', color: 'var(--text-secondary)' }}
+            >
+              {Math.round(zoom * 100)}%
+            </span>
+            <button
+              onClick={zoomIn}
+              disabled={!canZoomIn}
+              className="btn btn-secondary btn-icon"
+              style={{ padding: '6px', minWidth: '32px', minHeight: '32px' }}
+              aria-label="Zoom in"
+              title="Zoom in (+)"
+            >
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+              </svg>
+            </button>
+            <button
+              onClick={fitToScreen}
+              className="btn btn-secondary"
+              style={{ padding: '6px 10px', fontSize: 'var(--text-xs)' }}
+              aria-label="Fit grid to screen"
+              title="Fit to screen"
+            >
+              Fit
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* Grid container with scroll - click background to deselect */}
+      <div
+        ref={scrollContainerRef}
+        className="flex-1 overflow-auto p-6"
+        style={{ backgroundColor: 'var(--bg-primary)' }}
+        onClick={(e) => {
+          // Only deselect if clicking directly on this container (not children)
+          if (e.target === e.currentTarget) {
+            clearSelection();
+          }
+        }}
+      >
+        {/* Grid with row/column labels wrapper */}
+        <div className="inline-flex flex-col">
+          {/* Main grid area with row labels */}
+          <div className="flex">
+            {/* Row labels column */}
+            <div
+              className="flex flex-col"
+              style={{ marginRight: 4, marginTop: gap }}
+            >
+              {rowLabels.map((num) => (
+                <button
+                  key={`row-${num}`}
+                  type="button"
+                  className="flex items-center justify-center select-none transition-colors rounded-sm"
+                  style={{
+                    width: labelSize,
+                    height: cellSize + gap,
+                    fontSize: labelFontSize,
+                    fontWeight: 'var(--font-medium)',
+                    color: 'var(--text-tertiary)',
+                    fontVariantNumeric: 'tabular-nums',
+                    background: 'transparent',
+                    border: 'none',
+                    cursor: 'pointer',
+                  }}
+                  onClick={() => handleRowClick(num)}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.backgroundColor = 'var(--bg-hover)';
+                    e.currentTarget.style.color = 'var(--text-secondary)';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.backgroundColor = 'transparent';
+                    e.currentTarget.style.color = 'var(--text-tertiary)';
+                  }}
+                  title={`Select bins in row ${num}`}
+                  aria-label={`Select bins in row ${num}`}
+                >
+                  {num}
+                </button>
+              ))}
+            </div>
+
+            {/* Grid with resize handles */}
+            <div className="relative">
+              {/* Grid itself */}
+              <div
+                ref={gridRef}
+                className="relative rounded-lg"
+                style={{
+                  width: drawer.width * (cellSize + gap) + gap,
+                  height: drawer.depth * (cellSize + gap) + gap,
+                  backgroundColor: 'var(--grid-bg)',
+                  boxShadow: 'var(--shadow-lg)',
+                }}
+                role="application"
+                aria-label={`Gridfinity drawer grid, ${drawer.width} columns by ${drawer.depth} rows`}
+              >
+              <GridCanvas
+                gridRef={gridRef}
+                cellSize={cellSize}
+                gap={gap}
+                onStartDraw={startDraw}
+                onStartDrag={startDrag}
+                onStartResize={startResize}
+              />
+              <Overlay gridRef={gridRef} cellSize={cellSize} gap={gap} />
+
+              {/* Empty state overlay */}
+              {isEmpty && (
+                <div
+                  className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none"
+                  style={{ zIndex: 5 }}
+                >
+                  <div
+                    className="flex flex-col items-center p-6 rounded-xl max-w-xs text-center"
+                    style={{
+                      backgroundColor: 'rgba(15, 15, 18, 0.85)',
+                      backdropFilter: 'blur(4px)',
+                    }}
+                  >
+                    <div
+                      className="w-12 h-12 mb-4 flex items-center justify-center rounded-lg"
+                      style={{ backgroundColor: 'var(--bg-hover)' }}
+                    >
+                      <svg
+                        className="w-6 h-6"
+                        style={{ color: 'var(--text-tertiary)' }}
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
+                        aria-hidden="true"
+                      >
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 5a1 1 0 011-1h14a1 1 0 011 1v2a1 1 0 01-1 1H5a1 1 0 01-1-1V5zM4 13a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H5a1 1 0 01-1-1v-6zM16 13a1 1 0 011-1h2a1 1 0 011 1v6a1 1 0 01-1 1h-2a1 1 0 01-1-1v-6z" />
+                      </svg>
+                    </div>
+                    <p
+                      className="font-medium mb-1"
+                      style={{ color: 'var(--text-secondary)', fontSize: 'var(--text-sm)' }}
+                    >
+                      Click and drag to draw a bin
+                    </p>
+                    <p style={{ color: 'var(--text-disabled)', fontSize: 'var(--text-xs)' }}>
+                      {isFirstLayer
+                        ? 'Or select a size from the Bin Palette on the left'
+                        : 'Striped cells are blocked by tall bins from layers below'
+                      }
+                    </p>
+                    {!isFirstLayer && (
+                      <p style={{ color: 'var(--text-disabled)', fontSize: '10px', marginTop: '4px' }}>
+                        Toggle "Layers below" to see blocked zones
+                      </p>
+                    )}
+                  </div>
+                </div>
+              )}
+              </div>
+
+              {/* Right edge resize handle */}
+              <div
+                className="absolute top-0 flex items-center justify-center group"
+                style={{
+                  left: drawer.width * (cellSize + gap) + gap,
+                  height: drawer.depth * (cellSize + gap) + gap,
+                  width: 16,
+                  cursor: 'ew-resize',
+                }}
+                onMouseDown={(e) => handleResizeStart('width', e)}
+                title="Drag to resize width"
+              >
+                <div
+                  className="h-16 w-1 rounded-full transition-all group-hover:h-24 group-hover:w-1.5"
+                  style={{
+                    backgroundColor: resizeDirection === 'width' || resizeDirection === 'both'
+                      ? 'var(--color-primary)'
+                      : 'var(--border-default)',
+                  }}
+                />
+              </div>
+
+              {/* Bottom edge resize handle - positioned below column labels */}
+              <div
+                className="absolute left-0 flex items-center justify-center group"
+                style={{
+                  top: drawer.depth * (cellSize + gap) + gap + labelSize,
+                  width: drawer.width * (cellSize + gap) + gap,
+                  height: 16,
+                  cursor: 'ns-resize',
+                }}
+                onMouseDown={(e) => handleResizeStart('depth', e)}
+                title="Drag to resize depth"
+              >
+                <div
+                  className="w-16 h-1 rounded-full transition-all group-hover:w-24 group-hover:h-1.5"
+                  style={{
+                    backgroundColor: resizeDirection === 'depth' || resizeDirection === 'both'
+                      ? 'var(--color-primary)'
+                      : 'var(--border-default)',
+                  }}
+                />
+              </div>
+
+              {/* Corner resize handle - positioned below column labels */}
+              <div
+                className="absolute flex items-center justify-center group"
+                style={{
+                  left: drawer.width * (cellSize + gap) + gap,
+                  top: drawer.depth * (cellSize + gap) + gap + labelSize,
+                  width: 16,
+                  height: 16,
+                  cursor: 'nwse-resize',
+                }}
+                onMouseDown={(e) => handleResizeStart('both', e)}
+                title="Drag to resize both dimensions"
+              >
+                <div
+                  className="w-3 h-3 rounded-sm transition-all group-hover:w-4 group-hover:h-4"
+                  style={{
+                    backgroundColor: resizeDirection === 'both'
+                      ? 'var(--color-primary)'
+                      : 'var(--border-default)',
+                  }}
+                />
+              </div>
+
+              {/* Column labels row (at bottom, 1-indexed from left) */}
+              <div
+                className="absolute left-0 flex"
+                style={{
+                  top: drawer.depth * (cellSize + gap) + gap,
+                  marginLeft: gap,
+                }}
+              >
+                {columnLabels.map((num) => (
+                  <button
+                    key={`col-${num}`}
+                    type="button"
+                    className="flex items-center justify-center select-none transition-colors rounded-sm"
+                    style={{
+                      width: cellSize + gap,
+                      height: labelSize,
+                      fontSize: labelFontSize,
+                      fontWeight: 'var(--font-medium)',
+                      color: 'var(--text-tertiary)',
+                      fontVariantNumeric: 'tabular-nums',
+                      background: 'transparent',
+                      border: 'none',
+                      cursor: 'pointer',
+                    }}
+                    onClick={() => handleColumnClick(num)}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.backgroundColor = 'var(--bg-hover)';
+                      e.currentTarget.style.color = 'var(--text-secondary)';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.backgroundColor = 'transparent';
+                      e.currentTarget.style.color = 'var(--text-tertiary)';
+                    }}
+                    title={`Select bins in column ${num}`}
+                    aria-label={`Select bins in column ${num}`}
+                  >
+                    {num}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Resize confirmation dialog */}
+      <ConfirmDialog
+        isOpen={pendingResize !== null}
+        title="Resize Grid"
+        message={pendingResize
+          ? `${pendingResize.clippedBinIds.length} bin${pendingResize.clippedBinIds.length > 1 ? 's' : ''} will be moved to staging. Continue?`
+          : ''
+        }
+        confirmText="Move to Staging"
+        onConfirm={confirmResize}
+        onCancel={() => setPendingResize(null)}
+      />
+    </div>
+  );
+}

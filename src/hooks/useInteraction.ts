@@ -1,0 +1,529 @@
+import { useEffect, useCallback } from 'react';
+import type { RefObject } from 'react';
+import type { Coord, Rect, ResizeHandle } from '../types';
+import { useUIStore, useLayoutStore, useUndoableAction } from '../store';
+import { useGridCoords } from './useGridCoords';
+import { canPlaceBin } from '../utils/validation';
+import { STAGING_ID } from '../constants';
+
+export function useInteraction(gridRef: RefObject<HTMLDivElement | null>) {
+  const { getGridCoords, clampCoords, isInBounds } = useGridCoords(gridRef);
+  const interaction = useUIStore(state => state.interaction);
+  const setInteraction = useUIStore(state => state.setInteraction);
+  const setDropTarget = useUIStore(state => state.setDropTarget);
+  const selectedBinIds = useUIStore(state => state.selectedBinIds);
+  const setSelectedBin = useUIStore(state => state.setSelectedBin);
+  const setSelectedBins = useUIStore(state => state.setSelectedBins);
+  const activeLayerId = useUIStore(state => state.activeLayerId);
+  const activeCategoryId = useUIStore(state => state.activeCategoryId);
+  const paintSize = useUIStore(state => state.paintSize);
+  const layout = useLayoutStore(state => state.layout);
+  const addBin = useLayoutStore(state => state.addBin);
+  const updateBin = useLayoutStore(state => state.updateBin);
+  const deleteBin = useLayoutStore(state => state.deleteBin);
+  const { execute } = useUndoableAction();
+
+  // Start drawing a new bin (or start paint drag if paint mode active)
+  const startDraw = useCallback((coord: Coord) => {
+    // If paint mode is active, start paint area selection (like draw mode)
+    if (paintSize) {
+      setInteraction({
+        type: 'paint',
+        paintSize,
+        start: coord,
+        current: coord,
+      });
+      return;
+    }
+
+    setInteraction({
+      type: 'draw',
+      start: coord,
+      current: coord,
+    });
+  }, [paintSize, setInteraction]);
+
+  // Start dragging bins (single or multiple)
+  const startDrag = useCallback((binId: string, clientX: number, clientY: number) => {
+    const bin = layout.bins.find(b => b.id === binId);
+    if (!bin) return;
+
+    // Convert mouse click position to grid coordinates
+    const clickCoord = getGridCoords(clientX, clientY);
+    if (!clickCoord) return;
+
+    // Use click position as startCoord so delta is calculated from where user clicked
+    const startCoord = clickCoord;
+
+    // If clicked bin is already in selection, drag all selected bins
+    // Otherwise, select only this bin and drag it
+    let binIds: string[];
+    if (selectedBinIds.includes(binId)) {
+      binIds = selectedBinIds;
+    } else {
+      binIds = [binId];
+      setSelectedBin(binId);
+    }
+
+    setInteraction({
+      type: 'drag',
+      binIds,
+      startCoord,
+      currentCoord: { x: bin.x, y: bin.y },
+      valid: true,
+      isOverGrid: true,
+    });
+  }, [layout.bins, selectedBinIds, setSelectedBin, setInteraction, getGridCoords]);
+
+  // Start resizing bins (single or multiple)
+  const startResize = useCallback((binId: string, handle: ResizeHandle) => {
+    const bin = layout.bins.find(b => b.id === binId);
+    if (!bin) return;
+
+    // If clicked bin is in selection, resize all selected bins
+    let binIds: string[];
+    if (selectedBinIds.includes(binId)) {
+      binIds = selectedBinIds;
+    } else {
+      binIds = [binId];
+      setSelectedBin(binId);
+    }
+
+    // Store start rects for all bins being resized
+    const startRects = new Map<string, Rect>();
+    const currentRects = new Map<string, Rect>();
+    for (const id of binIds) {
+      const b = layout.bins.find(x => x.id === id);
+      if (b) {
+        const rect = { x: b.x, y: b.y, width: b.width, depth: b.depth };
+        startRects.set(id, rect);
+        currentRects.set(id, { ...rect });
+      }
+    }
+
+    setInteraction({
+      type: 'resize',
+      binIds,
+      handle,
+      startRects,
+      currentRects,
+      valid: true,
+    });
+  }, [layout.bins, selectedBinIds, setSelectedBin, setInteraction]);
+
+  // Cancel current interaction
+  const cancel = useCallback(() => {
+    setInteraction(null);
+  }, [setInteraction]);
+
+  // Document-level mouse tracking
+  useEffect(() => {
+    if (!interaction) return;
+
+    const handleMouseMove = (e: MouseEvent) => {
+      const coords = getGridCoords(e.clientX, e.clientY);
+      if (!coords) return;
+      const clamped = clampCoords(coords);
+
+      if (interaction.type === 'draw') {
+        setInteraction({
+          ...interaction,
+          current: clamped,
+        });
+      } else if (interaction.type === 'drag') {
+        // Check if mouse is over the grid
+        const overGrid = isInBounds(coords);
+
+        // Calculate delta from original position
+        const primaryBin = layout.bins.find(b => b.id === interaction.binIds[0]);
+        if (!primaryBin) return;
+
+        const deltaX = clamped.x - interaction.startCoord.x;
+        const deltaY = clamped.y - interaction.startCoord.y;
+
+        // Check if all bins can be placed at their new positions
+        let allValid = overGrid; // Only valid if over grid
+        const otherBinIds = new Set(interaction.binIds);
+
+        if (overGrid) {
+          for (const binId of interaction.binIds) {
+            const bin = layout.bins.find(b => b.id === binId);
+            if (!bin) continue;
+
+            const newX = Math.max(0, Math.min(bin.x + deltaX, layout.drawer.width - bin.width));
+            const newY = Math.max(0, Math.min(bin.y + deltaY, layout.drawer.depth - bin.depth));
+
+            // Check placement excluding all bins being dragged
+            const result = canPlaceBin(
+              { x: newX, y: newY, width: bin.width, depth: bin.depth, height: bin.height },
+              activeLayerId,
+              layout,
+              binId,
+              otherBinIds // Pass all dragged bins to exclude from collision check
+            );
+
+            if (!result.valid) {
+              allValid = false;
+              break;
+            }
+          }
+        }
+
+        // Calculate new position for primary bin (used for preview)
+        const newX = Math.max(0, Math.min(primaryBin.x + deltaX, layout.drawer.width - primaryBin.width));
+        const newY = Math.max(0, Math.min(primaryBin.y + deltaY, layout.drawer.depth - primaryBin.depth));
+
+        setInteraction({
+          ...interaction,
+          currentCoord: { x: newX, y: newY },
+          valid: allValid,
+          isOverGrid: overGrid,
+        });
+      } else if (interaction.type === 'resize') {
+        // Resize all selected bins by same delta
+        const newRects = new Map<string, Rect>();
+        let allValid = true;
+        const otherBinIds = new Set(interaction.binIds);
+
+        for (const binId of interaction.binIds) {
+          const bin = layout.bins.find(b => b.id === binId);
+          const startRect = interaction.startRects.get(binId);
+          if (!bin || !startRect) continue;
+
+          const newRect = calculateResizeRect(
+            startRect,
+            interaction.handle,
+            clamped,
+            layout.drawer
+          );
+          newRects.set(binId, newRect);
+
+          const result = canPlaceBin(
+            { ...newRect, height: bin.height },
+            activeLayerId,
+            layout,
+            binId,
+            otherBinIds
+          );
+
+          if (!result.valid) {
+            allValid = false;
+          }
+        }
+
+        setInteraction({
+          ...interaction,
+          currentRects: newRects,
+          valid: allValid,
+        });
+      } else if (interaction.type === 'stagingDrag') {
+        // Dragging a bin from staging to main grid
+        const bin = layout.bins.find(b => b.id === interaction.binId);
+        if (!bin) return;
+
+        // Calculate where the bin would be placed (centered on cursor)
+        const targetX = Math.max(0, Math.min(clamped.x, layout.drawer.width - bin.width));
+        const targetY = Math.max(0, Math.min(clamped.y, layout.drawer.depth - bin.depth));
+
+        // Validate placement
+        const result = canPlaceBin(
+          { x: targetX, y: targetY, width: bin.width, depth: bin.depth, height: bin.height },
+          activeLayerId,
+          layout,
+          bin.id
+        );
+
+        setInteraction({
+          ...interaction,
+          currentCoord: { x: targetX, y: targetY },
+          valid: result.valid,
+        });
+      } else if (interaction.type === 'paint') {
+        // Paint mode - update selection area (like draw mode)
+        setInteraction({
+          ...interaction,
+          current: clamped,
+        });
+      }
+    };
+
+    const handleMouseUp = () => {
+      // Read drop target directly from store to ensure we have the latest value
+      const currentDropTarget = useUIStore.getState().dropTarget;
+
+      if (interaction.type === 'draw') {
+        const { start, current } = interaction;
+        const x1 = Math.min(start.x, current.x);
+        const y1 = Math.min(start.y, current.y);
+        const x2 = Math.max(start.x, current.x);
+        const y2 = Math.max(start.y, current.y);
+        const width = x2 - x1 + 1;
+        const depth = y2 - y1 + 1;
+
+        const layer = layout.layers.find(l => l.id === activeLayerId);
+        if (layer) {
+          execute(() => {
+            const binId = addBin({
+              layerId: activeLayerId,
+              x: x1,
+              y: y1,
+              width,
+              depth,
+              height: layer.height,
+              category: activeCategoryId,
+              label: '',
+              notes: '',
+            });
+            if (binId) {
+              setSelectedBin(binId);
+            }
+          });
+        }
+      } else if (interaction.type === 'paint') {
+        // Paint mode - fill the selected area with bins of paintSize
+        const { start, current, paintSize: ps } = interaction;
+        const x1 = Math.min(start.x, current.x);
+        const y1 = Math.min(start.y, current.y);
+        const x2 = Math.max(start.x, current.x);
+        const y2 = Math.max(start.y, current.y);
+        const areaWidth = x2 - x1 + 1;
+        const areaDepth = y2 - y1 + 1;
+
+        const layer = layout.layers.find(l => l.id === activeLayerId);
+        if (layer && ps) {
+          // Calculate how many bins fit in the selected area
+          const binsAcross = Math.floor(areaWidth / ps.width);
+          const binsDown = Math.floor(areaDepth / ps.depth);
+
+          if (binsAcross > 0 && binsDown > 0) {
+            // Get fresh layout state for validation
+            const currentLayout = useLayoutStore.getState().layout;
+            const placedBinIds: string[] = [];
+
+            execute(() => {
+              // Place bins in a grid pattern
+              for (let row = 0; row < binsDown; row++) {
+                for (let col = 0; col < binsAcross; col++) {
+                  const binX = x1 + col * ps.width;
+                  const binY = y1 + row * ps.depth;
+
+                  // Validate each placement
+                  const result = canPlaceBin(
+                    { x: binX, y: binY, width: ps.width, depth: ps.depth, height: layer.height },
+                    activeLayerId,
+                    currentLayout,
+                    undefined,
+                    new Set(placedBinIds) // Exclude bins we've already placed
+                  );
+
+                  if (result.valid) {
+                    const binId = addBin({
+                      layerId: activeLayerId,
+                      x: binX,
+                      y: binY,
+                      width: ps.width,
+                      depth: ps.depth,
+                      height: layer.height,
+                      category: activeCategoryId,
+                      label: '',
+                      notes: '',
+                    });
+                    if (binId) {
+                      placedBinIds.push(binId);
+                    }
+                  }
+                }
+              }
+            });
+
+            // Select all placed bins
+            if (placedBinIds.length > 0) {
+              setSelectedBins(placedBinIds);
+            }
+          }
+        }
+      } else if (interaction.type === 'drag') {
+        // Check for drop targets first
+        if (currentDropTarget === 'trash') {
+          // Delete all dragged bins
+          execute(() => {
+            for (const binId of interaction.binIds) {
+              deleteBin(binId);
+            }
+          });
+          setSelectedBins([]);
+          setDropTarget(null);
+          setInteraction(null);
+          return;
+        }
+
+        if (currentDropTarget === 'staging') {
+          // Move all dragged bins to staging
+          execute(() => {
+            for (const binId of interaction.binIds) {
+              updateBin(binId, { layerId: STAGING_ID });
+            }
+          });
+          setSelectedBins([]);
+          setDropTarget(null);
+          setInteraction(null);
+          return;
+        }
+
+        // Normal drag placement
+        if (interaction.valid) {
+          const primaryBin = layout.bins.find(b => b.id === interaction.binIds[0]);
+          if (!primaryBin) {
+            setInteraction(null);
+            return;
+          }
+
+          // Calculate delta from original position
+          const deltaX = interaction.currentCoord.x - primaryBin.x;
+          const deltaY = interaction.currentCoord.y - primaryBin.y;
+
+          if (deltaX !== 0 || deltaY !== 0) {
+            const layer = layout.layers.find(l => l.id === activeLayerId);
+            execute(() => {
+              // Update all dragged bins
+              for (const binId of interaction.binIds) {
+                const bin = layout.bins.find(b => b.id === binId);
+                if (!bin) continue;
+
+                const newX = Math.max(0, Math.min(bin.x + deltaX, layout.drawer.width - bin.width));
+                const newY = Math.max(0, Math.min(bin.y + deltaY, layout.drawer.depth - bin.depth));
+
+                updateBin(binId, {
+                  x: newX,
+                  y: newY,
+                  layerId: activeLayerId,
+                  height: layer?.height || bin.height,
+                });
+              }
+            });
+          }
+        }
+      } else if (interaction.type === 'resize' && interaction.valid) {
+        let hasChanges = false;
+
+        // Check if any bin changed
+        for (const binId of interaction.binIds) {
+          const startRect = interaction.startRects.get(binId);
+          const currentRect = interaction.currentRects.get(binId);
+          if (!startRect || !currentRect) continue;
+
+          if (
+            startRect.x !== currentRect.x ||
+            startRect.y !== currentRect.y ||
+            startRect.width !== currentRect.width ||
+            startRect.depth !== currentRect.depth
+          ) {
+            hasChanges = true;
+            break;
+          }
+        }
+
+        if (hasChanges) {
+          execute(() => {
+            for (const binId of interaction.binIds) {
+              const currentRect = interaction.currentRects.get(binId);
+              if (!currentRect) continue;
+
+              updateBin(binId, {
+                x: currentRect.x,
+                y: currentRect.y,
+                width: currentRect.width,
+                depth: currentRect.depth,
+              });
+            }
+          });
+        }
+      } else if (interaction.type === 'stagingDrag') {
+        // Check for trash drop first
+        if (currentDropTarget === 'trash') {
+          execute(() => {
+            deleteBin(interaction.binId);
+          });
+          setDropTarget(null);
+          setInteraction(null);
+          return;
+        }
+
+        // Place bin on grid if valid position
+        if (interaction.valid && interaction.currentCoord) {
+          const bin = layout.bins.find(b => b.id === interaction.binId);
+          if (bin) {
+            const layer = layout.layers.find(l => l.id === activeLayerId);
+            execute(() => {
+              updateBin(interaction.binId, {
+                x: interaction.currentCoord!.x,
+                y: interaction.currentCoord!.y,
+                layerId: activeLayerId,
+                height: layer?.height || bin.height,
+              });
+            });
+            setSelectedBin(interaction.binId);
+          }
+        }
+        // If invalid or no position, bin stays in staging (no action needed)
+      }
+
+      setInteraction(null);
+    };
+
+    document.addEventListener('mousemove', handleMouseMove);
+    document.addEventListener('mouseup', handleMouseUp);
+
+    return () => {
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', handleMouseUp);
+    };
+  }, [interaction, layout, activeLayerId, activeCategoryId, addBin, updateBin, deleteBin, setInteraction, setDropTarget, setSelectedBin, setSelectedBins, getGridCoords, clampCoords, isInBounds, execute]);
+
+  return {
+    interaction,
+    startDraw,
+    startDrag,
+    startResize,
+    cancel,
+  };
+}
+
+/**
+ * Calculate new rectangle based on resize handle and cursor position.
+ */
+function calculateResizeRect(
+  start: Rect,
+  handle: ResizeHandle,
+  cursor: Coord,
+  drawer: { width: number; depth: number }
+): Rect {
+  let { x, y, width, depth } = start;
+
+  if (handle.includes('e')) {
+    width = Math.max(1, cursor.x - x + 1);
+  }
+  if (handle.includes('w')) {
+    const newX = Math.min(cursor.x, x + width - 1);
+    width = x + width - newX;
+    x = newX;
+  }
+  if (handle.includes('n')) {
+    depth = Math.max(1, cursor.y - y + 1);
+  }
+  if (handle.includes('s')) {
+    const newY = Math.min(cursor.y, y + depth - 1);
+    depth = y + depth - newY;
+    y = newY;
+  }
+
+  // Clamp to drawer bounds
+  x = Math.max(0, x);
+  y = Math.max(0, y);
+  if (x + width > drawer.width) width = drawer.width - x;
+  if (y + depth > drawer.depth) depth = drawer.depth - y;
+  width = Math.max(1, width);
+  depth = Math.max(1, depth);
+
+  return { x, y, width, depth };
+}

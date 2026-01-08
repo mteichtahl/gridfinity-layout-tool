@@ -1,0 +1,100 @@
+import { create } from 'zustand';
+import { useCallback, useRef } from 'react';
+import type { Layout } from '../types';
+import { useLayoutStore } from './layout';
+import { CONSTRAINTS } from '../constants';
+
+interface HistoryState {
+  past: Layout[];
+  future: Layout[];
+
+  canUndo: boolean;
+  canRedo: boolean;
+
+  push: (layout: Layout) => void;
+  undo: () => void;
+  redo: () => void;
+  clear: () => void;
+}
+
+export const useHistoryStore = create<HistoryState>((set, get) => ({
+  past: [],
+  future: [],
+  canUndo: false,
+  canRedo: false,
+
+  push: (layout) => {
+    set(state => {
+      const newPast = [...state.past, layout];
+      // Trim to limit
+      if (newPast.length > CONSTRAINTS.UNDO_LIMIT) {
+        newPast.shift();
+      }
+      return {
+        past: newPast,
+        future: [], // Clear future on new action
+        canUndo: true,
+        canRedo: false,
+      };
+    });
+  },
+
+  undo: () => {
+    const { past } = get();
+    if (past.length === 0) return;
+
+    const current = useLayoutStore.getState().layout;
+    const previous = past[past.length - 1];
+
+    set(state => ({
+      past: state.past.slice(0, -1),
+      future: [current, ...state.future],
+      canUndo: state.past.length > 1,
+      canRedo: true,
+    }));
+
+    useLayoutStore.setState({ layout: previous });
+  },
+
+  redo: () => {
+    const { future } = get();
+    if (future.length === 0) return;
+
+    const current = useLayoutStore.getState().layout;
+    const next = future[0];
+
+    set(state => ({
+      past: [...state.past, current],
+      future: state.future.slice(1),
+      canUndo: true,
+      canRedo: state.future.length > 1,
+    }));
+
+    useLayoutStore.setState({ layout: next });
+  },
+
+  clear: () => {
+    set({ past: [], future: [], canUndo: false, canRedo: false });
+  },
+}));
+
+/**
+ * Hook to wrap layout actions with history tracking.
+ * Use this instead of calling layout store directly for undoable actions.
+ */
+export function useUndoableAction() {
+  const layout = useLayoutStore(state => state.layout);
+  const push = useHistoryStore(state => state.push);
+
+  // Use ref to track current layout without causing callback to change
+  const layoutRef = useRef(layout);
+  layoutRef.current = layout;
+
+  const execute = useCallback((action: () => void) => {
+    // Deep clone current state before action using ref
+    push(JSON.parse(JSON.stringify(layoutRef.current)));
+    action();
+  }, [push]); // Only depends on push, which is stable from Zustand
+
+  return { execute };
+}

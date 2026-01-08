@@ -1,0 +1,410 @@
+import { create } from 'zustand';
+import { immer } from 'zustand/middleware/immer';
+import type { Layout, Bin, Layer, Category, Drawer } from '../types';
+import { createDefaultLayout, generateId, STAGING_ID, CONSTRAINTS, calcMaxGridUnits } from '../constants';
+import { canPlaceBin } from '../utils/validation';
+import { fillAllWithSize, fillGaps } from '../utils/fill';
+import { checkLayerReorderCollisions } from '../utils/collision';
+
+interface LayoutState {
+  layout: Layout;
+
+  // Bin operations
+  addBin: (bin: Omit<Bin, 'id'>) => string | null;
+  updateBin: (id: string, updates: Partial<Bin>) => void;
+  deleteBin: (id: string) => void;
+  duplicateBin: (id: string) => string | null;
+  moveBinToStaging: (id: string) => void;
+  moveBinFromStaging: (id: string, layerId: string, x: number, y: number) => boolean;
+
+  // Layer operations
+  addLayer: () => string | null;
+  updateLayer: (id: string, updates: Partial<Layer>) => void;
+  deleteLayer: (id: string) => boolean;
+  reorderLayers: (fromIndex: number, toIndex: number) => { success: boolean; error?: string };
+
+  // Drawer operations
+  updateDrawer: (updates: Partial<Drawer>) => void;
+
+  // Category operations
+  addCategory: (category: Omit<Category, 'id'>) => string;
+  updateCategory: (id: string, updates: Partial<Category>) => void;
+  deleteCategory: (id: string) => boolean;
+
+  // Bulk operations
+  fillLayer: (layerId: string, width: number, depth: number, categoryId: string) => number;
+  fillLayerGaps: (layerId: string, categoryId: string) => number;
+  clearLayer: (layerId: string) => number;
+
+  // I/O
+  importLayout: (layout: Layout) => void;
+  reset: () => void;
+
+  // Name
+  setName: (name: string) => void;
+
+  // Settings
+  setPrintBedSize: (size: number) => void;
+  setGridUnitMm: (mm: number) => void;
+  setHeightUnitMm: (mm: number) => void;
+}
+
+export const useLayoutStore = create<LayoutState>()(
+  immer((set, get) => ({
+    layout: createDefaultLayout(),
+
+    addBin: (binData) => {
+      const { layout } = get();
+      const id = generateId();
+      const bin: Bin = { ...binData, id };
+
+      // Validate placement
+      if (bin.layerId !== STAGING_ID) {
+        const result = canPlaceBin(
+          { x: bin.x, y: bin.y, width: bin.width, depth: bin.depth, height: bin.height },
+          bin.layerId,
+          layout
+        );
+        if (!result.valid) return null;
+      }
+
+      set(state => {
+        state.layout.bins.push(bin);
+      });
+
+      return id;
+    },
+
+    updateBin: (id, updates) => {
+      set(state => {
+        const bin = state.layout.bins.find(b => b.id === id);
+        if (bin) {
+          Object.assign(bin, updates);
+        }
+      });
+    },
+
+    deleteBin: (id) => {
+      set(state => {
+        state.layout.bins = state.layout.bins.filter(b => b.id !== id);
+      });
+    },
+
+    duplicateBin: (id) => {
+      const { layout, addBin } = get();
+      const bin = layout.bins.find(b => b.id === id);
+      if (!bin) return null;
+
+      // Staging bins just create another staging copy
+      if (bin.layerId === STAGING_ID) {
+        return addBin({
+          layerId: STAGING_ID,
+          x: 0,
+          y: 0,
+          width: bin.width,
+          depth: bin.depth,
+          height: bin.height,
+          category: bin.category,
+          label: bin.label,
+          notes: bin.notes,
+        });
+      }
+
+      // Try positions: right, below, left, above
+      const offsets = [
+        { dx: bin.width, dy: 0 },   // right
+        { dx: 0, dy: -bin.depth },  // below (y decreases going down visually)
+        { dx: -bin.width, dy: 0 },  // left
+        { dx: 0, dy: bin.depth },   // above
+      ];
+
+      for (const { dx, dy } of offsets) {
+        const newX = bin.x + dx;
+        const newY = bin.y + dy;
+
+        const result = canPlaceBin(
+          { x: newX, y: newY, width: bin.width, depth: bin.depth, height: bin.height },
+          bin.layerId,
+          layout
+        );
+
+        if (result.valid) {
+          return addBin({
+            layerId: bin.layerId,
+            x: newX,
+            y: newY,
+            width: bin.width,
+            depth: bin.depth,
+            height: bin.height,
+            category: bin.category,
+            label: bin.label,
+            notes: bin.notes,
+          });
+        }
+      }
+
+      // No valid position found, send to staging
+      return addBin({
+        layerId: STAGING_ID,
+        x: 0,
+        y: 0,
+        width: bin.width,
+        depth: bin.depth,
+        height: bin.height,
+        category: bin.category,
+        label: bin.label,
+        notes: bin.notes,
+      });
+    },
+
+    moveBinToStaging: (id) => {
+      set(state => {
+        const bin = state.layout.bins.find(b => b.id === id);
+        if (bin) {
+          bin.layerId = STAGING_ID;
+        }
+      });
+    },
+
+    moveBinFromStaging: (id, layerId, x, y) => {
+      const { layout } = get();
+      const bin = layout.bins.find(b => b.id === id);
+      if (!bin) return false;
+
+      const layer = layout.layers.find(l => l.id === layerId);
+      if (!layer) return false;
+
+      const result = canPlaceBin(
+        { x, y, width: bin.width, depth: bin.depth, height: layer.height },
+        layerId,
+        layout,
+        id
+      );
+
+      if (!result.valid) return false;
+
+      set(state => {
+        const b = state.layout.bins.find(b => b.id === id);
+        if (b) {
+          b.layerId = layerId;
+          b.x = x;
+          b.y = y;
+          b.height = layer.height;
+        }
+      });
+
+      return true;
+    },
+
+    addLayer: () => {
+      const { layout } = get();
+      if (layout.layers.length >= CONSTRAINTS.LAYERS_MAX) return null;
+
+      const totalHeight = layout.layers.reduce((sum, l) => sum + l.height, 0);
+      const remaining = layout.drawer.height - totalHeight;
+      if (remaining < 1) return null;
+
+      const id = generateId();
+      const newLayer: Layer = {
+        id,
+        name: `Layer ${layout.layers.length + 1}`,
+        height: Math.min(remaining, 3),
+      };
+
+      set(state => {
+        state.layout.layers.push(newLayer);
+      });
+
+      return id;
+    },
+
+    updateLayer: (id, updates) => {
+      set(state => {
+        const layer = state.layout.layers.find(l => l.id === id);
+        if (layer) {
+          // If height is changing, clamp it
+          if (updates.height !== undefined) {
+            const othersHeight = state.layout.layers
+              .filter(l => l.id !== id)
+              .reduce((sum, l) => sum + l.height, 0);
+            const maxHeight = state.layout.drawer.height - othersHeight;
+            updates.height = Math.max(1, Math.min(updates.height, maxHeight));
+          }
+          Object.assign(layer, updates);
+        }
+      });
+    },
+
+    deleteLayer: (id) => {
+      const { layout } = get();
+      if (layout.layers.length <= CONSTRAINTS.LAYERS_MIN) return false;
+
+      set(state => {
+        state.layout.layers = state.layout.layers.filter(l => l.id !== id);
+        state.layout.bins = state.layout.bins.filter(b => b.layerId !== id);
+      });
+
+      return true;
+    },
+
+    reorderLayers: (fromIndex, toIndex) => {
+      const { layout } = get();
+
+      if (fromIndex === toIndex) return { success: true };
+      if (fromIndex < 0 || fromIndex >= layout.layers.length) return { success: false, error: 'Invalid source index' };
+      if (toIndex < 0 || toIndex >= layout.layers.length) return { success: false, error: 'Invalid target index' };
+
+      // Create new layer order
+      const newLayers = [...layout.layers];
+      const [moved] = newLayers.splice(fromIndex, 1);
+      newLayers.splice(toIndex, 0, moved);
+
+      // Check for collisions with new order
+      const collisions = checkLayerReorderCollisions(layout.bins, layout.layers, newLayers);
+      if (collisions.length > 0) {
+        return {
+          success: false,
+          error: `Reordering would cause ${collisions.length} bin collision${collisions.length > 1 ? 's' : ''}`,
+        };
+      }
+
+      // Apply the reorder
+      set(state => {
+        state.layout.layers = newLayers;
+      });
+
+      return { success: true };
+    },
+
+    updateDrawer: (updates) => {
+      set(state => {
+        const drawer = state.layout.drawer;
+
+        // Apply updates with constraints
+        if (updates.width !== undefined) {
+          drawer.width = Math.max(CONSTRAINTS.GRID_MIN, Math.min(CONSTRAINTS.GRID_MAX, updates.width));
+        }
+        if (updates.depth !== undefined) {
+          drawer.depth = Math.max(CONSTRAINTS.GRID_MIN, Math.min(CONSTRAINTS.GRID_MAX, updates.depth));
+        }
+        if (updates.height !== undefined) {
+          const totalLayerHeight = state.layout.layers.reduce((sum, l) => sum + l.height, 0);
+          drawer.height = Math.max(totalLayerHeight, updates.height);
+        }
+
+        // Move out-of-bounds bins to staging
+        state.layout.bins = state.layout.bins.map(bin => {
+          if (bin.layerId === STAGING_ID) return bin;
+
+          if (bin.x + bin.width > drawer.width || bin.y + bin.depth > drawer.depth) {
+            return { ...bin, layerId: STAGING_ID };
+          }
+          return bin;
+        });
+      });
+    },
+
+    addCategory: (categoryData) => {
+      const id = generateId();
+      set(state => {
+        state.layout.categories.push({ ...categoryData, id });
+      });
+      return id;
+    },
+
+    updateCategory: (id, updates) => {
+      set(state => {
+        const cat = state.layout.categories.find(c => c.id === id);
+        if (cat) {
+          Object.assign(cat, updates);
+        }
+      });
+    },
+
+    deleteCategory: (id) => {
+      const { layout } = get();
+
+      // Can't delete if in use
+      if (layout.bins.some(b => b.category === id)) return false;
+      // Must have at least one
+      if (layout.categories.length <= CONSTRAINTS.CATEGORIES_MIN) return false;
+
+      set(state => {
+        state.layout.categories = state.layout.categories.filter(c => c.id !== id);
+      });
+
+      return true;
+    },
+
+    fillLayer: (layerId, width, depth, categoryId) => {
+      const { layout } = get();
+      const result = fillAllWithSize(layout, layerId, width, depth, categoryId);
+
+      if (result.bins.length > 0) {
+        set(state => {
+          state.layout.bins.push(...result.bins);
+        });
+      }
+
+      return result.bins.length;
+    },
+
+    fillLayerGaps: (layerId, categoryId) => {
+      const { layout } = get();
+      // Calculate max grid units from print bed size (accounting for gaps)
+      const maxGridUnits = calcMaxGridUnits(layout.printBedSize, layout.gridUnitMm);
+      const result = fillGaps(layout, layerId, categoryId, maxGridUnits);
+
+      if (result.bins.length > 0) {
+        set(state => {
+          state.layout.bins.push(...result.bins);
+        });
+      }
+
+      return result.addedCount;
+    },
+
+    clearLayer: (layerId) => {
+      const { layout } = get();
+      const count = layout.bins.filter(b => b.layerId === layerId).length;
+
+      set(state => {
+        state.layout.bins = state.layout.bins.filter(b => b.layerId !== layerId);
+      });
+
+      return count;
+    },
+
+    importLayout: (layout) => {
+      set({ layout });
+    },
+
+    reset: () => {
+      set({ layout: createDefaultLayout() });
+    },
+
+    setName: (name) => {
+      set(state => {
+        state.layout.name = name.slice(0, CONSTRAINTS.NAME_MAX_LENGTH);
+      });
+    },
+
+    setPrintBedSize: (size) => {
+      set(state => {
+        state.layout.printBedSize = Math.max(42, Math.min(500, size));
+      });
+    },
+
+    setGridUnitMm: (mm) => {
+      set(state => {
+        state.layout.gridUnitMm = Math.max(1, Math.min(200, mm));
+      });
+    },
+
+    setHeightUnitMm: (mm) => {
+      set(state => {
+        state.layout.heightUnitMm = Math.max(1, Math.min(50, mm));
+      });
+    },
+  }))
+);

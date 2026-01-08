@@ -1,0 +1,212 @@
+import type { RefObject, MouseEvent } from 'react';
+import React from 'react';
+import { useUIStore, useLayoutStore } from '../../store';
+import { useGridCoords } from '../../hooks';
+import { Bin } from './Bin';
+import { getBlockedZones } from '../../utils/collision';
+import type { Coord, ResizeHandle } from '../../types';
+
+interface GridCanvasProps {
+  gridRef: RefObject<HTMLDivElement | null>;
+  cellSize: number;
+  gap: number;
+  onStartDraw: (coord: Coord) => void;
+  onStartDrag: (binId: string, clientX: number, clientY: number) => void;
+  onStartResize: (binId: string, handle: ResizeHandle) => void;
+}
+
+/**
+ * Cell rendering and mouse handling.
+ * Uses CSS Grid to render cells and bins.
+ */
+export function GridCanvas({ gridRef, cellSize, gap, onStartDraw, onStartDrag, onStartResize }: GridCanvasProps) {
+  const drawer = useLayoutStore((state) => state.layout.drawer);
+  const bins = useLayoutStore((state) => state.layout.bins);
+  const layers = useLayoutStore((state) => state.layout.layers);
+  const categories = useLayoutStore((state) => state.layout.categories);
+  const activeLayerId = useUIStore((state) => state.activeLayerId);
+  const showOtherLayers = useUIStore((state) => state.showOtherLayers);
+  const selectedBinIds = useUIStore((state) => state.selectedBinIds);
+
+  const setSelectedBin = useUIStore((state) => state.setSelectedBin);
+  const setActiveLayer = useUIStore((state) => state.setActiveLayer);
+  const paintSize = useUIStore((state) => state.paintSize);
+
+  const { getGridCoords } = useGridCoords(gridRef);
+
+  // Filter bins for current and layers below
+  const activeBins = bins.filter((b) => b.layerId === activeLayerId);
+  const activeLayerIndex = layers.findIndex((l) => l.id === activeLayerId);
+  const layersBelowIds = layers.slice(0, activeLayerIndex).map((l) => l.id);
+  const ghostBins = showOtherLayers
+    ? bins.filter((b) => layersBelowIds.includes(b.layerId))
+    : [];
+
+  // Get blocked zones for current layer
+  const blockedZones = getBlockedZones(activeLayerId, bins, layers);
+
+  // Capture phase handler for paint mode - runs before Bin components can stop propagation
+  const handleMouseDownCapture = (e: MouseEvent<HTMLDivElement>) => {
+    if (e.button !== 0) return;
+
+    // In paint mode, intercept all clicks to start paint interaction
+    if (paintSize) {
+      const coords = getGridCoords(e.clientX, e.clientY);
+      if (coords) {
+        e.preventDefault();
+        e.stopPropagation();
+        onStartDraw(coords);
+      }
+    }
+  };
+
+  // Bubble phase handler for normal draw mode
+  const handleMouseDown = (e: MouseEvent<HTMLDivElement>) => {
+    // Only start draw on left click on empty space (paint mode handled in capture)
+    if (e.button !== 0 || paintSize) return;
+    if ((e.target as HTMLElement).closest('[data-bin-id]')) return;
+
+    const coords = getGridCoords(e.clientX, e.clientY);
+    if (coords) {
+      onStartDraw(coords);
+    }
+  };
+
+  const handleBlockedZoneClick = (binId: string, layerId: string) => {
+    setActiveLayer(layerId);
+    setSelectedBin(binId);
+  };
+
+  // Generate grid cells for visual reference
+  const cells: React.JSX.Element[] = [];
+  for (let y = drawer.depth - 1; y >= 0; y--) {
+    for (let x = 0; x < drawer.width; x++) {
+      cells.push(
+        <div
+          key={`${x}-${y}`}
+          style={{
+            gridColumn: x + 1,
+            gridRow: drawer.depth - y,
+            width: cellSize,
+            height: cellSize,
+            backgroundColor: 'var(--grid-cell)',
+            borderRadius: '2px',
+          }}
+        />
+      );
+    }
+  }
+
+  return (
+    <div
+      className="absolute inset-0"
+      onMouseDownCapture={handleMouseDownCapture}
+      onMouseDown={handleMouseDown}
+      style={{ cursor: paintSize ? 'cell' : 'crosshair' }}
+    >
+      {/* CSS Grid container */}
+      <div
+        className="absolute inset-0"
+        style={{
+          display: 'grid',
+          gridTemplateColumns: `repeat(${drawer.width}, ${cellSize}px)`,
+          gridTemplateRows: `repeat(${drawer.depth}, ${cellSize}px)`,
+          gap: `${gap}px`,
+          padding: `${gap}px`,
+        }}
+      >
+        {/* Grid cells */}
+        {cells}
+
+        {/* Ghost bins (other layers) */}
+        {ghostBins.map((bin) => {
+          const category = categories.find((c) => c.id === bin.category);
+          const layer = layers.find((l) => l.id === bin.layerId);
+          return (
+            <Bin
+              key={bin.id}
+              bin={bin}
+              category={category}
+              layer={layer}
+              drawer={drawer}
+              isGhost
+              isSelected={false}
+              onStartDrag={onStartDrag}
+              onStartResize={onStartResize}
+            />
+          );
+        })}
+
+        {/* Blocked zones */}
+        {blockedZones.map((zone) => {
+          const sourceBin = bins.find((b) => b.id === zone.sourceBinId);
+          const category = sourceBin
+            ? categories.find((c) => c.id === sourceBin.category)
+            : undefined;
+
+          return (
+            <div
+              key={zone.sourceBinId}
+              className="relative cursor-pointer"
+              style={{
+                gridColumn: `${zone.x + 1} / span ${zone.width}`,
+                gridRow: `${drawer.depth - zone.y - zone.depth + 1} / span ${zone.depth}`,
+                backgroundColor: category?.color || '#6b7280',
+                opacity: 0.3,
+                zIndex: 8,
+              }}
+              onClick={() => sourceBin && handleBlockedZoneClick(sourceBin.id, sourceBin.layerId)}
+              title={sourceBin ? `Click to edit on ${layers.find(l => l.id === sourceBin.layerId)?.name}` : undefined}
+            >
+              {/* Diagonal hatching pattern */}
+              <svg
+                className="absolute inset-0 w-full h-full pointer-events-none"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <defs>
+                  <pattern
+                    id={`hatch-${zone.sourceBinId}`}
+                    patternUnits="userSpaceOnUse"
+                    width="8"
+                    height="8"
+                  >
+                    <path
+                      d="M-2,2 l4,-4 M0,8 l8,-8 M6,10 l4,-4"
+                      stroke="#000"
+                      strokeWidth="1"
+                      opacity="0.3"
+                    />
+                  </pattern>
+                </defs>
+                <rect
+                  width="100%"
+                  height="100%"
+                  fill={`url(#hatch-${zone.sourceBinId})`}
+                />
+              </svg>
+            </div>
+          );
+        })}
+
+        {/* Active layer bins */}
+        {activeBins.map((bin) => {
+          const category = categories.find((c) => c.id === bin.category);
+          const layer = layers.find((l) => l.id === bin.layerId);
+          return (
+            <Bin
+              key={bin.id}
+              bin={bin}
+              category={category}
+              layer={layer}
+              drawer={drawer}
+              isGhost={false}
+              isSelected={selectedBinIds.includes(bin.id)}
+              onStartDrag={onStartDrag}
+              onStartResize={onStartResize}
+            />
+          );
+        })}
+      </div>
+    </div>
+  );
+}

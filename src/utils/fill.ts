@@ -1,0 +1,180 @@
+import type { Bin, Layout } from '../types';
+import { generateId, CONSTRAINTS } from '../constants';
+import { canPlaceBin } from './validation';
+
+/**
+ * Fill empty cells with bins of specified size.
+ * Skips occupied cells and blocked zones.
+ */
+export function fillAllWithSize(
+  layout: Layout,
+  layerId: string,
+  binWidth: number,
+  binDepth: number,
+  categoryId: string
+): { bins: Bin[]; skippedCells: number } {
+  const layer = layout.layers.find(l => l.id === layerId);
+  if (!layer) {
+    return { bins: [], skippedCells: 0 };
+  }
+
+  const newBins: Bin[] = [];
+  let skippedCells = 0;
+
+  // Track which cells are covered by new bins
+  const covered = new Set<string>();
+
+  for (let y = 0; y < layout.drawer.depth; y += binDepth) {
+    for (let x = 0; x < layout.drawer.width; x += binWidth) {
+      // Check if we've exceeded max bins
+      if (newBins.length >= CONSTRAINTS.QUICK_FILL_MAX_BINS) {
+        break;
+      }
+
+      // Calculate actual size (may be smaller at edges)
+      const actualWidth = Math.min(binWidth, layout.drawer.width - x);
+      const actualDepth = Math.min(binDepth, layout.drawer.depth - y);
+
+      // Skip if any cell in this region is already covered
+      let alreadyCovered = false;
+      for (let cx = x; cx < x + actualWidth && !alreadyCovered; cx++) {
+        for (let cy = y; cy < y + actualDepth && !alreadyCovered; cy++) {
+          if (covered.has(`${cx},${cy}`)) {
+            alreadyCovered = true;
+          }
+        }
+      }
+      if (alreadyCovered) {
+        skippedCells++;
+        continue;
+      }
+
+      // Create temporary layout with new bins for validation
+      const tempLayout: Layout = {
+        ...layout,
+        bins: [...layout.bins, ...newBins],
+      };
+
+      const result = canPlaceBin(
+        { x, y, width: actualWidth, depth: actualDepth, height: layer.height },
+        layerId,
+        tempLayout
+      );
+
+      if (result.valid) {
+        const newBin: Bin = {
+          id: generateId(),
+          layerId,
+          x,
+          y,
+          width: actualWidth,
+          depth: actualDepth,
+          height: layer.height,
+          category: categoryId,
+          label: '',
+          notes: '',
+        };
+        newBins.push(newBin);
+
+        // Mark cells as covered
+        for (let cx = x; cx < x + actualWidth; cx++) {
+          for (let cy = y; cy < y + actualDepth; cy++) {
+            covered.add(`${cx},${cy}`);
+          }
+        }
+      } else {
+        skippedCells++;
+      }
+    }
+  }
+
+  return { bins: newBins, skippedCells };
+}
+
+/**
+ * Fill gaps with optimally-sized bins.
+ * Tries to use bins that don't require splitting.
+ */
+export function fillGaps(
+  layout: Layout,
+  layerId: string,
+  categoryId: string,
+  maxPrintSize: number
+): { bins: Bin[]; addedCount: number } {
+  const layer = layout.layers.find(l => l.id === layerId);
+  if (!layer) {
+    return { bins: [], addedCount: 0 };
+  }
+
+  const newBins: Bin[] = [];
+  const workingLayout = { ...layout };
+
+  // Simple greedy approach: try progressively smaller sizes
+  const sizes: Array<{ w: number; d: number }> = [];
+  for (let w = maxPrintSize; w >= 1; w--) {
+    for (let d = maxPrintSize; d >= 1; d--) {
+      sizes.push({ w, d });
+    }
+  }
+  // Sort by area descending
+  sizes.sort((a, b) => (b.w * b.d) - (a.w * a.d));
+
+  let changed = true;
+  while (changed && newBins.length < CONSTRAINTS.QUICK_FILL_MAX_BINS) {
+    changed = false;
+
+    for (let y = 0; y < layout.drawer.depth && newBins.length < CONSTRAINTS.QUICK_FILL_MAX_BINS; y++) {
+      for (let x = 0; x < layout.drawer.width && newBins.length < CONSTRAINTS.QUICK_FILL_MAX_BINS; x++) {
+        // Try each size at this position
+        for (const size of sizes) {
+          const tempLayout: Layout = {
+            ...workingLayout,
+            bins: [...workingLayout.bins, ...newBins],
+          };
+
+          const result = canPlaceBin(
+            { x, y, width: size.w, depth: size.d, height: layer.height },
+            layerId,
+            tempLayout
+          );
+
+          if (result.valid) {
+            newBins.push({
+              id: generateId(),
+              layerId,
+              x,
+              y,
+              width: size.w,
+              depth: size.d,
+              height: layer.height,
+              category: categoryId,
+              label: '',
+              notes: '',
+            });
+            changed = true;
+            break; // Move to next position
+          }
+        }
+      }
+    }
+  }
+
+  return { bins: newBins, addedCount: newBins.length };
+}
+
+/**
+ * Get coverage percentage for a layer.
+ */
+export function getLayerCoverage(layout: Layout, layerId: string): number {
+  const totalCells = layout.drawer.width * layout.drawer.depth;
+  if (totalCells === 0) return 0;
+
+  let coveredCells = 0;
+  for (const bin of layout.bins) {
+    if (bin.layerId === layerId) {
+      coveredCells += bin.width * bin.depth;
+    }
+  }
+
+  return Math.round((coveredCells / totalCells) * 100);
+}
