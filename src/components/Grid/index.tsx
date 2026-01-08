@@ -464,7 +464,7 @@ export function Grid() {
               <button
                 onClick={zoomOut}
                 disabled={!canZoomOut}
-                className="btn btn-secondary btn-icon p-1.5 min-w-[32px] min-h-[32px]"
+                className="btn btn-secondary btn-icon p-1 min-w-[28px] min-h-[28px]"
                 aria-label="Zoom out"
                 title="Zoom out (−)"
               >
@@ -480,7 +480,7 @@ export function Grid() {
               <button
                 onClick={zoomIn}
                 disabled={!canZoomIn}
-                className="btn btn-secondary btn-icon p-1.5 min-w-[32px] min-h-[32px]"
+                className="btn btn-secondary btn-icon p-1 min-w-[28px] min-h-[28px]"
                 aria-label="Zoom in"
                 title="Zoom in (+)"
               >
