@@ -1,6 +1,6 @@
 import type { Layout } from '../types';
 import { validateImport } from './validation';
-import { generateId } from '../constants';
+import { generateId, STAGING_ID } from '../constants';
 
 const STORAGE_KEY = 'gridfinity-layout-v1';
 
@@ -10,8 +10,7 @@ const STORAGE_KEY = 'gridfinity-layout-v1';
 export function saveLayout(layout: Layout): void {
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(layout));
-  } catch (e) {
-    console.error('Failed to save layout:', e);
+  } catch {
     throw new Error('Storage full. Export your layout to save it.');
   }
 }
@@ -61,13 +60,11 @@ export function loadLayout(): Layout | null {
     const validation = validateImport(parsed);
 
     if (!validation.valid) {
-      console.error('Stored layout invalid:', validation.errors);
       return null;
     }
 
     return parsed as Layout;
-  } catch (e) {
-    console.error('Failed to load layout:', e);
+  } catch {
     return null;
   }
 }
@@ -121,7 +118,7 @@ export function importLayoutJSON(json: string): { layout: Layout | null; errors:
     layout.bins = layout.bins.map(bin => ({
       ...bin,
       id: generateId(),
-      layerId: bin.layerId === '__staging__' ? '__staging__' : (idMap.get(bin.layerId) || bin.layerId),
+      layerId: bin.layerId === STAGING_ID ? STAGING_ID : (idMap.get(bin.layerId) || bin.layerId),
       category: idMap.get(bin.category) || bin.category,
     }));
 

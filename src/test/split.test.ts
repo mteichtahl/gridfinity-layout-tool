@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { splitBinSize, generatePrintList } from '../utils/split';
 import type { Bin } from '../types';
+import { STAGING_ID } from '../constants';
 
 describe('splitBinSize', () => {
   const maxSize = 4;
@@ -66,7 +67,7 @@ describe('generatePrintList', () => {
   it('excludes staging bins', () => {
     const bins: Bin[] = [
       { id: '1', layerId: 'l1', x: 0, y: 0, width: 2, depth: 2, height: 3, category: 'c1', label: '', notes: '' },
-      { id: '2', layerId: '__staging__', x: 0, y: 0, width: 2, depth: 2, height: 3, category: 'c1', label: '', notes: '' },
+      { id: '2', layerId: STAGING_ID, x: 0, y: 0, width: 2, depth: 2, height: 3, category: 'c1', label: '', notes: '' },
     ];
     const rows = generatePrintList(bins, 4);
     expect(rows).toHaveLength(1);

@@ -34,7 +34,6 @@ try {
     useLayoutStore.getState().importLayout(savedLayout);
   }
 } catch (e) {
-  console.error('Error loading layout:', e);
   initialLoadError = e as Error;
 }
 

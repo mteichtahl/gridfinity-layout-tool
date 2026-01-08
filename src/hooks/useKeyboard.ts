@@ -1,7 +1,7 @@
 import { useEffect, useCallback } from 'react';
 import { useUIStore, useLayoutStore, useHistoryStore, useUndoableAction } from '../store';
 import { canPlaceBin } from '../utils/validation';
-import { SHORTCUTS } from '../constants';
+import { SHORTCUTS, STAGING_ID } from '../constants';
 
 export function useKeyboard() {
   const selectedBinIds = useUIStore(state => state.selectedBinIds);
@@ -115,7 +115,7 @@ export function useKeyboard() {
 
       for (const binId of selectedBinIds) {
         const bin = layout.bins.find(b => b.id === binId);
-        if (!bin || bin.layerId === '__staging__') {
+        if (!bin || bin.layerId === STAGING_ID) {
           allValid = false;
           break;
         }

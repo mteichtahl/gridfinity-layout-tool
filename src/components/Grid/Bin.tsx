@@ -1,4 +1,4 @@
-import { useRef, type PointerEvent } from 'react';
+import { memo, useRef, type PointerEvent } from 'react';
 import type { Bin as BinType, Category, Layer, ResizeHandle } from '../../types';
 import { useUIStore, useLayoutStore } from '../../store';
 import { useResponsive } from '../../hooks';
@@ -37,7 +37,7 @@ function getContrastColor(hexColor: string): string {
  * Single bin with selection ring and resize handles.
  * Features improved selection states with glow effect and refined handles.
  */
-export function Bin({ bin, category, layer, drawer, isGhost, isSelected, onStartDrag, onStartResize }: BinProps) {
+function BinComponent({ bin, category, layer, drawer, isGhost, isSelected, onStartDrag, onStartResize }: BinProps) {
   const { isTouchDevice } = useResponsive();
   const setSelectedBin = useUIStore((state) => state.setSelectedBin);
   const toggleSelection = useUIStore((state) => state.toggleSelection);
@@ -360,3 +360,52 @@ export function Bin({ bin, category, layer, drawer, isGhost, isSelected, onStart
     </div>
   );
 }
+
+/**
+ * Custom comparison function for React.memo.
+ * Only re-render if props that affect visual appearance change.
+ */
+function binPropsAreEqual(prevProps: BinProps, nextProps: BinProps): boolean {
+  // Always re-render if selection state changes
+  if (prevProps.isSelected !== nextProps.isSelected) return false;
+  if (prevProps.isGhost !== nextProps.isGhost) return false;
+
+  // Re-render if bin data changes
+  const prevBin = prevProps.bin;
+  const nextBin = nextProps.bin;
+  if (
+    prevBin.id !== nextBin.id ||
+    prevBin.x !== nextBin.x ||
+    prevBin.y !== nextBin.y ||
+    prevBin.width !== nextBin.width ||
+    prevBin.depth !== nextBin.depth ||
+    prevBin.height !== nextBin.height ||
+    prevBin.label !== nextBin.label ||
+    prevBin.category !== nextBin.category
+  ) {
+    return false;
+  }
+
+  // Re-render if category changes
+  if (prevProps.category?.id !== nextProps.category?.id ||
+      prevProps.category?.color !== nextProps.category?.color) {
+    return false;
+  }
+
+  // Re-render if layer changes
+  if (prevProps.layer?.id !== nextProps.layer?.id ||
+      prevProps.layer?.height !== nextProps.layer?.height) {
+    return false;
+  }
+
+  // Re-render if drawer dimensions change
+  if (prevProps.drawer.width !== nextProps.drawer.width ||
+      prevProps.drawer.depth !== nextProps.drawer.depth) {
+    return false;
+  }
+
+  // Callbacks are stable (from useCallback), so we don't compare them
+  return true;
+}
+
+export const Bin = memo(BinComponent, binPropsAreEqual);

@@ -32,7 +32,7 @@ export interface Layer {
 
 export interface Bin {
   id: string;
-  layerId: string;           // base layer ID or "__staging__"
+  layerId: string;           // base layer ID or STAGING_ID
   x: number;                 // 0-based, from left
   y: number;                 // 0-based, from bottom
   width: number;             // >= 1

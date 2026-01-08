@@ -18,9 +18,8 @@ export function useAutoSave() {
     timeoutRef.current = window.setTimeout(() => {
       try {
         saveLayout(layout);
-      } catch (e) {
-        console.error('Auto-save failed:', e);
-        // Could emit a toast notification here
+      } catch {
+        // Save failed - storage may be full
       }
     }, SAVE_DEBOUNCE_MS);
 

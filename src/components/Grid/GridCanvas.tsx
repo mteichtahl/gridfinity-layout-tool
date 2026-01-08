@@ -1,5 +1,4 @@
-import type { RefObject, PointerEvent } from 'react';
-import React from 'react';
+import type { RefObject, PointerEvent, JSX } from 'react';
 import { useUIStore, useLayoutStore } from '../../store';
 import { useGridCoords } from '../../hooks';
 import { Bin } from './Bin';
@@ -78,7 +77,7 @@ export function GridCanvas({ gridRef, cellSize, gap, onStartDraw, onStartDrag, o
   };
 
   // Generate grid cells for visual reference
-  const cells: React.JSX.Element[] = [];
+  const cells: JSX.Element[] = [];
   for (let y = drawer.depth - 1; y >= 0; y--) {
     for (let x = 0; x < drawer.width; x++) {
       cells.push(

@@ -6,6 +6,7 @@ import {
   getBlockedZones,
 } from '../utils/collision';
 import type { Layer, Bin } from '../types';
+import { STAGING_ID } from '../constants';
 
 const layers: Layer[] = [
   { id: 'layer1', name: 'Layer 1', height: 3 },
@@ -68,7 +69,7 @@ describe('binsCollide', () => {
   });
 
   it('returns false for staging bins', () => {
-    const binA: Bin = { id: '1', layerId: '__staging__', x: 0, y: 0, width: 2, depth: 2, height: 3, category: 'tools', label: '', notes: '' };
+    const binA: Bin = { id: '1', layerId: STAGING_ID, x: 0, y: 0, width: 2, depth: 2, height: 3, category: 'tools', label: '', notes: '' };
     const binB: Bin = { id: '2', layerId: 'layer1', x: 0, y: 0, width: 2, depth: 2, height: 3, category: 'tools', label: '', notes: '' };
     expect(binsCollide(binA, binB, layers)).toBe(false);
   });
