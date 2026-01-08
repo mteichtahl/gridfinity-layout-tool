@@ -541,7 +541,7 @@ export function RightPanel() {
             </svg>
             <h2 className="section-header m-0">Print List</h2>
             {printRows.length > 0 && (
-              <span className="badge badge-info">{totalBins}</span>
+              <span className="badge bg-info-muted text-info">{totalBins}</span>
             )}
           </button>
           {printRows.length > 0 && (

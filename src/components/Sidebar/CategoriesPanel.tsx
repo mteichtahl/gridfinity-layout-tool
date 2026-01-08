@@ -191,7 +191,7 @@ export function CategoriesPanel() {
                     </svg>
                   </button>
                   {isActive && (
-                    <span className="badge badge-info text-[10px] py-0 px-1.5">
+                    <span className="badge bg-info-muted text-info text-[10px] py-0 px-1.5">
                       active
                     </span>
                   )}
