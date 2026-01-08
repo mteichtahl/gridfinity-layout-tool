@@ -1,4 +1,4 @@
-import { useRef, useState, useCallback, useEffect } from 'react';
+import { useRef, useState, useCallback, useEffect, type CSSProperties } from 'react';
 import { useUIStore, useLayoutStore, useUndoableAction } from '../../store';
 import { useInteraction, useResponsive } from '../../hooks';
 import { BASE_CELL_SIZE, STAGING_ID, CONSTRAINTS } from '../../constants';
@@ -8,6 +8,18 @@ import { ConfirmDialog } from '../modals/ConfirmDialog';
 import { MobileGridToolbar } from '../mobile';
 
 type ResizeDirection = 'width' | 'depth' | 'both' | null;
+
+// Frequently-used style constants
+const STYLES = {
+  textXsTertiary: { fontSize: 'var(--text-xs)', color: 'var(--text-tertiary)' } as CSSProperties,
+  textSmTertiary: { fontSize: 'var(--text-sm)', color: 'var(--text-tertiary)' } as CSSProperties,
+  textSmPrimary: { fontSize: 'var(--text-sm)', color: 'var(--text-primary)' } as CSSProperties,
+  textSmSecondary: { fontSize: 'var(--text-sm)', color: 'var(--text-secondary)' } as CSSProperties,
+  buttonSmall: { padding: '4px', minWidth: '28px', minHeight: '28px' } as CSSProperties,
+  buttonMedium: { padding: '6px', minWidth: '32px', minHeight: '32px' } as CSSProperties,
+  buttonCompact: { minWidth: 'auto', minHeight: 'auto' } as CSSProperties,
+  borderSubtle: { borderBottom: '1px solid var(--border-subtle)' } as CSSProperties,
+} as const;
 
 /**
  * Main grid container with zoom controls, layer indicator, and row/column numbering.
@@ -295,7 +307,7 @@ export function Grid() {
                 <span style={{ fontSize: 'var(--text-sm)', fontWeight: 'var(--font-medium)' }}>
                   {activeLayer.name}
                 </span>
-                <span style={{ fontSize: 'var(--text-xs)', color: 'var(--text-tertiary)' }}>
+                <span style={STYLES.textXsTertiary}>
                   {activeLayer.height}u
                 </span>
               </div>
@@ -320,7 +332,7 @@ export function Grid() {
                   <button
                     onClick={() => setPaintSize(null)}
                     className="btn btn-ghost p-0.5 ml-1"
-                    style={{ minWidth: 'auto', minHeight: 'auto' }}
+                    style={STYLES.buttonCompact}
                     aria-label="Exit paint mode"
                   >
                     <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -334,7 +346,7 @@ export function Grid() {
                   <svg className="w-4 h-4" style={{ color: 'var(--text-tertiary)' }} fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
                   </svg>
-                  <span style={{ fontSize: 'var(--text-sm)', color: 'var(--text-tertiary)' }}>
+                  <span style={STYLES.textSmTertiary}>
                     Draw
                   </span>
                 </>
@@ -349,7 +361,7 @@ export function Grid() {
                 border: '1px solid var(--border-subtle)',
               }}
             >
-              <span style={{ fontSize: 'var(--text-xs)', color: 'var(--text-tertiary)' }}>Grid</span>
+              <span style={STYLES.textXsTertiary}>Grid</span>
               <div className="flex items-center">
                 <button
                   onClick={() => handleDimensionChange('width', -1)}
@@ -380,7 +392,7 @@ export function Grid() {
                   </svg>
                 </button>
               </div>
-              <span style={{ fontSize: 'var(--text-xs)', color: 'var(--text-tertiary)' }}>×</span>
+              <span style={STYLES.textXsTertiary}>×</span>
               <div className="flex items-center">
                 <button
                   onClick={() => handleDimensionChange('depth', -1)}
@@ -462,7 +474,7 @@ export function Grid() {
                 onClick={zoomOut}
                 disabled={!canZoomOut}
                 className="btn btn-secondary btn-icon"
-                style={{ padding: '6px', minWidth: '32px', minHeight: '32px' }}
+                style={STYLES.buttonMedium}
                 aria-label="Zoom out"
                 title="Zoom out (−)"
               >
@@ -472,7 +484,7 @@ export function Grid() {
               </button>
               <span
                 className="min-w-[52px] text-center font-medium"
-                style={{ fontSize: 'var(--text-sm)', color: 'var(--text-secondary)' }}
+                style={STYLES.textSmSecondary}
               >
                 {Math.round(zoom * 100)}%
               </span>
@@ -480,7 +492,7 @@ export function Grid() {
                 onClick={zoomIn}
                 disabled={!canZoomIn}
                 className="btn btn-secondary btn-icon"
-                style={{ padding: '6px', minWidth: '32px', minHeight: '32px' }}
+                style={STYLES.buttonMedium}
                 aria-label="Zoom in"
                 title="Zoom in (+)"
               >
