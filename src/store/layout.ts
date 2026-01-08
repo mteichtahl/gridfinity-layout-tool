@@ -2,7 +2,7 @@ import { create } from 'zustand';
 import { immer } from 'zustand/middleware/immer';
 import type { Layout, Bin, Layer, Category, Drawer } from '../types';
 import { createDefaultLayout, generateId, STAGING_ID, CONSTRAINTS, calcMaxGridUnits } from '../constants';
-import { canPlaceBin } from '../utils/validation';
+import { canPlaceBin, clamp } from '../utils/validation';
 import { fillAllWithSize, fillGaps } from '../utils/fill';
 import { checkLayerReorderCollisions } from '../utils/collision';
 
@@ -223,7 +223,7 @@ export const useLayoutStore = create<LayoutState>()(
               .filter(l => l.id !== id)
               .reduce((sum, l) => sum + l.height, 0);
             const maxHeight = state.layout.drawer.height - othersHeight;
-            updates.height = Math.max(1, Math.min(updates.height, maxHeight));
+            updates.height = clamp(updates.height, 1, maxHeight);
           }
           Object.assign(layer, updates);
         }
@@ -273,10 +273,10 @@ export const useLayoutStore = create<LayoutState>()(
         const drawer = state.layout.drawer;
 
         if (updates.width !== undefined) {
-          drawer.width = Math.max(CONSTRAINTS.GRID_MIN, Math.min(CONSTRAINTS.GRID_MAX, updates.width));
+          drawer.width = clamp(updates.width, CONSTRAINTS.GRID_MIN, CONSTRAINTS.GRID_MAX);
         }
         if (updates.depth !== undefined) {
-          drawer.depth = Math.max(CONSTRAINTS.GRID_MIN, Math.min(CONSTRAINTS.GRID_MAX, updates.depth));
+          drawer.depth = clamp(updates.depth, CONSTRAINTS.GRID_MIN, CONSTRAINTS.GRID_MAX);
         }
         if (updates.height !== undefined) {
           const totalLayerHeight = state.layout.layers.reduce((sum, l) => sum + l.height, 0);
@@ -380,19 +380,19 @@ export const useLayoutStore = create<LayoutState>()(
 
     setPrintBedSize: (size) => {
       set(state => {
-        state.layout.printBedSize = Math.max(42, Math.min(500, size));
+        state.layout.printBedSize = clamp(size, 42, 500);
       });
     },
 
     setGridUnitMm: (mm) => {
       set(state => {
-        state.layout.gridUnitMm = Math.max(1, Math.min(200, mm));
+        state.layout.gridUnitMm = clamp(mm, 1, 200);
       });
     },
 
     setHeightUnitMm: (mm) => {
       set(state => {
-        state.layout.heightUnitMm = Math.max(1, Math.min(50, mm));
+        state.layout.heightUnitMm = clamp(mm, 1, 50);
       });
     },
   }))
