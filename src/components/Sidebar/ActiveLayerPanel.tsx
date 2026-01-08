@@ -118,7 +118,7 @@ export function ActiveLayerPanel() {
       <div className="space-y-3">
         {/* Squares row */}
         <div>
-          <div style={{ fontSize: '10px', color: 'var(--text-disabled)', marginBottom: '6px' }}>Squares</div>
+          <div className="text-[10px] text-content-disabled mb-1.5">Squares</div>
           <div className="flex gap-1.5">
             {[1, 2, 3, 4, 5, 6].map(size => {
               const isActive = isPaintActive(size, size);
@@ -127,20 +127,19 @@ export function ActiveLayerPanel() {
                   key={`${size}×${size}`}
                   onClick={() => togglePaintSize({ width: size, depth: size })}
                   onDoubleClick={() => handleFill(size, size)}
-                  className={`btn flex-1 flex flex-col items-center justify-center gap-0.5 ${isActive ? 'btn-primary' : 'btn-secondary'}`}
-                  style={{ minWidth: 0, height: '44px', padding: '4px' }}
+                  className={`btn flex-1 flex flex-col items-center justify-center gap-0.5 min-w-0 h-[44px] p-1 ${isActive ? 'btn-primary' : 'btn-secondary'}`}
                   aria-label={`${isActive ? 'Deselect' : 'Select'} ${size}×${size} for painting`}
                   title={`Click to paint ${size}×${size} bins. Double-click to fill layer.`}
                 >
                   <div
+                    className="rounded-sm"
                     style={{
                       width: `${6 + size * 2}px`,
                       height: `${6 + size * 2}px`,
                       backgroundColor: isActive ? 'var(--overlay-light)' : '#94a3b8',
-                      borderRadius: '2px',
                     }}
                   />
-                  <span style={{ fontSize: '9px', color: isActive ? 'inherit' : 'var(--text-secondary)' }}>{size}×{size}</span>
+                  <span className={`text-[9px] ${isActive ? '' : 'text-content-secondary'}`}>{size}×{size}</span>
                 </button>
               );
             })}
@@ -149,12 +148,11 @@ export function ActiveLayerPanel() {
 
         {/* Rectangles - organized by width */}
         <div>
-          <div style={{ fontSize: '10px', color: 'var(--text-disabled)', marginBottom: '6px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <div className="text-[10px] text-content-disabled mb-1.5 flex items-center justify-between">
             <span>Rectangles</span>
             <button
               onClick={() => setRotateRectangles(!rotateRectangles)}
-              className={`btn ${rotateRectangles ? 'btn-primary' : 'btn-secondary'}`}
-              style={{ padding: '2px 6px', fontSize: '9px', display: 'flex', alignItems: 'center', gap: '3px' }}
+              className={`btn py-0.5 px-1.5 text-[9px] flex items-center gap-[3px] ${rotateRectangles ? 'btn-primary' : 'btn-secondary'}`}
               aria-label={rotateRectangles ? 'Show vertical rectangles' : 'Show horizontal rectangles'}
               title={rotateRectangles ? 'Vertical (taller)' : 'Horizontal (wider)'}
             >
@@ -183,20 +181,19 @@ export function ActiveLayerPanel() {
                   key={`${w}×${d}`}
                   onClick={() => togglePaintSize({ width: w, depth: d })}
                   onDoubleClick={() => handleFill(w, d)}
-                  className={`btn flex flex-col items-center justify-center gap-0.5 ${isActive ? 'btn-primary' : 'btn-secondary'}`}
-                  style={{ minWidth: 0, height: '44px', padding: '4px' }}
+                  className={`btn flex flex-col items-center justify-center gap-0.5 min-w-0 h-[44px] p-1 ${isActive ? 'btn-primary' : 'btn-secondary'}`}
                   aria-label={`${isActive ? 'Deselect' : 'Select'} ${w}×${d} for painting`}
                   title={`Click to paint ${w}×${d} bins. Double-click to fill layer.`}
                 >
                   <div
+                    className="rounded-sm"
                     style={{
                       width: `${6 + w * 2}px`,
                       height: `${6 + d * 2}px`,
                       backgroundColor: isActive ? 'var(--overlay-light)' : '#94a3b8',
-                      borderRadius: '2px',
                     }}
                   />
-                  <span style={{ fontSize: '9px', color: isActive ? 'inherit' : 'var(--text-secondary)' }}>{w}×{d}</span>
+                  <span className={`text-[9px] ${isActive ? '' : 'text-content-secondary'}`}>{w}×{d}</span>
                 </button>
               );
             })}

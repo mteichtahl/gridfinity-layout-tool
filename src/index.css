@@ -567,6 +567,8 @@ input[type="number"] {
    COMPONENT STYLES
    =========================================== */
 
+@layer components {
+
 /* Panel with depth */
 .panel {
   background: linear-gradient(180deg, var(--bg-elevated) 0%, var(--bg-secondary) 100%);
@@ -824,3 +826,5 @@ input[type="number"] {
   background: var(--border-subtle);
   margin: var(--space-lg) 0;
 }
+
+} /* end @layer components */
