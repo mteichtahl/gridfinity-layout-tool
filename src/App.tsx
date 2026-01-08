@@ -1,6 +1,6 @@
 import { useEffect, useLayoutEffect, useState, useCallback } from 'react';
 import { useLayoutStore, useUIStore } from './store';
-import { useKeyboard, useAutoSave } from './hooks';
+import { useKeyboard, useAutoSave, useResponsive } from './hooks';
 import { loadLayout } from './utils/storage';
 import { Grid } from './components/Grid';
 import { Sidebar } from './components/Sidebar';
@@ -11,6 +11,7 @@ import { DropZones } from './components/DropZones';
 import { DragPreview } from './components/DragPreview';
 import { HelpModal } from './components/modals/HelpModal';
 import { ToastContainer } from './components/Toast';
+import { MobileHeader, BottomNavBar, BottomSheet, getPanelTitle } from './components/mobile';
 import { SHORTCUTS } from './constants';
 
 // Load layout once at module level to avoid effect setState issues
@@ -27,17 +28,9 @@ try {
 
 export default function App() {
   const [isHelpOpen, setIsHelpOpen] = useState(false);
-  const [showViewportWarning, setShowViewportWarning] = useState(false);
-
-  // Check viewport size
-  useEffect(() => {
-    const checkViewport = () => {
-      setShowViewportWarning(window.innerWidth < 1024);
-    };
-    checkViewport();
-    window.addEventListener('resize', checkViewport);
-    return () => window.removeEventListener('resize', checkViewport);
-  }, []);
+  const { isMobile } = useResponsive();
+  const activeMobilePanel = useUIStore(state => state.activeMobilePanel);
+  const setActiveMobilePanel = useUIStore(state => state.setActiveMobilePanel);
 
   const layout = useLayoutStore(state => state.layout);
   const activeLayerId = useUIStore(state => state.activeLayerId);
@@ -94,29 +87,61 @@ export default function App() {
     );
   }
 
+  // Mobile layout
+  if (isMobile) {
+    return (
+      <div className="h-screen flex flex-col overflow-hidden" style={{ backgroundColor: 'var(--bg-primary)', color: 'var(--text-primary)' }}>
+        {/* Mobile Header */}
+        <MobileHeader onMenuClick={() => setActiveMobilePanel('settings')} />
+
+        {/* Main content area - Grid takes full width */}
+        <main className="flex-1 flex flex-col overflow-hidden" style={{ backgroundColor: 'var(--bg-primary)' }}>
+          <Grid />
+          <Staging />
+        </main>
+
+        {/* Bottom Navigation */}
+        <BottomNavBar />
+
+        {/* Bottom Sheet for panels */}
+        {activeMobilePanel && (
+          <BottomSheet title={getPanelTitle(activeMobilePanel)}>
+            <MobilePanelContent panel={activeMobilePanel} />
+          </BottomSheet>
+        )}
+
+        {/* Drop zones (appear when dragging) */}
+        <DropZones />
+
+        {/* Floating drag preview */}
+        <DragPreview />
+
+        {/* Paint mode indicator */}
+        {paintSize && (
+          <div className="paint-mode-indicator" role="status" aria-live="polite">
+            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+            </svg>
+            <span>Paint Mode: {paintSize.width}×{paintSize.depth}</span>
+            <button
+              onClick={() => setPaintSize(null)}
+              className="ml-1 hover:opacity-80 transition-opacity"
+              aria-label="Exit paint mode"
+            >
+              <kbd>Esc</kbd>
+            </button>
+          </div>
+        )}
+
+        {/* Toast notifications */}
+        <ToastContainer />
+      </div>
+    );
+  }
+
+  // Desktop layout (unchanged)
   return (
     <div className="h-screen flex flex-col overflow-hidden" style={{ backgroundColor: 'var(--bg-primary)', color: 'var(--text-primary)' }}>
-      {/* Viewport warning */}
-      {showViewportWarning && (
-        <div className="px-4 py-2 text-sm flex items-center justify-between" style={{ backgroundColor: 'var(--color-warning-muted)', color: 'var(--color-warning)' }}>
-          <span className="flex items-center gap-2">
-            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-            </svg>
-            This tool works best on screens 1024px or wider
-          </span>
-          <button
-            onClick={() => setShowViewportWarning(false)}
-            className="hover:opacity-80 ml-4 p-1 rounded transition-opacity"
-            aria-label="Dismiss warning"
-          >
-            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-            </svg>
-          </button>
-        </div>
-      )}
-
       {/* Header */}
       <Header onHelpClick={() => setIsHelpOpen(true)} />
 
@@ -165,4 +190,52 @@ export default function App() {
       <ToastContainer />
     </div>
   );
+}
+
+/**
+ * Placeholder content for mobile panels.
+ * Will be replaced with actual panel content in Branch 4.
+ */
+function MobilePanelContent({ panel }: { panel: string }) {
+  const selectedBinIds = useUIStore(state => state.selectedBinIds);
+
+  switch (panel) {
+    case 'layers':
+      return (
+        <div className="py-4 text-center" style={{ color: 'var(--text-secondary)' }}>
+          <p className="mb-2">Layer management coming soon</p>
+          <p className="text-sm">Tap bins on the grid to select them</p>
+        </div>
+      );
+    case 'inspector':
+      return (
+        <div className="py-4 text-center" style={{ color: 'var(--text-secondary)' }}>
+          {selectedBinIds.length > 0 ? (
+            <p>{selectedBinIds.length} bin(s) selected</p>
+          ) : (
+            <p>No bin selected. Tap a bin to select it.</p>
+          )}
+        </div>
+      );
+    case 'categories':
+      return (
+        <div className="py-4 text-center" style={{ color: 'var(--text-secondary)' }}>
+          <p>Category management coming soon</p>
+        </div>
+      );
+    case 'print':
+      return (
+        <div className="py-4 text-center" style={{ color: 'var(--text-secondary)' }}>
+          <p>Print list coming soon</p>
+        </div>
+      );
+    case 'settings':
+      return (
+        <div className="py-4 text-center" style={{ color: 'var(--text-secondary)' }}>
+          <p>Settings coming soon</p>
+        </div>
+      );
+    default:
+      return null;
+  }
 }
