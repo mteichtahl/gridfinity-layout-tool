@@ -7,3 +7,4 @@ export { MobileInspector } from './MobileInspector';
 export { MobilePrintList } from './MobilePrintList';
 export { MobileSettingsPanel } from './MobileSettingsPanel';
 export { MobileGridToolbar } from './MobileGridToolbar';
+export { BinContextMenu } from './BinContextMenu';

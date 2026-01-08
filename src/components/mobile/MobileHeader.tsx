@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
-import { useLayoutStore, useHistoryStore } from '../../store';
+import { useLayoutStore, useHistoryStore, useUIStore } from '../../store';
 import { CONSTRAINTS } from '../../constants';
+import type { MobilePanel } from '../../store/ui';
 
 interface MobileHeaderProps {
   onMenuClick: () => void;
@@ -18,6 +19,8 @@ export function MobileHeader({ onMenuClick }: MobileHeaderProps) {
   const canRedo = useHistoryStore(state => state.canRedo);
   const undo = useHistoryStore(state => state.undo);
   const redo = useHistoryStore(state => state.redo);
+
+  const toggleMobilePanel = useUIStore(state => state.toggleMobilePanel);
 
   const [isEditing, setIsEditing] = useState(false);
   const [editValue, setEditValue] = useState(layout.name);
@@ -49,24 +52,71 @@ export function MobileHeader({ onMenuClick }: MobileHeaderProps) {
     }
   };
 
+  // Helper for landscape nav buttons
+  const handleLandscapeNav = (panel: MobilePanel) => {
+    toggleMobilePanel(panel);
+  };
+
   return (
     <header
-      className="h-12 flex items-center justify-between px-3 flex-shrink-0"
+      className="mobile-header h-12 flex items-center justify-between px-3 flex-shrink-0"
       style={{
         backgroundColor: 'var(--bg-secondary)',
         borderBottom: '1px solid var(--border-subtle)'
       }}
     >
-      {/* Left: Menu button */}
+      {/* Left: Settings button */}
       <button
         onClick={onMenuClick}
         className="btn btn-ghost btn-icon"
-        aria-label="Open settings menu"
+        aria-label="Open settings"
+        title="Settings"
       >
         <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
         </svg>
       </button>
+
+      {/* Landscape nav buttons (shown when bottom nav is hidden) */}
+      <div className="flex items-center gap-1">
+        <button
+          onClick={() => handleLandscapeNav('layers')}
+          className="landscape-nav-button btn btn-ghost btn-icon"
+          aria-label="Layers"
+        >
+          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+          </svg>
+        </button>
+        <button
+          onClick={() => handleLandscapeNav('inspector')}
+          className="landscape-nav-button btn btn-ghost btn-icon"
+          aria-label="Inspector"
+        >
+          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
+          </svg>
+        </button>
+        <button
+          onClick={() => handleLandscapeNav('categories')}
+          className="landscape-nav-button btn btn-ghost btn-icon"
+          aria-label="Categories"
+        >
+          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
+          </svg>
+        </button>
+        <button
+          onClick={() => handleLandscapeNav('print')}
+          className="landscape-nav-button btn btn-ghost btn-icon"
+          aria-label="Print List"
+        >
+          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+          </svg>
+        </button>
+      </div>
 
       {/* Center: Layout name */}
       <div className="flex-1 mx-3 min-w-0">

@@ -11,6 +11,11 @@ export interface PaintSize {
   depth: number;
 }
 
+export interface ContextMenuState {
+  binId: string;
+  position: { x: number; y: number };
+}
+
 interface UIState {
   // Selection
   activeLayerId: string;
@@ -35,6 +40,9 @@ interface UIState {
 
   // Mobile
   activeMobilePanel: MobilePanel;
+
+  // Context menu (for long-press on mobile)
+  contextMenu: ContextMenuState | null;
 
   // Actions
   setActiveLayer: (id: string) => void;
@@ -65,6 +73,10 @@ interface UIState {
   setActiveMobilePanel: (panel: MobilePanel) => void;
   closeMobilePanel: () => void;
   toggleMobilePanel: (panel: MobilePanel) => void;
+
+  // Context menu actions
+  showContextMenu: (binId: string, position: { x: number; y: number }) => void;
+  hideContextMenu: () => void;
 }
 
 export const useUIStore = create<UIState>((set) => ({
@@ -80,6 +92,7 @@ export const useUIStore = create<UIState>((set) => ({
   dropTarget: null,
   paintSize: null,
   activeMobilePanel: null,
+  contextMenu: null,
 
   setActiveLayer: (id) => set({
     activeLayerId: id,
@@ -163,4 +176,8 @@ export const useUIStore = create<UIState>((set) => ({
   toggleMobilePanel: (panel) => set(state => ({
     activeMobilePanel: state.activeMobilePanel === panel ? null : panel
   })),
+
+  // Context menu actions
+  showContextMenu: (binId, position) => set({ contextMenu: { binId, position } }),
+  hideContextMenu: () => set({ contextMenu: null }),
 }));

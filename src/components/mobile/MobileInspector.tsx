@@ -87,7 +87,7 @@ export function MobileInspector() {
   // Empty state
   if (selectedBins.length === 0) {
     return (
-      <div className="py-8 text-center">
+      <div className="py-6 text-center">
         <div
           className="w-16 h-16 mx-auto mb-4 rounded-full flex items-center justify-center"
           style={{ backgroundColor: 'var(--bg-elevated)' }}
@@ -96,10 +96,34 @@ export function MobileInspector() {
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
           </svg>
         </div>
-        <p style={{ color: 'var(--text-secondary)' }}>No bin selected</p>
-        <p className="text-sm mt-1" style={{ color: 'var(--text-disabled)' }}>
-          Tap a bin on the grid to select it
+        <p className="font-medium mb-1" style={{ color: 'var(--text-secondary)' }}>No bin selected</p>
+        <p className="text-sm mb-4" style={{ color: 'var(--text-disabled)' }}>
+          Tap a bin on the grid to edit it
         </p>
+
+        {/* Creation hint */}
+        <div
+          className="mx-4 p-3 rounded-lg text-left"
+          style={{ backgroundColor: 'var(--bg-elevated)', border: '1px solid var(--border-subtle)' }}
+        >
+          <p className="text-sm font-medium mb-2" style={{ color: 'var(--text-secondary)' }}>
+            How to create bins:
+          </p>
+          <ul className="text-sm space-y-1.5" style={{ color: 'var(--text-tertiary)' }}>
+            <li className="flex items-start gap-2">
+              <span style={{ color: 'var(--color-primary)' }}>1.</span>
+              <span>Tap and drag on empty grid cells to draw a bin</span>
+            </li>
+            <li className="flex items-start gap-2">
+              <span style={{ color: 'var(--color-primary)' }}>2.</span>
+              <span>Or use <strong>Layers</strong> tab to select a size, then tap to place</span>
+            </li>
+            <li className="flex items-start gap-2">
+              <span style={{ color: 'var(--color-primary)' }}>3.</span>
+              <span>Long-press a bin for quick actions</span>
+            </li>
+          </ul>
+        </div>
       </div>
     );
   }
@@ -176,8 +200,11 @@ export function MobileInspector() {
     );
   }
 
-  // Single bin
-  const needsSplit = bin && (bin.width > maxGridUnits || bin.depth > maxGridUnits);
+  // Single bin - after early returns, bin is guaranteed to be non-null
+  // TypeScript needs explicit guard since the early returns don't directly check `bin`
+  if (!bin) return null;
+
+  const needsSplit = bin.width > maxGridUnits || bin.depth > maxGridUnits;
 
   return (
     <div className="pb-4">
@@ -189,7 +216,7 @@ export function MobileInspector() {
         />
         <div>
           <h3 className="font-semibold" style={{ color: 'var(--text-primary)' }}>
-            {bin!.width}×{bin!.depth} Bin
+            {bin.width}×{bin.depth} Bin
           </h3>
           <p className="text-sm" style={{ color: 'var(--text-tertiary)' }}>
             {layer?.name || 'Unknown layer'}
@@ -205,8 +232,8 @@ export function MobileInspector() {
           </label>
           <div className="flex items-center">
             <button
-              onClick={() => handleUpdateBin('width', bin!.width - 1)}
-              disabled={bin!.width <= 1}
+              onClick={() => handleUpdateBin('width', bin.width - 1)}
+              disabled={bin.width <= 1}
               className="btn btn-secondary w-12 h-12 p-0 rounded-r-none"
             >
               <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -217,10 +244,10 @@ export function MobileInspector() {
               className="flex-1 h-12 flex items-center justify-center font-semibold"
               style={{ backgroundColor: 'var(--bg-elevated)', color: 'var(--text-primary)' }}
             >
-              {bin!.width}
+              {bin.width}
             </span>
             <button
-              onClick={() => handleUpdateBin('width', bin!.width + 1)}
+              onClick={() => handleUpdateBin('width', bin.width + 1)}
               className="btn btn-secondary w-12 h-12 p-0 rounded-l-none"
             >
               <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -235,8 +262,8 @@ export function MobileInspector() {
           </label>
           <div className="flex items-center">
             <button
-              onClick={() => handleUpdateBin('depth', bin!.depth - 1)}
-              disabled={bin!.depth <= 1}
+              onClick={() => handleUpdateBin('depth', bin.depth - 1)}
+              disabled={bin.depth <= 1}
               className="btn btn-secondary w-12 h-12 p-0 rounded-r-none"
             >
               <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -247,10 +274,10 @@ export function MobileInspector() {
               className="flex-1 h-12 flex items-center justify-center font-semibold"
               style={{ backgroundColor: 'var(--bg-elevated)', color: 'var(--text-primary)' }}
             >
-              {bin!.depth}
+              {bin.depth}
             </span>
             <button
-              onClick={() => handleUpdateBin('depth', bin!.depth + 1)}
+              onClick={() => handleUpdateBin('depth', bin.depth + 1)}
               className="btn btn-secondary w-12 h-12 p-0 rounded-l-none"
             >
               <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -268,8 +295,8 @@ export function MobileInspector() {
         </label>
         <div className="flex items-center">
           <button
-            onClick={() => handleUpdateBin('height', bin!.height - 1)}
-            disabled={bin!.height <= (layer?.height ?? 1)}
+            onClick={() => handleUpdateBin('height', bin.height - 1)}
+            disabled={bin.height <= (layer?.height ?? 1)}
             className="btn btn-secondary w-12 h-12 p-0 rounded-r-none"
           >
             <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -280,11 +307,11 @@ export function MobileInspector() {
             className="flex-1 h-12 flex items-center justify-center font-semibold"
             style={{ backgroundColor: 'var(--bg-elevated)', color: 'var(--text-primary)' }}
           >
-            {bin!.height}u
+            {bin.height}u
           </span>
           <button
-            onClick={() => handleUpdateBin('height', bin!.height + 1)}
-            disabled={bin!.height >= maxBinHeight}
+            onClick={() => handleUpdateBin('height', bin.height + 1)}
+            disabled={bin.height >= maxBinHeight}
             className="btn btn-secondary w-12 h-12 p-0 rounded-l-none"
           >
             <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -320,7 +347,7 @@ export function MobileInspector() {
           Category
         </label>
         <select
-          value={bin!.category}
+          value={bin.category}
           onChange={(e) => handleUpdateBin('category', e.target.value)}
           className="input w-full h-12"
         >
@@ -337,7 +364,7 @@ export function MobileInspector() {
         </label>
         <input
           type="text"
-          value={bin!.label}
+          value={bin.label}
           onChange={(e) => handleUpdateBin('label', e.target.value.slice(0, CONSTRAINTS.LABEL_MAX_LENGTH))}
           className="input w-full h-12"
           placeholder="Optional label"
@@ -350,7 +377,7 @@ export function MobileInspector() {
           Notes
         </label>
         <textarea
-          value={bin!.notes}
+          value={bin.notes}
           onChange={(e) => handleUpdateBin('notes', e.target.value.slice(0, CONSTRAINTS.NOTES_MAX_LENGTH))}
           className="input w-full"
           placeholder="Optional notes"
@@ -360,7 +387,7 @@ export function MobileInspector() {
 
       {/* Actions */}
       <div className="flex gap-2">
-        {bin!.layerId !== STAGING_ID && (
+        {bin.layerId !== STAGING_ID && (
           <button onClick={handleMoveToStaging} className="btn btn-secondary flex-1">
             To Staging
           </button>

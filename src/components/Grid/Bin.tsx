@@ -1,7 +1,10 @@
-import type { PointerEvent } from 'react';
+import { useRef, type PointerEvent } from 'react';
 import type { Bin as BinType, Category, Layer, ResizeHandle } from '../../types';
 import { useUIStore, useLayoutStore } from '../../store';
+import { useResponsive } from '../../hooks';
 import { calcMaxGridUnits } from '../../constants';
+
+const LONG_PRESS_DURATION = 500; // ms
 
 interface BinProps {
   bin: BinType;
@@ -35,6 +38,7 @@ function getContrastColor(hexColor: string): string {
  * Features improved selection states with glow effect and refined handles.
  */
 export function Bin({ bin, category, layer, drawer, isGhost, isSelected, onStartDrag, onStartResize }: BinProps) {
+  const { isTouchDevice } = useResponsive();
   const setSelectedBin = useUIStore((state) => state.setSelectedBin);
   const toggleSelection = useUIStore((state) => state.toggleSelection);
   const addToSelection = useUIStore((state) => state.addToSelection);
@@ -42,8 +46,14 @@ export function Bin({ bin, category, layer, drawer, isGhost, isSelected, onStart
   const interaction = useUIStore((state) => state.interaction);
   const zoom = useUIStore((state) => state.zoom);
   const showLabels = useUIStore((state) => state.showLabels);
+  const showContextMenu = useUIStore((state) => state.showContextMenu);
   const printBedSize = useLayoutStore((state) => state.layout.printBedSize);
   const gridUnitMm = useLayoutStore((state) => state.layout.gridUnitMm);
+
+  // Long-press detection for mobile context menu
+  const longPressTimerRef = useRef<number | null>(null);
+  const longPressTriggeredRef = useRef(false);
+  const pointerStartRef = useRef<{ x: number; y: number } | null>(null);
 
   // Check if this bin is currently being dragged
   const isBeingDragged = interaction?.type === 'drag' && interaction.binIds.includes(bin.id);
@@ -75,10 +85,35 @@ export function Bin({ bin, category, layer, drawer, isGhost, isSelected, onStart
   const dimensionFontSize = Math.round(14 * fontScale);
   const labelFontSize = Math.round(12 * fontScale);
 
+  const clearLongPress = () => {
+    if (longPressTimerRef.current) {
+      clearTimeout(longPressTimerRef.current);
+      longPressTimerRef.current = null;
+    }
+  };
+
   const handlePointerDown = (e: PointerEvent<HTMLDivElement>) => {
     if (isGhost) return;
     e.preventDefault();
     e.stopPropagation();
+
+    // Reset long-press state
+    longPressTriggeredRef.current = false;
+    pointerStartRef.current = { x: e.clientX, y: e.clientY };
+
+    // Start long-press timer on touch devices
+    if (isTouchDevice && e.button === 0) {
+      clearLongPress();
+      longPressTimerRef.current = window.setTimeout(() => {
+        longPressTriggeredRef.current = true;
+        // Vibrate if supported (haptic feedback)
+        if (navigator.vibrate) {
+          navigator.vibrate(50);
+        }
+        // Show context menu
+        showContextMenu(bin.id, { x: e.clientX, y: e.clientY });
+      }, LONG_PRESS_DURATION);
+    }
 
     if (e.button === 0) {
       const isMultiSelectKey = e.ctrlKey || e.metaKey;
@@ -87,17 +122,50 @@ export function Bin({ bin, category, layer, drawer, isGhost, isSelected, onStart
       if (isMultiSelectKey) {
         // Ctrl/Cmd+click: toggle this bin in selection
         toggleSelection(bin.id);
+        clearLongPress();
       } else if (isRangeSelectKey) {
         // Shift+click: add to selection (range select could be enhanced later)
         addToSelection(bin.id);
-      } else {
-        // Normal click: single select and start drag
+        clearLongPress();
+      } else if (!isTouchDevice) {
+        // Desktop: Normal click - single select and start drag immediately
         if (!isSelected) {
           setSelectedBin(bin.id);
         }
         onStartDrag(bin.id, e.clientX, e.clientY);
+      } else {
+        // Touch: Select on pointer down, drag starts on move
+        if (!isSelected) {
+          setSelectedBin(bin.id);
+        }
       }
     }
+  };
+
+  const handlePointerMove = (e: PointerEvent<HTMLDivElement>) => {
+    // Cancel long-press if pointer moved too far (10px threshold)
+    if (pointerStartRef.current) {
+      const dx = e.clientX - pointerStartRef.current.x;
+      const dy = e.clientY - pointerStartRef.current.y;
+      const distance = Math.sqrt(dx * dx + dy * dy);
+      if (distance > 10) {
+        clearLongPress();
+        // Start drag on move for touch devices
+        if (isTouchDevice && !longPressTriggeredRef.current) {
+          onStartDrag(bin.id, e.clientX, e.clientY);
+        }
+      }
+    }
+  };
+
+  const handlePointerUp = () => {
+    clearLongPress();
+    pointerStartRef.current = null;
+  };
+
+  const handlePointerCancel = () => {
+    clearLongPress();
+    pointerStartRef.current = null;
   };
 
   const handleResizePointerDown = (e: PointerEvent<HTMLDivElement>, handle: ResizeHandle) => {
@@ -147,6 +215,9 @@ export function Bin({ bin, category, layer, drawer, isGhost, isSelected, onStart
         transform: getTransform(),
       }}
       onPointerDown={handlePointerDown}
+      onPointerMove={handlePointerMove}
+      onPointerUp={handlePointerUp}
+      onPointerCancel={handlePointerCancel}
       role="button"
       aria-label={`Bin ${bin.width} by ${bin.depth}${bin.label ? `, labeled ${bin.label}` : ''}${category ? `, category ${category.name}` : ''}`}
       aria-pressed={isSelected}

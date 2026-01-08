@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useState, useCallback } from 'react';
+import { useEffect, useLayoutEffect, useState, useCallback, useRef } from 'react';
 import { useLayoutStore, useUIStore } from './store';
 import { useKeyboard, useAutoSave, useResponsive } from './hooks';
 import { loadLayout } from './utils/storage';
@@ -21,7 +21,9 @@ import {
   MobileInspector,
   MobilePrintList,
   MobileSettingsPanel,
+  BinContextMenu,
 } from './components/mobile';
+import { TabletPanelOverlay } from './components/tablet';
 import { SHORTCUTS } from './constants';
 
 // Load layout once at module level to avoid effect setState issues
@@ -38,9 +40,48 @@ try {
 
 export default function App() {
   const [isHelpOpen, setIsHelpOpen] = useState(false);
-  const { isMobile } = useResponsive();
+  const { isMobile, isTablet } = useResponsive();
   const activeMobilePanel = useUIStore(state => state.activeMobilePanel);
   const setActiveMobilePanel = useUIStore(state => state.setActiveMobilePanel);
+  const contextMenu = useUIStore(state => state.contextMenu);
+  const hideContextMenu = useUIStore(state => state.hideContextMenu);
+
+  // Tablet panel state (use collapsed state inverted - collapsed means hidden in overlay mode)
+  const leftPanelCollapsed = useUIStore(state => state.leftPanelCollapsed);
+  const rightPanelCollapsed = useUIStore(state => state.rightPanelCollapsed);
+  const toggleLeftPanel = useUIStore(state => state.toggleLeftPanel);
+  const toggleRightPanel = useUIStore(state => state.toggleRightPanel);
+
+  // For tablet, we want panels to start collapsed (hidden as overlays)
+  // leftPanelCollapsed=true means sidebar is hidden, false means visible as overlay
+  const tabletLeftPanelOpen = isTablet && !leftPanelCollapsed;
+  const tabletRightPanelOpen = isTablet && !rightPanelCollapsed;
+
+  // Track previous tablet state to detect mode entry
+  const wasTabletRef = useRef(isTablet);
+
+  // Consolidated tablet panel management:
+  // 1. Collapse both panels when entering tablet mode
+  // 2. Auto-close opposite panel when one opens
+  useEffect(() => {
+    const justEnteredTablet = isTablet && !wasTabletRef.current;
+    wasTabletRef.current = isTablet;
+
+    if (!isTablet) return;
+
+    // When entering tablet mode, collapse both panels
+    if (justEnteredTablet) {
+      if (!leftPanelCollapsed) toggleLeftPanel();
+      if (!rightPanelCollapsed) toggleRightPanel();
+      return;
+    }
+
+    // Auto-close opposite panel when one opens (only one panel at a time)
+    if (!leftPanelCollapsed && !rightPanelCollapsed) {
+      // Both are open - close the right panel (left takes priority)
+      toggleRightPanel();
+    }
+  }, [isTablet, leftPanelCollapsed, rightPanelCollapsed, toggleLeftPanel, toggleRightPanel]);
 
   const layout = useLayoutStore(state => state.layout);
   const activeLayerId = useUIStore(state => state.activeLayerId);
@@ -143,6 +184,89 @@ export default function App() {
           </div>
         )}
 
+        {/* Context menu (long-press on bin) */}
+        {contextMenu && (
+          <BinContextMenuWrapper
+            binId={contextMenu.binId}
+            position={contextMenu.position}
+            onClose={hideContextMenu}
+          />
+        )}
+
+        {/* Toast notifications */}
+        <ToastContainer />
+      </div>
+    );
+  }
+
+  // Tablet layout - full width grid with overlay panels
+  if (isTablet) {
+    return (
+      <div className="h-screen flex flex-col overflow-hidden" style={{ backgroundColor: 'var(--bg-primary)', color: 'var(--text-primary)' }}>
+        {/* Header */}
+        <Header onHelpClick={() => setIsHelpOpen(true)} />
+
+        {/* Main content area - Grid takes full width */}
+        <div className="flex-1 flex overflow-hidden">
+          <main className="flex-1 flex flex-col overflow-hidden" style={{ backgroundColor: 'var(--bg-primary)' }}>
+            <Grid />
+            <Staging />
+          </main>
+        </div>
+
+        {/* Left sidebar as overlay */}
+        <TabletPanelOverlay
+          isOpen={tabletLeftPanelOpen}
+          onClose={toggleLeftPanel}
+          side="left"
+        >
+          <Sidebar />
+        </TabletPanelOverlay>
+
+        {/* Right panel as overlay */}
+        <TabletPanelOverlay
+          isOpen={tabletRightPanelOpen}
+          onClose={toggleRightPanel}
+          side="right"
+        >
+          <RightPanel />
+        </TabletPanelOverlay>
+
+        {/* Drop zones (appear when dragging) */}
+        <DropZones />
+
+        {/* Floating drag preview */}
+        <DragPreview />
+
+        {/* Modals */}
+        <HelpModal isOpen={isHelpOpen} onClose={() => setIsHelpOpen(false)} />
+
+        {/* Paint mode indicator */}
+        {paintSize && (
+          <div className="paint-mode-indicator" role="status" aria-live="polite">
+            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+            </svg>
+            <span>Paint Mode: {paintSize.width}×{paintSize.depth}</span>
+            <button
+              onClick={() => setPaintSize(null)}
+              className="ml-1 hover:opacity-80 transition-opacity"
+              aria-label="Exit paint mode"
+            >
+              <kbd>Esc</kbd>
+            </button>
+          </div>
+        )}
+
+        {/* Context menu (long-press on bin) */}
+        {contextMenu && (
+          <BinContextMenuWrapper
+            binId={contextMenu.binId}
+            position={contextMenu.position}
+            onClose={hideContextMenu}
+          />
+        )}
+
         {/* Toast notifications */}
         <ToastContainer />
       </div>
@@ -220,4 +344,24 @@ function MobilePanelContent({ panel }: { panel: string }) {
     default:
       return null;
   }
+}
+
+/**
+ * Context menu wrapper that looks up the bin from the store.
+ */
+function BinContextMenuWrapper({
+  binId,
+  position,
+  onClose,
+}: {
+  binId: string;
+  position: { x: number; y: number };
+  onClose: () => void;
+}) {
+  const bins = useLayoutStore(state => state.layout.bins);
+  const bin = bins.find(b => b.id === binId);
+
+  if (!bin) return null;
+
+  return <BinContextMenu bin={bin} position={position} onClose={onClose} />;
 }

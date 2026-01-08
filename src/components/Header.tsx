@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
-import { useLayoutStore, useHistoryStore } from '../store';
+import { useLayoutStore, useHistoryStore, useUIStore } from '../store';
+import { useResponsive } from '../hooks';
 import { CONSTRAINTS } from '../constants';
 import { ConfirmDialog } from './modals/ConfirmDialog';
 
@@ -8,6 +9,8 @@ interface HeaderProps {
 }
 
 export function Header({ onHelpClick }: HeaderProps) {
+  const { isTablet } = useResponsive();
+
   const layout = useLayoutStore(state => state.layout);
   const setName = useLayoutStore(state => state.setName);
   const reset = useLayoutStore(state => state.reset);
@@ -17,6 +20,12 @@ export function Header({ onHelpClick }: HeaderProps) {
   const canRedo = useHistoryStore(state => state.canRedo);
   const undo = useHistoryStore(state => state.undo);
   const redo = useHistoryStore(state => state.redo);
+
+  // Tablet panel toggles
+  const leftPanelCollapsed = useUIStore(state => state.leftPanelCollapsed);
+  const rightPanelCollapsed = useUIStore(state => state.rightPanelCollapsed);
+  const toggleLeftPanel = useUIStore(state => state.toggleLeftPanel);
+  const toggleRightPanel = useUIStore(state => state.toggleRightPanel);
 
   const [isEditing, setIsEditing] = useState(false);
   const [editValue, setEditValue] = useState(layout.name);
@@ -113,6 +122,36 @@ export function Header({ onHelpClick }: HeaderProps) {
       </div>
 
       <div className="flex items-center gap-1">
+        {/* Tablet panel toggle buttons */}
+        {isTablet && (
+          <div className="flex items-center mr-2" style={{ borderRight: '1px solid var(--border-subtle)', paddingRight: '8px' }}>
+            <button
+              onClick={toggleLeftPanel}
+              className="btn btn-ghost btn-icon"
+              style={!leftPanelCollapsed ? { backgroundColor: 'var(--bg-hover)' } : undefined}
+              title="Toggle sidebar panel"
+              aria-label="Toggle sidebar panel"
+              aria-pressed={!leftPanelCollapsed}
+            >
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h7" />
+              </svg>
+            </button>
+            <button
+              onClick={toggleRightPanel}
+              className="btn btn-ghost btn-icon"
+              style={!rightPanelCollapsed ? { backgroundColor: 'var(--bg-hover)' } : undefined}
+              title="Toggle inspector panel"
+              aria-label="Toggle inspector panel"
+              aria-pressed={!rightPanelCollapsed}
+            >
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+              </svg>
+            </button>
+          </div>
+        )}
+
         {/* Undo/Redo buttons */}
         <div className="flex items-center mr-2" style={{ borderRight: '1px solid var(--border-subtle)', paddingRight: '8px' }}>
           <button

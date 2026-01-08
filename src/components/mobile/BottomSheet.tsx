@@ -24,11 +24,13 @@ export function BottomSheet({ children, title }: BottomSheetProps) {
   // Handle swipe down to dismiss
   const handlePointerDown = useCallback((e: React.PointerEvent) => {
     // Only track drags on the header area
-    if (!(e.target as HTMLElement).closest('[data-sheet-header]')) return;
+    const headerEl = (e.target as HTMLElement).closest('[data-sheet-header]') as HTMLElement | null;
+    if (!headerEl) return;
 
     setIsDragging(true);
     dragStartY.current = e.clientY;
-    (e.target as HTMLElement).setPointerCapture(e.pointerId);
+    // Capture on the header element to ensure consistent drag tracking
+    headerEl.setPointerCapture(e.pointerId);
   }, []);
 
   const handlePointerMove = useCallback((e: React.PointerEvent) => {
@@ -43,8 +45,8 @@ export function BottomSheet({ children, title }: BottomSheetProps) {
     if (!isDragging) return;
 
     setIsDragging(false);
-    // If dragged more than 100px, close the sheet
-    if (dragY > 100) {
+    // If dragged more than 80px, close the sheet
+    if (dragY > 80) {
       closeMobilePanel();
     }
     setDragY(0);
@@ -110,14 +112,28 @@ export function BottomSheet({ children, title }: BottomSheetProps) {
         {/* Drag handle and header */}
         <div
           data-sheet-header
-          className="flex flex-col items-center pt-2 pb-3 cursor-grab active:cursor-grabbing"
+          className="flex flex-col items-center pt-3 pb-3 cursor-grab active:cursor-grabbing"
           style={{ touchAction: 'none' }}
         >
-          {/* Drag indicator */}
+          {/* Drag indicator - larger and more prominent */}
           <div
-            className="w-10 h-1 rounded-full mb-3"
-            style={{ backgroundColor: 'var(--border-default)' }}
+            className="w-12 h-1.5 rounded-full mb-2 transition-all duration-150"
+            style={{
+              backgroundColor: isDragging ? 'var(--color-primary)' : 'var(--text-disabled)',
+              transform: isDragging ? 'scaleX(1.2)' : 'scaleX(1)',
+            }}
           />
+          {/* Swipe hint - shows during drag */}
+          <div
+            className="text-xs mb-2 transition-opacity duration-150"
+            style={{
+              color: 'var(--text-disabled)',
+              opacity: isDragging ? 1 : 0,
+              height: isDragging ? 'auto' : 0,
+            }}
+          >
+            {dragY > 80 ? 'Release to close' : 'Swipe down to close'}
+          </div>
 
           {/* Title row */}
           <div className="w-full flex items-center justify-between px-4">

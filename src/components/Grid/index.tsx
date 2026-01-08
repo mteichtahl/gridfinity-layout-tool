@@ -516,19 +516,25 @@ export function Grid() {
         <div className="inline-flex flex-col">
           {/* Main grid area with row labels */}
           <div className="flex">
-            {/* Row labels column */}
+            {/* Row labels column - uses CSS Grid to match cell alignment exactly */}
             <div
-              className="flex flex-col"
-              style={{ marginRight: 4, marginTop: gap }}
+              style={{
+                display: 'grid',
+                gridTemplateRows: `repeat(${drawer.depth}, ${cellSize}px)`,
+                gap: `${gap}px`,
+                padding: `${gap}px`,
+                paddingRight: 0,
+                marginRight: 4,
+              }}
             >
-              {rowLabels.map((num) => (
+              {rowLabels.map((num, index) => (
                 <button
                   key={`row-${num}`}
                   type="button"
                   className="flex items-center justify-center select-none transition-colors rounded-sm"
                   style={{
                     width: labelSize,
-                    height: cellSize + gap,
+                    gridRow: index + 1,
                     fontSize: labelFontSize,
                     fontWeight: 'var(--font-medium)',
                     color: 'var(--text-tertiary)',
@@ -611,11 +617,11 @@ export function Grid() {
                       className="font-medium mb-1"
                       style={{ color: 'var(--text-secondary)', fontSize: 'var(--text-sm)' }}
                     >
-                      Click and drag to draw a bin
+                      {isMobile ? 'Tap and drag to draw a bin' : 'Click and drag to draw a bin'}
                     </p>
                     <p style={{ color: 'var(--text-disabled)', fontSize: 'var(--text-xs)' }}>
                       {isFirstLayer
-                        ? 'Or select a size from the Bin Palette on the left'
+                        ? (isMobile ? 'Or use Layers tab to select a size' : 'Or select a size from the Bin Palette on the left')
                         : 'Striped cells are blocked by tall bins from layers below'
                       }
                     </p>
@@ -696,22 +702,26 @@ export function Grid() {
                 />
               </div>
 
-              {/* Column labels row (at bottom, 1-indexed from left) */}
+              {/* Column labels row (at bottom, 1-indexed from left) - uses CSS Grid to match cell alignment */}
               <div
-                className="absolute left-0 flex"
+                className="absolute left-0"
                 style={{
+                  display: 'grid',
+                  gridTemplateColumns: `repeat(${drawer.width}, ${cellSize}px)`,
+                  gap: `${gap}px`,
+                  padding: `${gap}px`,
+                  paddingTop: 0,
                   top: drawer.depth * (cellSize + gap) + gap,
-                  marginLeft: gap,
                 }}
               >
-                {columnLabels.map((num) => (
+                {columnLabels.map((num, index) => (
                   <button
                     key={`col-${num}`}
                     type="button"
                     className="flex items-center justify-center select-none transition-colors rounded-sm"
                     style={{
-                      width: cellSize + gap,
                       height: labelSize,
+                      gridColumn: index + 1,
                       fontSize: labelFontSize,
                       fontWeight: 'var(--font-medium)',
                       color: 'var(--text-tertiary)',
