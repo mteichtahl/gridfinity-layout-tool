@@ -67,6 +67,18 @@ export function MobileInspector() {
     });
   };
 
+  const handleUpdateMultiHeight = (delta: number) => {
+    execute(() => {
+      for (const b of selectedBins) {
+        const binLayer = layout.layers.find(l => l.id === b.layerId);
+        const minHeight = binLayer?.height || 1;
+        const binMaxHeight = layout.drawer.height - getLayerZStart(b.layerId, layout.layers);
+        const newHeight = clamp(b.height + delta, minHeight, binMaxHeight);
+        updateBin(b.id, { height: newHeight });
+      }
+    });
+  };
+
   const handleDeleteBin = () => {
     execute(() => {
       for (const b of selectedBins) {
@@ -152,18 +164,66 @@ export function MobileInspector() {
           <label className="block text-sm mb-2 text-content-tertiary">
             Category
           </label>
-          <select
-            value={commonCategory || ''}
-            onChange={(e) => handleUpdateMultiCategory(e.target.value)}
-            className="input w-full h-12"
-          >
-            {!commonCategory && (
-              <option value="" disabled>Mixed categories</option>
+          <div className="relative">
+            {commonCategory ? (
+              <div
+                className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 rounded pointer-events-none"
+                style={{ backgroundColor: layout.categories.find(c => c.id === commonCategory)?.color || DEFAULT_CATEGORY_COLOR }}
+              />
+            ) : (
+              <div className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 rounded pointer-events-none bg-surface-hover border border-stroke-subtle" />
             )}
-            {layout.categories.map(c => (
-              <option key={c.id} value={c.id}>{c.name}</option>
-            ))}
-          </select>
+            <select
+              value={commonCategory || ''}
+              onChange={(e) => handleUpdateMultiCategory(e.target.value)}
+              className="input w-full h-12 pl-10 pr-10 appearance-none"
+            >
+              {!commonCategory && (
+                <option value="" disabled>Mixed categories</option>
+              )}
+              {layout.categories.map(c => (
+                <option key={c.id} value={c.id}>{c.name}</option>
+              ))}
+            </select>
+            <svg
+              className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 pointer-events-none text-content-tertiary"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+            >
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+            </svg>
+          </div>
+        </div>
+
+        {/* Height control */}
+        <div className="mb-4">
+          <label className="block text-sm mb-2 text-content-tertiary">
+            Height
+          </label>
+          <div className="flex items-center">
+            <button
+              onClick={() => handleUpdateMultiHeight(-1)}
+              className="btn btn-secondary w-12 h-12 p-0 rounded-r-none"
+            >
+              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 12H4" />
+              </svg>
+            </button>
+            <span className="flex-1 h-12 flex items-center justify-center font-semibold bg-surface-elevated text-content">
+              {selectedBins.every(b => b.height === selectedBins[0]?.height)
+                ? `${selectedBins[0]?.height}u`
+                : 'Mixed'}
+            </span>
+            <button
+              onClick={() => handleUpdateMultiHeight(1)}
+              className="btn btn-secondary w-12 h-12 p-0 rounded-l-none"
+            >
+              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+              </svg>
+            </button>
+          </div>
         </div>
 
         {/* Actions */}
@@ -321,15 +381,29 @@ export function MobileInspector() {
         <label className="block text-sm mb-1 text-content-tertiary">
           Category
         </label>
-        <select
-          value={bin.category}
-          onChange={(e) => handleUpdateBin('category', e.target.value)}
-          className="input w-full h-12"
-        >
-          {layout.categories.map(c => (
-            <option key={c.id} value={c.id}>{c.name}</option>
-          ))}
-        </select>
+        <div className="relative">
+          <div
+            className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 rounded pointer-events-none"
+            style={{ backgroundColor: category?.color || DEFAULT_CATEGORY_COLOR }}
+          />
+          <select
+            value={bin.category}
+            onChange={(e) => handleUpdateBin('category', e.target.value)}
+            className="input w-full h-12 pl-10 pr-10 appearance-none"
+          >
+            {layout.categories.map(c => (
+              <option key={c.id} value={c.id}>{c.name}</option>
+            ))}
+          </select>
+          <svg
+            className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 pointer-events-none text-content-tertiary"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+          >
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+          </svg>
+        </div>
       </div>
 
       {/* Label */}
