@@ -154,6 +154,7 @@ export function Overlay({ cellSize, gap }: OverlayProps) {
               boxShadow: '0 0 0 1px rgba(0, 0, 0, 0.4)',
               pointerEvents: 'none',
               borderRadius: '2px',
+              zIndex: 30,
             }}
           />
         );
@@ -172,6 +173,7 @@ export function Overlay({ cellSize, gap }: OverlayProps) {
             border: `2px solid ${color}`,
             pointerEvents: 'none',
             backgroundColor: `${color}20`,
+            zIndex: 31,
           }}
         />
       );
