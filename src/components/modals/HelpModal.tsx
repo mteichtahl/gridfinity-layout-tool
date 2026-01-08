@@ -210,43 +210,28 @@ export function HelpModal({ isOpen, onClose }: HelpModalProps) {
 
           {/* Tips Section */}
           <section>
-            <h3
-              className="mb-4"
-              style={{
-                fontSize: 'var(--text-lg)',
-                fontWeight: 'var(--font-semibold)',
-                color: 'var(--text-primary)',
-              }}
-            >
+            <h3 className="mb-4" style={STYLES.sectionHeader}>
               Tips
             </h3>
-            <ul
-              className="space-y-2 p-4 rounded-lg"
-              style={{
-                backgroundColor: 'var(--bg-elevated)',
-                border: '1px solid var(--border-subtle)',
-                fontSize: 'var(--text-sm)',
-                color: 'var(--text-secondary)',
-              }}
-            >
+            <ul className="space-y-2 p-4 rounded-lg" style={STYLES.tipsList}>
               <li className="flex items-start gap-2">
-                <span style={{ color: 'var(--color-primary)' }}>•</span>
+                <span style={STYLES.colorPrimary}>•</span>
                 <span>Use the Bin Palette to select a size, then click or drag to paint bins</span>
               </li>
               <li className="flex items-start gap-2">
-                <span style={{ color: 'var(--color-primary)' }}>•</span>
+                <span style={STYLES.colorPrimary}>•</span>
                 <span>Bins that exceed the max print size will be automatically split</span>
               </li>
               <li className="flex items-start gap-2">
-                <span style={{ color: 'var(--color-primary)' }}>•</span>
+                <span style={STYLES.colorPrimary}>•</span>
                 <span>Drag layers in the sidebar to reorder them vertically</span>
               </li>
               <li className="flex items-start gap-2">
-                <span style={{ color: 'var(--color-primary)' }}>•</span>
+                <span style={STYLES.colorPrimary}>•</span>
                 <span>Double-click layer names to rename them, click the edit icon to edit categories</span>
               </li>
               <li className="flex items-start gap-2">
-                <span style={{ color: 'var(--color-primary)' }}>•</span>
+                <span style={STYLES.colorPrimary}>•</span>
                 <span>Your layout is automatically saved to your browser</span>
               </li>
             </ul>
@@ -254,34 +239,19 @@ export function HelpModal({ isOpen, onClose }: HelpModalProps) {
 
           {/* Blocked Zones Section */}
           <section>
-            <h3
-              className="mb-4"
-              style={{
-                fontSize: 'var(--text-lg)',
-                fontWeight: 'var(--font-semibold)',
-                color: 'var(--text-primary)',
-              }}
-            >
+            <h3 className="mb-4" style={STYLES.sectionHeader}>
               Blocked Zones
             </h3>
-            <div
-              className="p-4 rounded-lg"
-              style={{
-                backgroundColor: 'var(--bg-elevated)',
-                border: '1px solid var(--border-subtle)',
-                fontSize: 'var(--text-sm)',
-                color: 'var(--text-secondary)',
-              }}
-            >
+            <div className="p-4 rounded-lg" style={STYLES.blockedZonesContent}>
               <p className="mb-3">
-                <strong style={{ color: 'var(--text-primary)' }}>What are blocked zones?</strong>
+                <strong style={STYLES.textPrimary}>What are blocked zones?</strong>
               </p>
               <p className="mb-3">
                 When a bin is taller than its layer height, it extends into layers above.
                 These areas appear as striped cells and cannot have new bins placed on them.
               </p>
               <p>
-                <strong style={{ color: 'var(--text-primary)' }}>Example:</strong> A 5u tall bin on Layer 1 (3u) extends 2u into Layer 2.
+                <strong style={STYLES.textPrimary}>Example:</strong> A 5u tall bin on Layer 1 (3u) extends 2u into Layer 2.
                 Those cells on Layer 2 are blocked because the physical bin occupies that space.
               </p>
             </div>
@@ -303,22 +273,10 @@ function ShortcutRow({
 
   return (
     <div className="flex justify-between items-center">
-      <span style={{ fontSize: 'var(--text-sm)', color: 'var(--text-secondary)' }}>
-        {description}
-      </span>
+      <span style={STYLES.rowDescription}>{description}</span>
       <div className="flex gap-1">
         {keyArray.map((key) => (
-          <kbd
-            key={key}
-            className="px-2 py-1 rounded font-mono"
-            style={{
-              fontSize: 'var(--text-xs)',
-              backgroundColor: 'var(--bg-primary)',
-              border: '1px solid var(--border-default)',
-              color: 'var(--text-primary)',
-              boxShadow: 'var(--shadow-sm)',
-            }}
-          >
+          <kbd key={key} className="px-2 py-1 rounded font-mono" style={STYLES.kbd}>
             {key}
           </kbd>
         ))}
@@ -336,15 +294,8 @@ function InteractionRow({
 }) {
   return (
     <div className="flex justify-between items-center">
-      <span style={{ fontSize: 'var(--text-sm)', color: 'var(--text-secondary)' }}>
-        {description}
-      </span>
-      <span
-        className="italic"
-        style={{ fontSize: 'var(--text-xs)', color: 'var(--text-tertiary)' }}
-      >
-        {action}
-      </span>
+      <span style={STYLES.rowDescription}>{description}</span>
+      <span className="italic" style={STYLES.rowAction}>{action}</span>
     </div>
   );
 }

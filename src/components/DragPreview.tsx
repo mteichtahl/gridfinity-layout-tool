@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useShallow } from 'zustand/shallow';
 import { useUIStore, useLayoutStore } from '../store';
 import { BASE_CELL_SIZE } from '../constants';
+import { getContrastColor } from '../utils/color';
 
 /**
  * Floating drag preview that follows the cursor during drag operations.
@@ -110,13 +111,4 @@ export function DragPreview() {
       })}
     </div>
   );
-}
-
-function getContrastColor(hexColor: string): string {
-  const hex = hexColor.replace('#', '');
-  const r = parseInt(hex.substr(0, 2), 16);
-  const g = parseInt(hex.substr(2, 2), 16);
-  const b = parseInt(hex.substr(4, 2), 16);
-  const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
-  return luminance > 0.5 ? 'var(--text-on-light)' : 'var(--text-on-dark)';
 }

@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react';
 import { useLayoutStore, useUIStore, useUndoableAction } from '../store';
 import { useToastStore } from '../store/toast';
 import { STAGING_ID, BASE_CELL_SIZE } from '../constants';
+import { getContrastColor } from '../utils/color';
 import { ConfirmDialog } from './modals/ConfirmDialog';
 
 interface PackedBin {
@@ -108,15 +109,6 @@ export function Staging() {
 
   const getCategory = (categoryId: string) =>
     layout.categories.find(c => c.id === categoryId);
-
-  const getContrastColor = (hexColor: string): string => {
-    const hex = hexColor.replace('#', '');
-    const r = parseInt(hex.substr(0, 2), 16);
-    const g = parseInt(hex.substr(2, 2), 16);
-    const b = parseInt(hex.substr(4, 2), 16);
-    const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
-    return luminance > 0.5 ? 'var(--text-on-light)' : 'var(--text-on-dark)';
-  };
 
   const handleBinPointerDown = (binId: string, e: React.PointerEvent) => {
     if (e.button !== 0) return;
