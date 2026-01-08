@@ -1,5 +1,63 @@
-import { useEffect } from 'react';
+import { useEffect, type CSSProperties } from 'react';
 import { SHORTCUTS } from '../../constants';
+
+// Style constants to avoid recreating objects on each render
+const STYLES = {
+  // Overlay and modal
+  overlay: { backgroundColor: 'var(--overlay-dark)' } as CSSProperties,
+  modal: {
+    backgroundColor: 'var(--bg-secondary)',
+    border: '1px solid var(--border-default)',
+    borderRadius: 'var(--radius-xl)',
+    padding: 'var(--space-2xl)',
+    boxShadow: 'var(--shadow-xl)',
+  } as CSSProperties,
+  // Typography
+  title: {
+    fontSize: 'var(--text-2xl)',
+    fontWeight: 'var(--font-bold)',
+    color: 'var(--text-primary)',
+  } as CSSProperties,
+  sectionHeader: {
+    fontSize: 'var(--text-lg)',
+    fontWeight: 'var(--font-semibold)',
+    color: 'var(--text-primary)',
+  } as CSSProperties,
+  textPrimary: { color: 'var(--text-primary)' } as CSSProperties,
+  textSecondary: { color: 'var(--text-secondary)' } as CSSProperties,
+  textTertiary: { color: 'var(--text-tertiary)' } as CSSProperties,
+  colorPrimary: { color: 'var(--color-primary)' } as CSSProperties,
+  // Containers
+  sectionContent: {
+    backgroundColor: 'var(--bg-elevated)',
+    border: '1px solid var(--border-subtle)',
+  } as CSSProperties,
+  tipsList: {
+    backgroundColor: 'var(--bg-elevated)',
+    border: '1px solid var(--border-subtle)',
+    fontSize: 'var(--text-sm)',
+    color: 'var(--text-secondary)',
+  } as CSSProperties,
+  blockedZonesContent: {
+    backgroundColor: 'var(--bg-elevated)',
+    border: '1px solid var(--border-subtle)',
+    fontSize: 'var(--text-sm)',
+    color: 'var(--text-secondary)',
+  } as CSSProperties,
+  // Button
+  buttonCompact: { minWidth: 'auto', minHeight: 'auto' } as CSSProperties,
+  // Keyboard shortcut
+  kbd: {
+    fontSize: 'var(--text-xs)',
+    backgroundColor: 'var(--bg-primary)',
+    border: '1px solid var(--border-default)',
+    color: 'var(--text-primary)',
+    boxShadow: 'var(--shadow-sm)',
+  } as CSSProperties,
+  // Rows
+  rowDescription: { fontSize: 'var(--text-sm)', color: 'var(--text-secondary)' } as CSSProperties,
+  rowAction: { fontSize: 'var(--text-xs)', color: 'var(--text-tertiary)' } as CSSProperties,
+} as const;
 
 interface HelpModalProps {
   isOpen: boolean;
@@ -42,38 +100,25 @@ export function HelpModal({ isOpen, onClose }: HelpModalProps) {
   return (
     <div
       className="fixed inset-0 flex items-center justify-center z-50 animate-fade-in"
-      style={{ backgroundColor: 'var(--overlay-dark)' }}
+      style={STYLES.overlay}
       onClick={onClose}
     >
       <div
         className="max-w-2xl w-full mx-4 max-h-[80vh] overflow-y-auto scrollbar-thin animate-scale-in"
-        style={{
-          backgroundColor: 'var(--bg-secondary)',
-          border: '1px solid var(--border-default)',
-          borderRadius: 'var(--radius-xl)',
-          padding: 'var(--space-2xl)',
-          boxShadow: 'var(--shadow-xl)',
-        }}
+        style={STYLES.modal}
         onClick={(e) => e.stopPropagation()}
         role="dialog"
         aria-modal="true"
         aria-labelledby="help-title"
       >
         <div className="flex justify-between items-center mb-6">
-          <h2
-            id="help-title"
-            style={{
-              fontSize: 'var(--text-2xl)',
-              fontWeight: 'var(--font-bold)',
-              color: 'var(--text-primary)',
-            }}
-          >
+          <h2 id="help-title" style={STYLES.title}>
             Keyboard Shortcuts & Help
           </h2>
           <button
             onClick={onClose}
             className="btn btn-ghost btn-icon"
-            style={{ minWidth: 'auto', minHeight: 'auto' }}
+            style={STYLES.buttonCompact}
             aria-label="Close help"
           >
             <svg
@@ -90,23 +135,10 @@ export function HelpModal({ isOpen, onClose }: HelpModalProps) {
         <div className="space-y-6">
           {/* Keyboard Shortcuts Section */}
           <section>
-            <h3
-              className="mb-4"
-              style={{
-                fontSize: 'var(--text-lg)',
-                fontWeight: 'var(--font-semibold)',
-                color: 'var(--text-primary)',
-              }}
-            >
+            <h3 className="mb-4" style={STYLES.sectionHeader}>
               Keyboard Shortcuts
             </h3>
-            <div
-              className="space-y-2 p-4 rounded-lg"
-              style={{
-                backgroundColor: 'var(--bg-elevated)',
-                border: '1px solid var(--border-subtle)',
-              }}
-            >
+            <div className="space-y-2 p-4 rounded-lg" style={STYLES.sectionContent}>
               <ShortcutRow
                 keys={[getModifierKey(), formatKey(SHORTCUTS.UNDO)]}
                 description="Undo"
@@ -149,23 +181,10 @@ export function HelpModal({ isOpen, onClose }: HelpModalProps) {
 
           {/* Mouse Interactions Section */}
           <section>
-            <h3
-              className="mb-4"
-              style={{
-                fontSize: 'var(--text-lg)',
-                fontWeight: 'var(--font-semibold)',
-                color: 'var(--text-primary)',
-              }}
-            >
+            <h3 className="mb-4" style={STYLES.sectionHeader}>
               Mouse Interactions
             </h3>
-            <div
-              className="space-y-2 p-4 rounded-lg"
-              style={{
-                backgroundColor: 'var(--bg-elevated)',
-                border: '1px solid var(--border-subtle)',
-              }}
-            >
+            <div className="space-y-2 p-4 rounded-lg" style={STYLES.sectionContent}>
               <InteractionRow
                 action="Click + drag on empty cell"
                 description="Draw a new bin"

@@ -27,7 +27,6 @@ export function canPlaceBin(
     return { valid: false, reason: 'exceeds_depth' };
   }
 
-  // Find layer
   const layer = layers.find(l => l.id === layerId);
   if (!layer) {
     return { valid: false, reason: 'invalid_layer' };
@@ -44,7 +43,6 @@ export function canPlaceBin(
     return { valid: false, reason: 'exceeds_height' };
   }
 
-  // Check blocked zones
   const blockedZones = getBlockedZones(layerId, bins, layers);
   for (let x = rect.x; x < rect.x + rect.width; x++) {
     for (let y = rect.y; y < rect.y + rect.depth; y++) {

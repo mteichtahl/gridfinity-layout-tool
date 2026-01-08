@@ -75,13 +75,11 @@ export function Staging() {
   const [showClearConfirm, setShowClearConfirm] = useState(false);
   const addToast = useToastStore(state => state.addToast);
 
-  // Get bins in staging
   const stagingBins = useMemo(() =>
     layout.bins.filter(bin => bin.layerId === STAGING_ID),
     [layout.bins]
   );
 
-  // Calculate grid dimensions
   const cellSize = Math.round(BASE_CELL_SIZE * zoom);
   const gap = 1;
   const gridWidth = layout.drawer.width; // Match main drawer width
@@ -108,11 +106,9 @@ export function Staging() {
     return Math.max(2, maxY);
   }, [packedBins]);
 
-  // Get category info
   const getCategory = (categoryId: string) =>
     layout.categories.find(c => c.id === categoryId);
 
-  // Calculate text color based on background
   const getContrastColor = (hexColor: string): string => {
     const hex = hexColor.replace('#', '');
     const r = parseInt(hex.substr(0, 2), 16);
@@ -122,7 +118,6 @@ export function Staging() {
     return luminance > 0.5 ? 'var(--text-on-light)' : 'var(--text-on-dark)';
   };
 
-  // Handle bin drag start from staging
   const handleBinPointerDown = (binId: string, e: React.PointerEvent) => {
     if (e.button !== 0) return;
     e.preventDefault();
@@ -136,7 +131,6 @@ export function Staging() {
     });
   };
 
-  // Clear all staging bins
   const handleClearStaging = () => {
     const count = stagingBins.length;
     execute(() => {
@@ -148,7 +142,6 @@ export function Staging() {
     addToast(`Deleted ${count} staged bins`, 'success');
   };
 
-  // Check if currently dragging a staging bin
   const isDraggingStagingBin = interaction?.type === 'stagingDrag';
   const draggingBinId = isDraggingStagingBin ? interaction.binId : null;
 

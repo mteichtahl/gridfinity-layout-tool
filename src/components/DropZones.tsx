@@ -18,7 +18,6 @@ export function DropZones() {
   const interactionType = interaction?.type ?? null;
   const bins = useLayoutStore((state) => state.layout.bins);
 
-  // Compute staging bins count with useMemo to avoid selector returning new array
   const stagingBinCount = useMemo(
     () => bins.filter(b => b.layerId === STAGING_ID).length,
     [bins]
@@ -36,10 +35,8 @@ export function DropZones() {
   // Determine if we're in a dragging state
   const isDragging = interactionType === 'drag' || interactionType === 'stagingDrag';
 
-  // Track mouse position to detect hover over drop zones
   useEffect(() => {
     if (!isDragging) {
-      // Clear drop target when not dragging
       if (dropTargetRef.current) setDropTarget(null);
       return;
     }

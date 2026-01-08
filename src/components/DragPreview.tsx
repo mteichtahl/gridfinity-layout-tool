@@ -25,7 +25,6 @@ export function DragPreview() {
 
   const isDragging = interaction && (interaction.type === 'drag' || interaction.type === 'stagingDrag');
 
-  // Track mouse position during drag
   useEffect(() => {
     if (!isDragging) {
       return;
@@ -47,7 +46,6 @@ export function DragPreview() {
   const cellSize = Math.round(BASE_CELL_SIZE * zoom);
   const gap = 1;
 
-  // Get bins being dragged
   let draggedBins: typeof bins = [];
   if (interaction.type === 'drag') {
     draggedBins = bins.filter(b => interaction.binIds.includes(b.id));

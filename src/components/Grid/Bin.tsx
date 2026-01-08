@@ -22,7 +22,6 @@ interface BinProps {
  * Calculate optimal text color based on background luminance
  */
 function getContrastColor(hexColor: string): string {
-  // Remove # if present
   const hex = hexColor.replace('#', '');
   const r = parseInt(hex.substr(0, 2), 16);
   const g = parseInt(hex.substr(2, 2), 16);
@@ -70,7 +69,6 @@ function BinComponent({ bin, category, layer, drawer, isGhost, isSelected, onSta
   const longPressTriggeredRef = useRef(false);
   const pointerStartRef = useRef<{ x: number; y: number } | null>(null);
 
-  // Check if this bin is currently being dragged
   const isBeingDragged = interaction?.type === 'drag' && interaction.binIds.includes(bin.id);
 
   // Hide resize handles during multi-select
@@ -82,7 +80,6 @@ function BinComponent({ bin, category, layer, drawer, isGhost, isSelected, onSta
   const isTall = layer && bin.height > layer.height;
 
   const dimensionsText = `${bin.width}×${bin.depth}`;
-  // Only show label text if showLabels is enabled
   const labelText = showLabels ? (bin.label || '') : '';
 
   // Rotate text for tall narrow bins (depth > 1.5x width)
