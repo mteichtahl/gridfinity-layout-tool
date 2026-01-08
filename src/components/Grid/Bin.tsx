@@ -1,4 +1,5 @@
 import { memo, useRef, type PointerEvent } from 'react';
+import { useShallow } from 'zustand/shallow';
 import type { Bin as BinType, Category, Layer, ResizeHandle } from '../../types';
 import { useUIStore, useLayoutStore } from '../../store';
 import { useResponsive } from '../../hooks';
@@ -39,16 +40,30 @@ function getContrastColor(hexColor: string): string {
  */
 function BinComponent({ bin, category, layer, drawer, isGhost, isSelected, onStartDrag, onStartResize }: BinProps) {
   const { isTouchDevice } = useResponsive();
+
+  // Consolidate UI state selectors with shallow comparison
+  const { selectedBinIds, interaction, zoom, showLabels } = useUIStore(
+    useShallow((state) => ({
+      selectedBinIds: state.selectedBinIds,
+      interaction: state.interaction,
+      zoom: state.zoom,
+      showLabels: state.showLabels,
+    }))
+  );
+
+  // Actions are stable, select individually
   const setSelectedBin = useUIStore((state) => state.setSelectedBin);
   const toggleSelection = useUIStore((state) => state.toggleSelection);
   const addToSelection = useUIStore((state) => state.addToSelection);
-  const selectedBinIds = useUIStore((state) => state.selectedBinIds);
-  const interaction = useUIStore((state) => state.interaction);
-  const zoom = useUIStore((state) => state.zoom);
-  const showLabels = useUIStore((state) => state.showLabels);
   const showContextMenu = useUIStore((state) => state.showContextMenu);
-  const printBedSize = useLayoutStore((state) => state.layout.printBedSize);
-  const gridUnitMm = useLayoutStore((state) => state.layout.gridUnitMm);
+
+  // Consolidate layout state selectors with shallow comparison
+  const { printBedSize, gridUnitMm } = useLayoutStore(
+    useShallow((state) => ({
+      printBedSize: state.layout.printBedSize,
+      gridUnitMm: state.layout.gridUnitMm,
+    }))
+  );
 
   // Long-press detection for mobile context menu
   const longPressTimerRef = useRef<number | null>(null);
