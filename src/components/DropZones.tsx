@@ -1,4 +1,5 @@
 import { useEffect, useRef, useMemo } from 'react';
+import { useShallow } from 'zustand/shallow';
 import { useUIStore, useLayoutStore } from '../store';
 import { STAGING_ID } from '../constants';
 
@@ -7,11 +8,14 @@ import { STAGING_ID } from '../constants';
  * Shows trash zone for deletion and staging zone for temporary storage.
  */
 export function DropZones() {
-  // Only select the interaction type to avoid re-renders on coordinate changes
-  const interactionType = useUIStore((state) => state.interaction?.type ?? null);
-  const interaction = useUIStore((state) => state.interaction);
-  const dropTarget = useUIStore((state) => state.dropTarget);
-  const setDropTarget = useUIStore((state) => state.setDropTarget);
+  const { interaction, dropTarget, setDropTarget } = useUIStore(
+    useShallow((state) => ({
+      interaction: state.interaction,
+      dropTarget: state.dropTarget,
+      setDropTarget: state.setDropTarget,
+    }))
+  );
+  const interactionType = interaction?.type ?? null;
   const bins = useLayoutStore((state) => state.layout.bins);
 
   // Compute staging bins count with useMemo to avoid selector returning new array

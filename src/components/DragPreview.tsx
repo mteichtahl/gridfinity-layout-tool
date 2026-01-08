@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useShallow } from 'zustand/shallow';
 import { useUIStore, useLayoutStore } from '../store';
 import { BASE_CELL_SIZE } from '../constants';
 
@@ -7,10 +8,18 @@ import { BASE_CELL_SIZE } from '../constants';
  * Shows a visual representation of the bin(s) being dragged.
  */
 export function DragPreview() {
-  const interaction = useUIStore((state) => state.interaction);
-  const zoom = useUIStore((state) => state.zoom);
-  const bins = useLayoutStore((state) => state.layout.bins);
-  const categories = useLayoutStore((state) => state.layout.categories);
+  const { interaction, zoom } = useUIStore(
+    useShallow((state) => ({
+      interaction: state.interaction,
+      zoom: state.zoom,
+    }))
+  );
+  const { bins, categories } = useLayoutStore(
+    useShallow((state) => ({
+      bins: state.layout.bins,
+      categories: state.layout.categories,
+    }))
+  );
 
   const [mousePos, setMousePos] = useState<{ x: number; y: number } | null>(null);
 

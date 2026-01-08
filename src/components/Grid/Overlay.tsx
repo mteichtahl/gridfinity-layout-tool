@@ -1,4 +1,5 @@
 import type { RefObject } from 'react';
+import { useShallow } from 'zustand/shallow';
 import { useUIStore, useLayoutStore } from '../../store';
 import { clamp } from '../../utils/validation';
 
@@ -15,8 +16,12 @@ interface OverlayProps {
  */
 export function Overlay({ cellSize, gap }: OverlayProps) {
   const interaction = useUIStore((state) => state.interaction);
-  const drawer = useLayoutStore((state) => state.layout.drawer);
-  const bins = useLayoutStore((state) => state.layout.bins);
+  const { drawer, bins } = useLayoutStore(
+    useShallow((state) => ({
+      drawer: state.layout.drawer,
+      bins: state.layout.bins,
+    }))
+  );
 
   if (!interaction) return null;
 
