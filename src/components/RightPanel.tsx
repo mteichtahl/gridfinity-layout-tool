@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useCallback, type CSSProperties } from 'react';
+import React, { useState, useMemo, useCallback } from 'react';
 import { useShallow } from 'zustand/shallow';
 import { useUIStore, useLayoutStore, useUndoableAction } from '../store';
 import { STAGING_ID, CONSTRAINTS, calcMaxGridUnits } from '../constants';
@@ -6,88 +6,22 @@ import { generatePrintList, getTotalBins, getTotalPieces, getTotalFilament, getS
 import { getLayerZStart } from '../utils/collision';
 import { clamp } from '../utils/validation';
 import { exportPrintListTSV } from '../utils/storage';
+import { useAdvancedLayerMode } from '../hooks/useAdvancedLayerMode';
 import { ConfirmDialog } from './modals/ConfirmDialog';
 import type { PrintPiece } from '../types';
 
 const STYLES = {
-  // Layout and borders
-  borderBottom: { borderBottom: '1px solid var(--border-subtle)' } as CSSProperties,
-  borderTop: { borderTop: '1px solid var(--border-subtle)' } as CSSProperties,
-  bgSecondaryBorderLeft: {
-    backgroundColor: 'var(--bg-secondary)',
-    borderLeft: '1px solid var(--border-subtle)',
-  } as CSSProperties,
-  bgElevated: { backgroundColor: 'var(--bg-elevated)' } as CSSProperties,
-
-  // Text colors
-  textPrimary: { color: 'var(--text-primary)' } as CSSProperties,
-  textSecondary: { color: 'var(--text-secondary)' } as CSSProperties,
-  textTertiary: { color: 'var(--text-tertiary)' } as CSSProperties,
-  textDisabled: { color: 'var(--text-disabled)' } as CSSProperties,
-
-  // Labels (fontSize xs + tertiary)
-  labelStyle: { fontSize: 'var(--text-xs)', color: 'var(--text-tertiary)' } as CSSProperties,
-  labelDisabled: { fontSize: 'var(--text-xs)', color: 'var(--text-disabled)' } as CSSProperties,
-
-  // Table header
-  tableHeader: { color: 'var(--text-secondary)', backgroundColor: 'var(--bg-elevated)' } as CSSProperties,
-
-  // Headings
-  sectionHeading: {
-    fontSize: 'var(--text-sm)',
-    fontWeight: 'var(--font-semibold)',
-    color: 'var(--text-secondary)',
-    textTransform: 'uppercase',
-    letterSpacing: '0.05em',
-  } as CSSProperties,
-  panelHeading: {
-    fontSize: 'var(--text-lg)',
-    fontWeight: 'var(--font-semibold)',
-    color: 'var(--text-primary)',
-  } as CSSProperties,
-
-  // Buttons
-  minSizeAuto: { minWidth: 'auto', minHeight: 'auto' } as CSSProperties,
-  minSize40: { minWidth: '40px', minHeight: '40px' } as CSSProperties,
-
-  // Split warning
-  warningBox: {
-    backgroundColor: 'var(--color-warning-muted)',
-    border: '1px solid var(--color-warning)',
-    color: 'var(--color-warning)',
-    fontSize: 'var(--text-sm)',
-  } as CSSProperties,
-
-  // Print list
-  tableFontSize: { fontSize: 'var(--text-sm)', tableLayout: 'auto' } as CSSProperties,
-  colorWarning: { color: 'var(--color-warning)' } as CSSProperties,
-  colorSuccess: { color: 'var(--color-success)' } as CSSProperties,
-
-  // Split preview piece
+  // Split preview piece - custom colors not in Tailwind
   splitPiece: {
     backgroundColor: 'var(--color-primary-muted)',
     border: '1px solid var(--color-primary)',
     borderRadius: '2px',
     fontSize: '9px',
     color: 'var(--text-secondary)',
-  } as CSSProperties,
+  },
 
-  // Multi-select badge
-  primaryBadge: { backgroundColor: 'var(--color-primary)', boxShadow: 'var(--shadow-sm)' } as CSSProperties,
-  badgeText: { fontSize: '10px', fontWeight: 'bold', color: '#000' } as CSSProperties,
-
-  // Misc
-  transparentBg: { background: 'transparent' } as CSSProperties,
-  textareaResize: { resize: 'vertical', minHeight: '60px' } as CSSProperties,
-  charCount: { fontSize: '10px', color: 'var(--text-disabled)' } as CSSProperties,
-  labelTruncate: { color: 'var(--text-tertiary)', maxWidth: '80px' } as CSSProperties,
-  categoryOverflow: { fontSize: '9px', color: 'var(--text-disabled)' } as CSSProperties,
-  splitDetails: { fontSize: 'var(--text-xs)', color: 'var(--text-secondary)' } as CSSProperties,
-  splitHeader: { fontWeight: 'var(--font-medium)', marginBottom: '4px' } as CSSProperties,
-  totalRow: { fontSize: 'var(--text-sm)', color: 'var(--text-primary)' } as CSSProperties,
-  multiSelectHint: { fontSize: 'var(--text-sm)', color: 'var(--text-secondary)', marginBottom: 'var(--space-md)' } as CSSProperties,
-  heightDisplay: { fontSize: 'var(--text-lg)', color: 'var(--text-primary)' } as CSSProperties,
-  emptyStateText: { fontSize: 'var(--text-sm)', color: 'var(--text-secondary)', marginBottom: '4px' } as CSSProperties,
+  // Dynamic inline styles for hover effects
+  textareaResize: { resize: 'vertical' as const, minHeight: '60px' },
 } as const;
 
 /**
@@ -192,6 +126,7 @@ export function RightPanel() {
   );
 
   const { execute } = useUndoableAction();
+  const showAdvancedLayers = useAdvancedLayerMode();
 
   // Single selection vs multi-selection
   const selectedBins = layout.bins.filter(b => selectedBinIds.includes(b.id));
@@ -282,22 +217,13 @@ export function RightPanel() {
   if (collapsed) {
     return (
       <aside
-        className="flex-shrink-0 flex flex-col transition-all duration-200 ease-in-out"
-        style={{ width: '40px', ...STYLES.bgSecondaryBorderLeft }}
+        className="flex-shrink-0 flex flex-col transition-all duration-200 ease-in-out bg-surface-secondary border-l border-stroke-subtle"
+        style={{ width: '40px' }}
       >
         <div className="flex flex-col items-center pt-3">
           <button
             onClick={toggle}
-            className="p-2 rounded-md transition-colors"
-            style={STYLES.textSecondary}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.backgroundColor = 'var(--bg-hover)';
-              e.currentTarget.style.color = 'var(--text-primary)';
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.backgroundColor = 'transparent';
-              e.currentTarget.style.color = 'var(--text-secondary)';
-            }}
+            className="p-2 rounded-md transition-colors text-content-secondary hover:bg-surface-hover hover:text-content"
             title="Expand panel"
             aria-label="Expand right panel"
           >
@@ -313,16 +239,7 @@ export function RightPanel() {
   const collapseButton = (
     <button
       onClick={toggle}
-      className="flex-shrink-0 p-1 rounded transition-colors"
-      style={STYLES.textTertiary}
-      onMouseEnter={(e) => {
-        e.currentTarget.style.backgroundColor = 'var(--bg-hover)';
-        e.currentTarget.style.color = 'var(--text-primary)';
-      }}
-      onMouseLeave={(e) => {
-        e.currentTarget.style.backgroundColor = 'transparent';
-        e.currentTarget.style.color = 'var(--text-tertiary)';
-      }}
+      className="flex-shrink-0 p-1 rounded transition-colors text-content-tertiary hover:bg-surface-hover hover:text-content"
       title="Collapse panel"
       aria-label="Collapse right panel"
     >
@@ -334,16 +251,13 @@ export function RightPanel() {
 
   return (
     <aside
-      className="flex-shrink-0 flex flex-col h-full overflow-hidden transition-all duration-200 ease-in-out"
-      style={{ width: '288px', ...STYLES.bgSecondaryBorderLeft }}
+      className="flex-shrink-0 flex flex-col h-full overflow-hidden transition-all duration-200 ease-in-out bg-surface-secondary border-l border-stroke-subtle"
+      style={{ width: '288px' }}
     >
       {/* Header */}
-      <div
-        className="flex items-center gap-3 px-4 py-3"
-        style={STYLES.borderBottom}
-      >
+      <div className="flex items-center gap-3 px-4 py-3 border-b border-stroke-subtle">
         {collapseButton}
-        <h2 style={STYLES.sectionHeading}>
+        <h2 className="text-sm font-semibold text-content-secondary uppercase tracking-wider">
           Inspector
         </h2>
       </div>
@@ -351,22 +265,20 @@ export function RightPanel() {
       {/* Selection Panel */}
       {isMultiSelect ? (
         /* Multi-selection panel */
-        <div className="p-4 animate-fade-in" style={STYLES.borderBottom}>
+        <div className="p-4 animate-fade-in border-b border-stroke-subtle">
           <div className="flex items-center gap-2 mb-4">
             <div
-              className="w-5 h-5 rounded flex-shrink-0 flex items-center justify-center"
-              style={STYLES.primaryBadge}
+              className="w-5 h-5 rounded flex-shrink-0 flex items-center justify-center bg-accent shadow-sm"
               aria-hidden="true"
             >
-              <span style={STYLES.badgeText}>{selectedBins.length}</span>
+              <span className="text-[10px] font-bold text-black">{selectedBins.length}</span>
             </div>
-            <h2 className="flex-1" style={STYLES.panelHeading}>
+            <h2 className="flex-1 text-lg font-semibold text-content">
               {selectedBins.length} Bins Selected
             </h2>
             <button
               onClick={() => setSelectedBins([])}
-              className="btn btn-ghost w-7 h-7 p-0"
-              style={STYLES.minSizeAuto}
+              className="btn btn-ghost w-7 h-7 p-0 min-w-0 min-h-0"
               aria-label="Deselect all bins"
             >
               <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -375,13 +287,13 @@ export function RightPanel() {
             </button>
           </div>
 
-          <p style={STYLES.multiSelectHint}>
+          <p className="text-sm text-content-secondary mb-4">
             Drag to move all selected bins together, or use arrow keys to nudge.
           </p>
 
           {/* Category for multiple bins */}
           <div className="mb-3">
-            <label className="block mb-1" style={STYLES.labelStyle}>
+            <label className="block mb-1 text-xs text-content-tertiary">
               Category
             </label>
             <select
@@ -423,20 +335,19 @@ export function RightPanel() {
           </div>
         </div>
       ) : bin ? (
-        <div className="p-4 animate-fade-in" style={STYLES.borderBottom}>
+        <div className="p-4 animate-fade-in border-b border-stroke-subtle">
           <div className="flex items-center gap-2 mb-4">
             <div
-              className="w-5 h-5 rounded flex-shrink-0"
-              style={{ backgroundColor: category?.color || '#6b7280', boxShadow: 'var(--shadow-sm)' }}
+              className="w-5 h-5 rounded flex-shrink-0 shadow-sm"
+              style={{ backgroundColor: category?.color || '#6b7280' }}
               aria-hidden="true"
             />
-            <h2 className="flex-1" style={STYLES.panelHeading}>
+            <h2 className="flex-1 text-lg font-semibold text-content">
               {bin.width}×{bin.depth} Bin
             </h2>
             <button
               onClick={() => setSelectedBins([])}
-              className="btn btn-ghost w-7 h-7 p-0"
-              style={STYLES.minSizeAuto}
+              className="btn btn-ghost w-7 h-7 p-0 min-w-0 min-h-0"
               aria-label="Deselect bin"
             >
               <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -449,7 +360,7 @@ export function RightPanel() {
             {/* Size inputs */}
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="block mb-1" style={STYLES.labelStyle}>
+                <label className="block mb-1 text-xs text-content-tertiary">
                   Width
                 </label>
                 <input
@@ -462,7 +373,7 @@ export function RightPanel() {
                 />
               </div>
               <div>
-                <label className="block mb-1" style={STYLES.labelStyle}>
+                <label className="block mb-1 text-xs text-content-tertiary">
                   Depth
                 </label>
                 <input
@@ -476,52 +387,46 @@ export function RightPanel() {
               </div>
             </div>
 
-            {/* Height control with +/- buttons */}
-            <div>
-              <label className="block mb-1" style={STYLES.labelStyle}>
-                Height
-              </label>
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={() => handleUpdateBin('height', bin.height - 1)}
-                  disabled={bin.height <= (layer?.height ?? 1)}
-                  className="btn btn-secondary w-10 h-10 p-0"
-                  style={STYLES.minSize40}
-                  aria-label="Decrease height"
-                >
-                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 12H4" />
-                  </svg>
-                </button>
-                <span
-                  className="flex-1 text-center font-semibold"
-                  style={STYLES.heightDisplay}
-                >
-                  {bin.height}u
-                </span>
-                <button
-                  onClick={() => handleUpdateBin('height', bin.height + 1)}
-                  disabled={bin.height >= maxBinHeight}
-                  className="btn btn-secondary w-10 h-10 p-0"
-                  style={STYLES.minSize40}
-                  aria-label="Increase height"
-                >
-                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-                  </svg>
-                </button>
+            {/* Height control with +/- buttons - only in advanced mode */}
+            {showAdvancedLayers && (
+              <div>
+                <label className="block mb-1 text-xs text-content-tertiary">
+                  Height
+                </label>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => handleUpdateBin('height', bin.height - 1)}
+                    disabled={bin.height <= (layer?.height ?? 1)}
+                    className="btn btn-secondary w-10 h-10 p-0 min-w-[40px] min-h-[40px]"
+                    aria-label="Decrease height"
+                  >
+                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 12H4" />
+                    </svg>
+                  </button>
+                  <span className="flex-1 text-center font-semibold text-lg text-content">
+                    {bin.height}u
+                  </span>
+                  <button
+                    onClick={() => handleUpdateBin('height', bin.height + 1)}
+                    disabled={bin.height >= maxBinHeight}
+                    className="btn btn-secondary w-10 h-10 p-0 min-w-[40px] min-h-[40px]"
+                    aria-label="Increase height"
+                  >
+                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                    </svg>
+                  </button>
+                </div>
+                <div className="text-center mt-1 text-xs text-content-disabled">
+                  Range: {layer?.height}u – {maxBinHeight}u
+                </div>
               </div>
-              <div className="text-center mt-1" style={STYLES.labelDisabled}>
-                Range: {layer?.height}u – {maxBinHeight}u
-              </div>
-            </div>
+            )}
 
             {/* Split warning */}
             {needsSplit && (
-              <div
-                className="flex items-center gap-2 p-3 rounded-lg"
-                style={STYLES.warningBox}
-              >
+              <div className="flex items-center gap-2 p-3 rounded-lg bg-[var(--color-warning-muted)] border border-[var(--color-warning)] text-[var(--color-warning)] text-sm">
                 <svg className="w-4 h-4 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
                 </svg>
@@ -531,7 +436,7 @@ export function RightPanel() {
 
             {/* Category */}
             <div>
-              <label className="block mb-1" style={STYLES.labelStyle}>
+              <label className="block mb-1 text-xs text-content-tertiary">
                 Category
               </label>
               <select
@@ -548,7 +453,7 @@ export function RightPanel() {
 
             {/* Label */}
             <div>
-              <label className="block mb-1" style={STYLES.labelStyle}>
+              <label className="block mb-1 text-xs text-content-tertiary">
                 Label
               </label>
               <input
@@ -563,7 +468,7 @@ export function RightPanel() {
 
             {/* Notes */}
             <div>
-              <label className="block mb-1" style={STYLES.labelStyle}>
+              <label className="block mb-1 text-xs text-content-tertiary">
                 Notes
               </label>
               <textarea
@@ -575,7 +480,7 @@ export function RightPanel() {
                 rows={3}
                 style={STYLES.textareaResize}
               />
-              <div className="text-right mt-1" style={STYLES.charCount}>
+              <div className="text-right mt-1 text-[10px] text-content-disabled">
                 {bin.notes.length}/{CONSTRAINTS.NOTES_MAX_LENGTH}
               </div>
             </div>
@@ -601,17 +506,17 @@ export function RightPanel() {
         </div>
       ) : (
         /* Empty state when no bin selected */
-        <div className="p-4" style={STYLES.borderBottom}>
+        <div className="p-4 border-b border-stroke-subtle">
           <div className="empty-state py-4">
             <div className="empty-state-icon">
               <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
               </svg>
             </div>
-            <p style={STYLES.emptyStateText}>
+            <p className="text-sm text-content-secondary mb-1">
               No bin selected
             </p>
-            <p style={STYLES.labelDisabled}>
+            <p className="text-xs text-content-disabled">
               Click a bin to edit its properties
             </p>
           </div>
@@ -620,26 +525,21 @@ export function RightPanel() {
 
       {/* Print List - Collapsible */}
       <div className="flex-1 flex flex-col min-h-0">
-        <div
-          className="flex items-center justify-between px-4 py-3"
-          style={printListExpanded ? STYLES.borderBottom : undefined}
-        >
+        <div className={`flex items-center justify-between px-4 py-3 ${printListExpanded ? 'border-b border-stroke-subtle' : ''}`}>
           <button
-            className="flex items-center gap-2 transition-colors"
-            style={STYLES.transparentBg}
+            className="flex items-center gap-2 transition-colors bg-transparent"
             onClick={() => setPrintListExpanded(!printListExpanded)}
             aria-expanded={printListExpanded}
           >
             <svg
-              className={`w-4 h-4 transition-transform duration-200 ${printListExpanded ? 'rotate-0' : '-rotate-90'}`}
-              style={STYLES.textTertiary}
+              className={`w-4 h-4 transition-transform duration-200 text-content-tertiary ${printListExpanded ? 'rotate-0' : '-rotate-90'}`}
               fill="none"
               viewBox="0 0 24 24"
               stroke="currentColor"
             >
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
             </svg>
-            <h2 className="section-header" style={{ margin: 0 }}>Print List</h2>
+            <h2 className="section-header m-0">Print List</h2>
             {printRows.length > 0 && (
               <span className="badge badge-info">{totalBins}</span>
             )}
@@ -653,13 +553,12 @@ export function RightPanel() {
                 setCopyFeedback(true);
                 setTimeout(() => setCopyFeedback(false), 2000);
               }}
-              className="btn btn-ghost p-1.5"
-              style={STYLES.minSizeAuto}
+              className="btn btn-ghost p-1.5 min-w-0 min-h-0"
               title="Copy as TSV for spreadsheets"
               aria-label="Copy print list as TSV"
             >
               {copyFeedback ? (
-                <svg className="w-4 h-4" style={STYLES.colorSuccess} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <svg className="w-4 h-4 text-[var(--color-success)]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                 </svg>
               ) : (
@@ -682,29 +581,29 @@ export function RightPanel() {
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                   </svg>
                 </div>
-                <p style={STYLES.labelStyle}>
+                <p className="text-xs text-content-tertiary">
                   No bins placed yet
                 </p>
               </div>
             ) : (
-              <table className="w-full" style={STYLES.tableFontSize}>
-                <thead style={STYLES.bgElevated}>
+              <table className="w-full text-sm">
+                <thead className="bg-surface-elevated">
                   <tr>
-                    <th className="pl-4 pr-2 py-2 text-left font-medium sticky top-0" style={STYLES.tableHeader}>
+                    <th className="pl-4 pr-2 py-2 text-left font-medium sticky top-0 text-content-secondary bg-surface-elevated">
                       Size
                     </th>
-                    <th className="px-2 py-2 text-left font-medium sticky top-0" style={STYLES.tableHeader} title="Height">
+                    <th className="px-2 py-2 text-left font-medium sticky top-0 text-content-secondary bg-surface-elevated" title="Height">
                       H
                     </th>
-                    <th className="px-2 py-2 text-right font-medium sticky top-0" style={STYLES.tableHeader} title="Quantity">
+                    <th className="px-2 py-2 text-right font-medium sticky top-0 text-content-secondary bg-surface-elevated" title="Quantity">
                       Qty
                     </th>
                     {hasAnySplits && (
-                      <th className="px-2 py-2 text-right font-medium sticky top-0" style={STYLES.tableHeader} title="Pieces after split">
+                      <th className="px-2 py-2 text-right font-medium sticky top-0 text-content-secondary bg-surface-elevated" title="Pieces after split">
                         Pcs
                       </th>
                     )}
-                    <th className="pl-2 pr-4 py-2 text-right font-medium sticky top-0" style={STYLES.tableHeader} title="Estimated filament (meters)">
+                    <th className="pl-2 pr-4 py-2 text-right font-medium sticky top-0 text-content-secondary bg-surface-elevated" title="Estimated filament (meters)">
                       ~m
                     </th>
                   </tr>
@@ -717,16 +616,10 @@ export function RightPanel() {
                     return (
                       <React.Fragment key={`${row.size}-${row.height}-${row.labels.join(',')}`}>
                         <tr
-                          className="transition-colors"
-                          style={{
-                            borderBottom: isExpanded ? 'none' : '1px solid var(--border-subtle)',
-                            cursor: row.needsSplit ? 'pointer' : 'default',
-                          }}
+                          className={`transition-colors hover:bg-surface-hover ${isExpanded ? '' : 'border-b border-stroke-subtle'} ${row.needsSplit ? 'cursor-pointer' : 'cursor-default'}`}
                           onClick={() => row.needsSplit && setExpandedSplitRow(isExpanded ? null : index)}
-                          onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = 'var(--bg-hover)'; }}
-                          onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = isExpanded ? 'var(--bg-elevated)' : 'transparent'; }}
                         >
-                          <td className="pl-4 pr-2 py-2" style={STYLES.textPrimary}>
+                          <td className="pl-4 pr-2 py-2 text-content">
                             <div className="flex flex-col gap-0.5">
                               <span className="inline-flex items-center gap-1.5">
                                 {/* Category color dots with name tooltip */}
@@ -746,14 +639,13 @@ export function RightPanel() {
                                     );
                                   })}
                                   {row.categoryIds.length > 3 && (
-                                    <span style={STYLES.categoryOverflow}>+{row.categoryIds.length - 3}</span>
+                                    <span className="text-[9px] text-content-disabled">+{row.categoryIds.length - 3}</span>
                                   )}
                                 </span>
                                 {row.size}
                                 {row.needsSplit && (
                                   <svg
-                                    className={`w-3.5 h-3.5 flex-shrink-0 transition-transform ${isExpanded ? 'rotate-180' : ''}`}
-                                    style={STYLES.colorWarning}
+                                    className={`w-3.5 h-3.5 flex-shrink-0 transition-transform text-[var(--color-warning)] ${isExpanded ? 'rotate-180' : ''}`}
                                     fill="none"
                                     viewBox="0 0 24 24"
                                     stroke="currentColor"
@@ -768,8 +660,7 @@ export function RightPanel() {
                                 <span className="flex items-center gap-1">
                                   {row.labels[0] && (
                                     <span
-                                      className="text-xs truncate"
-                                      style={STYLES.labelTruncate}
+                                      className="text-xs truncate text-content-tertiary max-w-[80px]"
                                       title={row.labels[0]}
                                     >
                                       {row.labels[0]}
@@ -778,8 +669,7 @@ export function RightPanel() {
                                   {row.notes && (
                                     <span title={row.notes}>
                                       <svg
-                                        className="w-3 h-3 flex-shrink-0"
-                                        style={STYLES.textDisabled}
+                                        className="w-3 h-3 flex-shrink-0 text-content-disabled"
                                         fill="none"
                                         viewBox="0 0 24 24"
                                         stroke="currentColor"
@@ -792,36 +682,35 @@ export function RightPanel() {
                               )}
                             </div>
                           </td>
-                          <td className="px-2 py-2" style={STYLES.textTertiary}>
+                          <td className="px-2 py-2 text-content-tertiary">
                             {row.height}u
                           </td>
-                          <td className="px-2 py-2 text-right" style={STYLES.textPrimary}>
+                          <td className="px-2 py-2 text-right text-content">
                             {row.binCount}
                           </td>
                           {hasAnySplits && (
-                            <td className="px-2 py-2 text-right" style={STYLES.textPrimary}>
+                            <td className="px-2 py-2 text-right text-content">
                               {row.totalPieces}
                             </td>
                           )}
-                          <td className="pl-2 pr-4 py-2 text-right" style={STYLES.textTertiary}>
+                          <td className="pl-2 pr-4 py-2 text-right text-content-tertiary">
                             {row.filament}
                           </td>
                         </tr>
                         {isExpanded && (
-                          <tr style={STYLES.bgElevated}>
+                          <tr className="bg-surface-elevated">
                             <td
                               colSpan={hasAnySplits ? 5 : 4}
-                              className="px-4 py-3"
-                              style={STYLES.borderBottom}
+                              className="px-4 py-3 border-b border-stroke-subtle"
                             >
                               <div className="flex items-start gap-4">
                                 <SplitPreview width={w} depth={d} pieces={row.pieces} />
-                                <div style={STYLES.splitDetails}>
-                                  <div style={STYLES.splitHeader}>
+                                <div className="text-xs text-content-secondary">
+                                  <div className="font-medium mb-1">
                                     Split into {row.totalPieces} pieces:
                                   </div>
                                   {row.pieces.map((piece) => (
-                                    <div key={`${piece.width}x${piece.depth}`} style={STYLES.textTertiary}>
+                                    <div key={`${piece.width}x${piece.depth}`} className="text-content-tertiary">
                                       {piece.count}× {piece.width}×{piece.depth}
                                     </div>
                                   ))}
@@ -839,19 +728,13 @@ export function RightPanel() {
           </div>
 
           {printRows.length > 0 && (
-            <div
-              className="px-4 py-3"
-              style={{ ...STYLES.borderTop, ...STYLES.bgElevated }}
-            >
-              <div className="flex justify-between font-medium mb-2" style={STYLES.totalRow}>
+            <div className="px-4 py-3 border-t border-stroke-subtle bg-surface-elevated">
+              <div className="flex justify-between font-medium mb-2 text-sm text-content">
                 <span>Total</span>
                 <span>{totalBins} bins{hasAnySplits ? `, ${totalPieces} pieces` : ''}</span>
               </div>
-              <div
-                className="flex justify-between pt-2"
-                style={{ ...STYLES.splitDetails, ...STYLES.borderTop }}
-              >
-                <span style={STYLES.textTertiary}>Est. filament</span>
+              <div className="flex justify-between pt-2 border-t border-stroke-subtle text-xs text-content-secondary">
+                <span className="text-content-tertiary">Est. filament</span>
                 <span title="Based on 1kg spool (~330m of 1.75mm PLA)">{totalFilament}m (~{spoolEstimate}× 1kg)</span>
               </div>
             </div>

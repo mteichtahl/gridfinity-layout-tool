@@ -59,11 +59,7 @@ export function MobileHeader({ onMenuClick }: MobileHeaderProps) {
 
   return (
     <header
-      className="mobile-header h-12 flex items-center justify-between px-3 flex-shrink-0"
-      style={{
-        backgroundColor: 'var(--bg-secondary)',
-        borderBottom: '1px solid var(--border-subtle)'
-      }}
+      className="mobile-header h-12 flex items-center justify-between px-3 flex-shrink-0 bg-surface-secondary border-b border-stroke-subtle"
     >
       {/* Left: Settings button */}
       <button
@@ -129,18 +125,12 @@ export function MobileHeader({ onMenuClick }: MobileHeaderProps) {
             onBlur={handleNameSubmit}
             onKeyDown={handleNameKeyDown}
             maxLength={CONSTRAINTS.NAME_MAX_LENGTH}
-            className="w-full px-2 py-1 rounded text-sm text-center"
-            style={{
-              backgroundColor: 'var(--bg-elevated)',
-              border: '1px solid var(--color-primary)',
-              color: 'var(--text-primary)',
-            }}
+            className="w-full px-2 py-1 rounded text-sm text-center bg-surface-elevated border border-accent text-content"
           />
         ) : (
           <button
             onClick={handleNameClick}
-            className="w-full text-sm truncate py-1 rounded transition-colors"
-            style={{ color: 'var(--text-primary)' }}
+            className="w-full text-sm truncate py-1 rounded transition-colors text-content"
           >
             {layout.name}
           </button>

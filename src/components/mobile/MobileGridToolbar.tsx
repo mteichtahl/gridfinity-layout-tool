@@ -39,32 +39,22 @@ export function MobileGridToolbar({ onFitToScreen }: MobileGridToolbarProps) {
 
   return (
     <div
-      className="flex items-center justify-between px-3 py-2 flex-shrink-0"
-      style={{
-        backgroundColor: 'var(--bg-secondary)',
-        borderBottom: '1px solid var(--border-subtle)',
-      }}
+      className="flex items-center justify-between px-3 py-2 flex-shrink-0 bg-surface-secondary border-b border-stroke-subtle"
     >
       {/* Left: Layer indicator (tappable) */}
       <button
         onClick={() => toggleMobilePanel('layers')}
-        className="flex items-center gap-2 px-3 py-2 rounded-lg transition-colors"
-        style={{
-          backgroundColor: 'var(--bg-elevated)',
-          border: '1px solid var(--border-subtle)',
-        }}
+        className="flex items-center gap-2 px-3 py-2 rounded-lg transition-colors bg-surface-elevated border border-stroke-subtle"
       >
         <div
-          className="w-2 h-2 rounded-full flex-shrink-0"
-          style={{ backgroundColor: 'var(--color-primary)' }}
+          className="w-2 h-2 rounded-full flex-shrink-0 bg-accent"
         />
         <span
-          className="font-medium truncate max-w-[80px]"
-          style={{ fontSize: 'var(--text-sm)', color: 'var(--text-primary)' }}
+          className="font-medium truncate max-w-[80px] text-sm text-content"
         >
           {activeLayer?.name || 'Layer'}
         </span>
-        <svg className="w-3 h-3 flex-shrink-0" style={{ color: 'var(--text-tertiary)' }} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <svg className="w-3 h-3 flex-shrink-0 text-content-tertiary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
         </svg>
       </button>
@@ -72,25 +62,22 @@ export function MobileGridToolbar({ onFitToScreen }: MobileGridToolbarProps) {
       {/* Center: Paint mode indicator (if active) */}
       {paintSize && (
         <div
-          className="flex items-center gap-2 px-3 py-2 rounded-lg"
+          className="flex items-center gap-2 px-3 py-2 rounded-lg border border-accent"
           style={{
             backgroundColor: 'var(--color-primary-muted)',
-            border: '1px solid var(--color-primary)',
           }}
         >
-          <svg className="w-4 h-4" style={{ color: 'var(--color-primary)' }} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <svg className="w-4 h-4 text-accent" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
           </svg>
           <span
-            className="font-medium"
-            style={{ fontSize: 'var(--text-sm)', color: 'var(--color-primary)' }}
+            className="font-medium text-sm text-accent"
           >
             {paintSize.width}×{paintSize.depth}
           </span>
           <button
             onClick={() => setPaintSize(null)}
-            className="p-1 rounded"
-            style={{ color: 'var(--color-primary)' }}
+            className="p-1 rounded text-accent"
             aria-label="Exit paint mode"
           >
             <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">

@@ -1,33 +1,10 @@
-import { useState, type CSSProperties } from 'react';
+import { useState } from 'react';
 import { useShallow } from 'zustand/shallow';
 import { useUIStore, useLayoutStore, useUndoableAction } from '../../store';
 import { STAGING_ID, CONSTRAINTS, calcMaxGridUnits } from '../../constants';
 import { getLayerZStart } from '../../utils/collision';
 import { clamp } from '../../utils/validation';
 import { ConfirmDialog } from '../modals/ConfirmDialog';
-
-// Style constants to avoid recreating objects on each render
-const STYLES = {
-  // Text colors
-  textPrimary: { color: 'var(--text-primary)' } as CSSProperties,
-  textSecondary: { color: 'var(--text-secondary)' } as CSSProperties,
-  textTertiary: { color: 'var(--text-tertiary)' } as CSSProperties,
-  textDisabled: { color: 'var(--text-disabled)' } as CSSProperties,
-  colorPrimary: { color: 'var(--color-primary)' } as CSSProperties,
-  // Containers
-  bgElevated: { backgroundColor: 'var(--bg-elevated)' } as CSSProperties,
-  elevatedBox: { backgroundColor: 'var(--bg-elevated)', border: '1px solid var(--border-subtle)' } as CSSProperties,
-  // Multi-select badge
-  multiSelectBadge: { backgroundColor: 'var(--color-primary)', color: '#000' } as CSSProperties,
-  // Dimension display (width/depth/height value)
-  dimensionValue: { backgroundColor: 'var(--bg-elevated)', color: 'var(--text-primary)' } as CSSProperties,
-  // Warning box
-  warningBox: {
-    backgroundColor: 'var(--color-warning-muted)',
-    border: '1px solid var(--color-warning)',
-    color: 'var(--color-warning)',
-  } as CSSProperties,
-} as const;
 
 /**
  * Mobile-optimized bin inspector with large touch targets.
@@ -114,38 +91,32 @@ export function MobileInspector() {
   if (selectedBins.length === 0) {
     return (
       <div className="py-6 text-center">
-        <div
-          className="w-16 h-16 mx-auto mb-4 rounded-full flex items-center justify-center"
-          style={STYLES.bgElevated}
-        >
-          <svg className="w-8 h-8" style={STYLES.textDisabled} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <div className="w-16 h-16 mx-auto mb-4 rounded-full flex items-center justify-center bg-surface-elevated">
+          <svg className="w-8 h-8 text-content-disabled" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
           </svg>
         </div>
-        <p className="font-medium mb-1" style={STYLES.textSecondary}>No bin selected</p>
-        <p className="text-sm mb-4" style={STYLES.textDisabled}>
+        <p className="font-medium mb-1 text-content-secondary">No bin selected</p>
+        <p className="text-sm mb-4 text-content-disabled">
           Tap a bin on the grid to edit it
         </p>
 
         {/* Creation hint */}
-        <div
-          className="mx-4 p-3 rounded-lg text-left"
-          style={STYLES.elevatedBox}
-        >
-          <p className="text-sm font-medium mb-2" style={STYLES.textSecondary}>
+        <div className="mx-4 p-3 rounded-lg text-left bg-surface-elevated border border-stroke-subtle">
+          <p className="text-sm font-medium mb-2 text-content-secondary">
             How to create bins:
           </p>
-          <ul className="text-sm space-y-1.5" style={STYLES.textTertiary}>
+          <ul className="text-sm space-y-1.5 text-content-tertiary">
             <li className="flex items-start gap-2">
-              <span style={STYLES.colorPrimary}>1.</span>
+              <span className="text-accent">1.</span>
               <span>Tap and drag on empty grid cells to draw a bin</span>
             </li>
             <li className="flex items-start gap-2">
-              <span style={STYLES.colorPrimary}>2.</span>
+              <span className="text-accent">2.</span>
               <span>Or use <strong>Layers</strong> tab to select a size, then tap to place</span>
             </li>
             <li className="flex items-start gap-2">
-              <span style={STYLES.colorPrimary}>3.</span>
+              <span className="text-accent">3.</span>
               <span>Long-press a bin for quick actions</span>
             </li>
           </ul>
@@ -163,17 +134,14 @@ export function MobileInspector() {
     return (
       <div className="pb-4">
         <div className="flex items-center gap-3 mb-4">
-          <div
-            className="w-12 h-12 rounded-lg flex items-center justify-center font-bold text-lg"
-            style={STYLES.multiSelectBadge}
-          >
+          <div className="w-12 h-12 rounded-lg flex items-center justify-center font-bold text-lg bg-accent text-black">
             {selectedBins.length}
           </div>
           <div>
-            <h3 className="font-semibold" style={STYLES.textPrimary}>
+            <h3 className="font-semibold text-content">
               {selectedBins.length} Bins Selected
             </h3>
-            <p className="text-sm" style={STYLES.textTertiary}>
+            <p className="text-sm text-content-tertiary">
               Move or delete together
             </p>
           </div>
@@ -181,10 +149,7 @@ export function MobileInspector() {
 
         {/* Category selector */}
         <div className="mb-4">
-          <label
-            className="block text-sm mb-2"
-            style={STYLES.textTertiary}
-          >
+          <label className="block text-sm mb-2 text-content-tertiary">
             Category
           </label>
           <select
@@ -241,10 +206,10 @@ export function MobileInspector() {
           style={{ backgroundColor: category?.color || '#6b7280' }}
         />
         <div>
-          <h3 className="font-semibold" style={STYLES.textPrimary}>
+          <h3 className="font-semibold text-content">
             {bin.width}×{bin.depth} Bin
           </h3>
-          <p className="text-sm" style={STYLES.textTertiary}>
+          <p className="text-sm text-content-tertiary">
             {layer?.name || 'Unknown layer'}
           </p>
         </div>
@@ -253,7 +218,7 @@ export function MobileInspector() {
       {/* Size controls */}
       <div className="grid grid-cols-2 gap-3 mb-4">
         <div>
-          <label className="block text-sm mb-1" style={STYLES.textTertiary}>
+          <label className="block text-sm mb-1 text-content-tertiary">
             Width
           </label>
           <div className="flex items-center">
@@ -266,10 +231,7 @@ export function MobileInspector() {
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 12H4" />
               </svg>
             </button>
-            <span
-              className="flex-1 h-12 flex items-center justify-center font-semibold"
-              style={STYLES.dimensionValue}
-            >
+            <span className="flex-1 h-12 flex items-center justify-center font-semibold bg-surface-elevated text-content">
               {bin.width}
             </span>
             <button
@@ -283,7 +245,7 @@ export function MobileInspector() {
           </div>
         </div>
         <div>
-          <label className="block text-sm mb-1" style={STYLES.textTertiary}>
+          <label className="block text-sm mb-1 text-content-tertiary">
             Depth
           </label>
           <div className="flex items-center">
@@ -296,10 +258,7 @@ export function MobileInspector() {
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 12H4" />
               </svg>
             </button>
-            <span
-              className="flex-1 h-12 flex items-center justify-center font-semibold"
-              style={STYLES.dimensionValue}
-            >
+            <span className="flex-1 h-12 flex items-center justify-center font-semibold bg-surface-elevated text-content">
               {bin.depth}
             </span>
             <button
@@ -316,7 +275,7 @@ export function MobileInspector() {
 
       {/* Height control */}
       <div className="mb-4">
-        <label className="block text-sm mb-1" style={STYLES.textTertiary}>
+        <label className="block text-sm mb-1 text-content-tertiary">
           Height
         </label>
         <div className="flex items-center">
@@ -329,10 +288,7 @@ export function MobileInspector() {
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 12H4" />
             </svg>
           </button>
-          <span
-            className="flex-1 h-12 flex items-center justify-center font-semibold"
-            style={STYLES.dimensionValue}
-          >
+          <span className="flex-1 h-12 flex items-center justify-center font-semibold bg-surface-elevated text-content">
             {bin.height}u
           </span>
           <button
@@ -345,17 +301,14 @@ export function MobileInspector() {
             </svg>
           </button>
         </div>
-        <div className="text-center text-xs mt-1" style={STYLES.textDisabled}>
+        <div className="text-center text-xs mt-1 text-content-disabled">
           Range: {layer?.height}u – {maxBinHeight}u
         </div>
       </div>
 
       {/* Split warning */}
       {needsSplit && (
-        <div
-          className="flex items-center gap-2 p-3 rounded-lg mb-4"
-          style={STYLES.warningBox}
-        >
+        <div className="flex items-center gap-2 p-3 rounded-lg mb-4 bg-[var(--color-warning-muted)] border border-[var(--color-warning)] text-[var(--color-warning)]">
           <svg className="w-5 h-5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
           </svg>
@@ -365,7 +318,7 @@ export function MobileInspector() {
 
       {/* Category */}
       <div className="mb-4">
-        <label className="block text-sm mb-1" style={STYLES.textTertiary}>
+        <label className="block text-sm mb-1 text-content-tertiary">
           Category
         </label>
         <select
@@ -381,7 +334,7 @@ export function MobileInspector() {
 
       {/* Label */}
       <div className="mb-4">
-        <label className="block text-sm mb-1" style={STYLES.textTertiary}>
+        <label className="block text-sm mb-1 text-content-tertiary">
           Label
         </label>
         <input
@@ -395,7 +348,7 @@ export function MobileInspector() {
 
       {/* Notes */}
       <div className="mb-4">
-        <label className="block text-sm mb-1" style={STYLES.textTertiary}>
+        <label className="block text-sm mb-1 text-content-tertiary">
           Notes
         </label>
         <textarea

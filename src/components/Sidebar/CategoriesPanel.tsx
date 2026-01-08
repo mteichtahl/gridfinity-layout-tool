@@ -85,19 +85,13 @@ export function CategoriesPanel() {
   const canAddCategory = categories.length < CONSTRAINTS.CATEGORIES_MAX;
 
   return (
-    <div
-      className="panel"
-      style={{
-        padding: 'var(--space-lg)',
-      }}
-    >
+    <div className="panel p-4">
       <div className="flex justify-between items-center mb-3">
-        <h2 className="section-header" style={{ margin: 0 }}>Categories</h2>
+        <h2 className="section-header m-0">Categories</h2>
         <button
           onClick={handleAddCategory}
           disabled={!canAddCategory}
-          className="btn btn-ghost w-7 h-7 p-0"
-          style={{ minWidth: 'auto', minHeight: 'auto' }}
+          className="btn btn-ghost w-7 h-7 p-0 min-w-0 min-h-0"
           aria-label="Add new category"
         >
           <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -116,17 +110,8 @@ export function CategoriesPanel() {
           return (
             <div
               key={category.id}
-              className="group flex items-center gap-2 p-2 rounded-md cursor-pointer min-w-0 transition-all"
-              style={{
-                backgroundColor: isActive ? 'var(--bg-active)' : 'transparent',
-              }}
+              className={`group flex items-center gap-2 p-2 rounded-md cursor-pointer min-w-0 transition-all ${isActive ? 'bg-[var(--bg-active)]' : 'hover:bg-surface-hover'}`}
               onClick={() => setActiveCategory(category.id)}
-              onMouseEnter={(e) => {
-                if (!isActive) e.currentTarget.style.backgroundColor = 'var(--bg-hover)';
-              }}
-              onMouseLeave={(e) => {
-                if (!isActive) e.currentTarget.style.backgroundColor = 'transparent';
-              }}
               role="button"
               tabIndex={0}
               aria-pressed={isActive}
@@ -187,26 +172,17 @@ export function CategoriesPanel() {
               ) : (
                 <>
                   <div
-                    className="w-5 h-5 rounded flex-shrink-0"
-                    style={{
-                      backgroundColor: category.color,
-                      boxShadow: 'var(--shadow-sm)',
-                    }}
+                    className="w-5 h-5 rounded flex-shrink-0 shadow-sm"
+                    style={{ backgroundColor: category.color }}
                     aria-hidden="true"
                   />
-                  <span
-                    className="flex-1 min-w-0 text-sm truncate"
-                    style={{ color: 'var(--text-primary)' }}
-                  >
+                  <span className="flex-1 min-w-0 text-sm truncate text-content">
                     {category.name}
                   </span>
                   {/* Edit button - appears on hover */}
                   <button
-                    className="flex-shrink-0 p-1 rounded opacity-0 group-hover:opacity-100 transition-opacity"
-                    style={{ color: 'var(--text-tertiary)' }}
+                    className="flex-shrink-0 p-1 rounded opacity-0 group-hover:opacity-100 transition-opacity text-content-tertiary hover:text-content"
                     onClick={(e) => { e.stopPropagation(); setEditingId(category.id); }}
-                    onMouseEnter={(e) => { e.currentTarget.style.color = 'var(--text-primary)'; }}
-                    onMouseLeave={(e) => { e.currentTarget.style.color = 'var(--text-tertiary)'; }}
                     title="Edit category"
                     aria-label={`Edit ${category.name}`}
                   >
@@ -215,18 +191,12 @@ export function CategoriesPanel() {
                     </svg>
                   </button>
                   {isActive && (
-                    <span
-                      className="badge badge-info"
-                      style={{ fontSize: '10px', padding: '1px 6px' }}
-                    >
+                    <span className="badge badge-info text-[10px] py-0 px-1.5">
                       active
                     </span>
                   )}
                   {inUse && !isActive && (
-                    <span
-                      className="text-xs"
-                      style={{ color: 'var(--text-disabled)' }}
-                    >
+                    <span className="text-xs text-content-disabled">
                       in use
                     </span>
                   )}

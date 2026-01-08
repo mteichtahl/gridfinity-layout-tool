@@ -2,18 +2,22 @@ import { useState } from 'react';
 import { useShallow } from 'zustand/shallow';
 import { useLayoutStore, useUIStore, useUndoableAction } from '../../store';
 import { useToastStore } from '../../store/toast';
+import { useAdvancedLayerMode } from '../../hooks/useAdvancedLayerMode';
 import { ConfirmDialog } from '../modals/ConfirmDialog';
 
 export function ActiveLayerPanel() {
   const [showClearConfirm, setShowClearConfirm] = useState(false);
   const [rotateRectangles, setRotateRectangles] = useState(false);
 
-  const { layout, fillLayer, fillLayerGaps, clearLayer } = useLayoutStore(
+  const showAdvancedLayers = useAdvancedLayerMode();
+
+  const { layout, fillLayer, fillLayerGaps, clearLayer, addLayer } = useLayoutStore(
     useShallow((state) => ({
       layout: state.layout,
       fillLayer: state.fillLayer,
       fillLayerGaps: state.fillLayerGaps,
       clearLayer: state.clearLayer,
+      addLayer: state.addLayer,
     }))
   );
 
@@ -23,6 +27,7 @@ export function ActiveLayerPanel() {
     paintSize,
     togglePaintSize,
     setSelectedBins,
+    setActiveLayer,
   } = useUIStore(
     useShallow((state) => ({
       activeLayerId: state.activeLayerId,
@@ -30,6 +35,7 @@ export function ActiveLayerPanel() {
       paintSize: state.paintSize,
       togglePaintSize: state.togglePaintSize,
       setSelectedBins: state.setSelectedBins,
+      setActiveLayer: state.setActiveLayer,
     }))
   );
 
@@ -90,17 +96,21 @@ export function ActiveLayerPanel() {
     addToast(`Cleared ${count} bins from layer`, 'success');
   };
 
+  const handleAddLevel = () => {
+    execute(() => {
+      const id = addLayer();
+      if (id) {
+        setActiveLayer(id);
+      }
+    });
+  };
+
   if (!activeLayer) return null;
 
   return (
-    <div
-      className="panel"
-      style={{
-        padding: 'var(--space-lg)',
-      }}
-    >
+    <div className="panel p-4">
       {/* Bin Palette header */}
-      <h2 className="section-header" style={{ margin: 0, marginBottom: 'var(--space-md)' }}>
+      <h2 className="section-header m-0 mb-3">
         Bin Palette
       </h2>
 
@@ -108,7 +118,7 @@ export function ActiveLayerPanel() {
       <div className="space-y-3">
         {/* Squares row */}
         <div>
-          <div style={{ fontSize: '10px', color: 'var(--text-disabled)', marginBottom: '6px' }}>Squares</div>
+          <div className="text-[10px] text-content-disabled mb-1.5">Squares</div>
           <div className="flex gap-1.5">
             {[1, 2, 3, 4, 5, 6].map(size => {
               const isActive = isPaintActive(size, size);
@@ -117,8 +127,7 @@ export function ActiveLayerPanel() {
                   key={`${size}×${size}`}
                   onClick={() => togglePaintSize({ width: size, depth: size })}
                   onDoubleClick={() => handleFill(size, size)}
-                  className={`btn flex-1 flex flex-col items-center justify-center gap-0.5 ${isActive ? 'btn-primary' : 'btn-secondary'}`}
-                  style={{ minWidth: 0, height: '44px', padding: '4px' }}
+                  className={`btn flex-1 flex flex-col items-center justify-center gap-0.5 min-w-0 h-[44px] p-1 ${isActive ? 'btn-primary' : 'btn-secondary'}`}
                   aria-label={`${isActive ? 'Deselect' : 'Select'} ${size}×${size} for painting`}
                   title={`Click to paint ${size}×${size} bins. Double-click to fill layer.`}
                 >
@@ -130,7 +139,7 @@ export function ActiveLayerPanel() {
                       borderRadius: '2px',
                     }}
                   />
-                  <span style={{ fontSize: '9px', color: isActive ? 'inherit' : 'var(--text-tertiary)' }}>{size}×{size}</span>
+                  <span className={`text-[9px] ${isActive ? '' : 'text-content-tertiary'}`}>{size}×{size}</span>
                 </button>
               );
             })}
@@ -139,12 +148,11 @@ export function ActiveLayerPanel() {
 
         {/* Rectangles - organized by width */}
         <div>
-          <div style={{ fontSize: '10px', color: 'var(--text-disabled)', marginBottom: '6px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <div className="text-[10px] text-content-disabled mb-1.5 flex items-center justify-between">
             <span>Rectangles</span>
             <button
               onClick={() => setRotateRectangles(!rotateRectangles)}
-              className={`btn ${rotateRectangles ? 'btn-primary' : 'btn-secondary'}`}
-              style={{ padding: '2px 6px', fontSize: '9px', display: 'flex', alignItems: 'center', gap: '3px' }}
+              className={`btn py-0.5 px-1.5 text-[9px] flex items-center gap-0.5 ${rotateRectangles ? 'btn-primary' : 'btn-secondary'}`}
               aria-label={rotateRectangles ? 'Show vertical rectangles' : 'Show horizontal rectangles'}
               title={rotateRectangles ? 'Vertical (taller)' : 'Horizontal (wider)'}
             >
@@ -173,8 +181,7 @@ export function ActiveLayerPanel() {
                   key={`${w}×${d}`}
                   onClick={() => togglePaintSize({ width: w, depth: d })}
                   onDoubleClick={() => handleFill(w, d)}
-                  className={`btn flex flex-col items-center justify-center gap-0.5 ${isActive ? 'btn-primary' : 'btn-secondary'}`}
-                  style={{ minWidth: 0, height: '44px', padding: '4px' }}
+                  className={`btn flex flex-col items-center justify-center gap-0.5 min-w-0 h-[44px] p-1 ${isActive ? 'btn-primary' : 'btn-secondary'}`}
                   aria-label={`${isActive ? 'Deselect' : 'Select'} ${w}×${d} for painting`}
                   title={`Click to paint ${w}×${d} bins. Double-click to fill layer.`}
                 >
@@ -186,7 +193,7 @@ export function ActiveLayerPanel() {
                       borderRadius: '2px',
                     }}
                   />
-                  <span style={{ fontSize: '9px', color: isActive ? 'inherit' : 'var(--text-tertiary)' }}>{w}×{d}</span>
+                  <span className={`text-[9px] ${isActive ? '' : 'text-content-tertiary'}`}>{w}×{d}</span>
                 </button>
               );
             })}
@@ -199,12 +206,10 @@ export function ActiveLayerPanel() {
         <button
           onClick={handleFillGaps}
           disabled={coverage === 100}
-          className="btn flex-1 justify-center"
-          style={{
-            background: coverage === 100
-              ? 'var(--bg-disabled)'
-              : 'linear-gradient(180deg, var(--color-success) 0%, #16a34a 100%)',
-            color: coverage === 100 ? 'var(--text-disabled)' : '#fff',
+          className={`btn flex-1 justify-center ${coverage === 100 ? 'bg-[var(--bg-disabled)] text-content-disabled' : ''}`}
+          style={coverage === 100 ? undefined : {
+            background: 'linear-gradient(180deg, var(--color-success) 0%, #16a34a 100%)',
+            color: '#fff',
           }}
           aria-label="Fill gaps with 1×1 bins"
           title="Fill remaining empty cells with 1×1 bins"
@@ -221,6 +226,19 @@ export function ActiveLayerPanel() {
           Clear
         </button>
       </div>
+
+      {/* Add another level - only in simple mode */}
+      {!showAdvancedLayers && (
+        <button
+          onClick={handleAddLevel}
+          className="btn btn-secondary w-full justify-center mt-3 text-xs"
+        >
+          <svg className="w-4 h-4 mr-1.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+          </svg>
+          Add another level
+        </button>
+      )}
 
       <ConfirmDialog
         isOpen={showClearConfirm}

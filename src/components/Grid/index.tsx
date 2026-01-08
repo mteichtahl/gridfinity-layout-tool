@@ -1,4 +1,4 @@
-import { useRef, useState, useCallback, useEffect, type CSSProperties } from 'react';
+import { useRef, useState, useCallback, useEffect } from 'react';
 import { useShallow } from 'zustand/shallow';
 import { useUIStore, useLayoutStore, useUndoableAction } from '../../store';
 import { useInteraction, useResponsive } from '../../hooks';
@@ -10,50 +10,6 @@ import { ConfirmDialog } from '../modals/ConfirmDialog';
 import { MobileGridToolbar } from '../mobile';
 
 type ResizeDirection = 'width' | 'depth' | 'both' | null;
-
-// Frequently-used style constants
-const STYLES = {
-  // Text styles
-  textXsTertiary: { fontSize: 'var(--text-xs)', color: 'var(--text-tertiary)' } as CSSProperties,
-  textSmTertiary: { fontSize: 'var(--text-sm)', color: 'var(--text-tertiary)' } as CSSProperties,
-  textSmPrimary: { fontSize: 'var(--text-sm)', color: 'var(--text-primary)' } as CSSProperties,
-  textSmSecondary: { fontSize: 'var(--text-sm)', color: 'var(--text-secondary)' } as CSSProperties,
-  textSmMedium: { fontSize: 'var(--text-sm)', fontWeight: 'var(--font-medium)' } as CSSProperties,
-  // Button styles
-  buttonSmall: { padding: '4px', minWidth: '28px', minHeight: '28px' } as CSSProperties,
-  buttonMedium: { padding: '6px', minWidth: '32px', minHeight: '32px' } as CSSProperties,
-  buttonCompact: { minWidth: 'auto', minHeight: 'auto' } as CSSProperties,
-  fitButton: { padding: '6px 10px', fontSize: 'var(--text-xs)' } as CSSProperties,
-  // Container styles
-  bgPrimary: { backgroundColor: 'var(--bg-primary)' } as CSSProperties,
-  bgSecondary: { backgroundColor: 'var(--bg-secondary)' } as CSSProperties,
-  toolbar: { backgroundColor: 'var(--bg-secondary)', borderBottom: '1px solid var(--border-subtle)' } as CSSProperties,
-  elevatedBox: { backgroundColor: 'var(--bg-elevated)', border: '1px solid var(--border-subtle)' } as CSSProperties,
-  // Indicators
-  primaryDot: { backgroundColor: 'var(--color-primary)' } as CSSProperties,
-  colorPrimary: { color: 'var(--color-primary)' } as CSSProperties,
-  colorTertiary: { color: 'var(--text-tertiary)' } as CSSProperties,
-  // Checkboxes
-  checkboxAccent: { accentColor: 'var(--color-primary)' } as CSSProperties,
-  // Empty state
-  emptyStateOverlay: { zIndex: 5 } as CSSProperties,
-  emptyStateBox: { backgroundColor: 'var(--bg-primary)', opacity: 0.95, backdropFilter: 'blur(4px)' } as CSSProperties,
-  emptyStateIcon: { backgroundColor: 'var(--bg-hover)' } as CSSProperties,
-  emptyStateTitle: { color: 'var(--text-secondary)', fontSize: 'var(--text-sm)' } as CSSProperties,
-  emptyStateHint: { color: 'var(--text-disabled)', fontSize: 'var(--text-xs)' } as CSSProperties,
-  emptyStateSubhint: { color: 'var(--text-disabled)', fontSize: '10px', marginTop: '4px' } as CSSProperties,
-  // Paint mode
-  paintModeText: { fontSize: 'var(--text-sm)', color: 'var(--color-primary)', fontWeight: 'var(--font-medium)' } as CSSProperties,
-  // Label buttons (for row/column selection)
-  labelButtonBase: {
-    fontWeight: 'var(--font-medium)',
-    color: 'var(--text-tertiary)',
-    fontVariantNumeric: 'tabular-nums',
-    background: 'transparent',
-    border: 'none',
-    cursor: 'pointer',
-  } as CSSProperties,
-} as const;
 
 /**
  * Main grid container with zoom controls, layer indicator, and row/column numbering.
@@ -341,30 +297,27 @@ export function Grid() {
   const rowLabels = Array.from({ length: drawer.depth }, (_, i) => drawer.depth - i);
 
   return (
-    <div className="flex flex-col h-full" style={STYLES.bgPrimary}>
+    <div className="flex flex-col h-full bg-surface">
       {/* Toolbar - mobile vs desktop */}
       {isMobile ? (
         <MobileGridToolbar onFitToScreen={fitToScreen} />
       ) : (
         <div
-          className="flex items-center justify-between px-4 py-3"
-          style={STYLES.toolbar}
+          className="flex items-center justify-between px-4 py-3 bg-surface-secondary border-b border-stroke-subtle"
         >
           {/* Left: Layer indicator */}
           <div className="flex items-center gap-3">
             {activeLayer && (
               <div
-                className="flex items-center gap-2 px-3 py-1.5 rounded-md"
-                style={STYLES.elevatedBox}
+                className="flex items-center gap-2 px-3 py-1.5 rounded-md bg-surface-elevated border border-stroke-subtle"
               >
                 <div
-                  className="w-2 h-2 rounded-full"
-                  style={STYLES.primaryDot}
+                  className="w-2 h-2 rounded-full bg-accent"
                 />
-                <span style={STYLES.textSmMedium}>
+                <span className="text-sm font-medium">
                   {activeLayer.name}
                 </span>
-                <span style={STYLES.textXsTertiary}>
+                <span className="text-xs text-content-tertiary">
                   {activeLayer.height}u
                 </span>
               </div>
@@ -380,16 +333,15 @@ export function Grid() {
               {paintSize ? (
                 <>
                   {/* Paint brush icon */}
-                  <svg className="w-4 h-4" style={STYLES.colorPrimary} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <svg className="w-4 h-4 text-accent" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
                   </svg>
-                  <span style={STYLES.paintModeText}>
+                  <span className="text-sm text-accent font-medium">
                     Paint {paintSize.width}×{paintSize.depth}
                   </span>
                   <button
                     onClick={() => setPaintSize(null)}
-                    className="btn btn-ghost p-0.5 ml-1"
-                    style={STYLES.buttonCompact}
+                    className="btn btn-ghost p-0.5 ml-1 min-w-auto min-h-auto"
                     aria-label="Exit paint mode"
                   >
                     <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -400,10 +352,10 @@ export function Grid() {
               ) : (
                 <>
                   {/* Pencil/draw icon */}
-                  <svg className="w-4 h-4" style={STYLES.colorTertiary} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <svg className="w-4 h-4 text-content-tertiary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
                   </svg>
-                  <span style={STYLES.textSmTertiary}>
+                  <span className="text-sm text-content-tertiary">
                     Draw
                   </span>
                 </>
@@ -412,16 +364,14 @@ export function Grid() {
 
             {/* Grid dimensions */}
             <div
-              className="flex items-center gap-1 px-2 py-1 rounded-md"
-              style={STYLES.elevatedBox}
+              className="flex items-center gap-1 px-2 py-1 rounded-md bg-surface-elevated border border-stroke-subtle"
             >
-              <span style={STYLES.textXsTertiary}>Grid</span>
+              <span className="text-xs text-content-tertiary">Grid</span>
               <div className="flex items-center">
                 <button
                   onClick={() => handleDimensionChange('width', -1)}
                   disabled={drawer.width <= 1}
-                  className="btn btn-ghost btn-icon"
-                  style={STYLES.buttonSmall}
+                  className="btn btn-ghost btn-icon p-1 min-w-[28px] min-h-[28px]"
                   aria-label="Decrease width"
                 >
                   <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -429,16 +379,14 @@ export function Grid() {
                   </svg>
                 </button>
                 <span
-                  className="min-w-[28px] text-center font-medium tabular-nums"
-                  style={STYLES.textSmPrimary}
+                  className="min-w-[28px] text-center font-medium tabular-nums text-sm text-content"
                 >
                   {drawer.width}
                 </span>
                 <button
                   onClick={() => handleDimensionChange('width', 1)}
                   disabled={drawer.width >= CONSTRAINTS.GRID_MAX}
-                  className="btn btn-ghost btn-icon"
-                  style={STYLES.buttonSmall}
+                  className="btn btn-ghost btn-icon p-1 min-w-[28px] min-h-[28px]"
                   aria-label="Increase width"
                 >
                   <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -446,13 +394,12 @@ export function Grid() {
                   </svg>
                 </button>
               </div>
-              <span style={STYLES.textXsTertiary}>×</span>
+              <span className="text-xs text-content-tertiary">×</span>
               <div className="flex items-center">
                 <button
                   onClick={() => handleDimensionChange('depth', -1)}
                   disabled={drawer.depth <= 1}
-                  className="btn btn-ghost btn-icon"
-                  style={STYLES.buttonSmall}
+                  className="btn btn-ghost btn-icon p-1 min-w-[28px] min-h-[28px]"
                   aria-label="Decrease depth"
                 >
                   <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -460,16 +407,14 @@ export function Grid() {
                   </svg>
                 </button>
                 <span
-                  className="min-w-[28px] text-center font-medium tabular-nums"
-                  style={STYLES.textSmPrimary}
+                  className="min-w-[28px] text-center font-medium tabular-nums text-sm text-content"
                 >
                   {drawer.depth}
                 </span>
                 <button
                   onClick={() => handleDimensionChange('depth', 1)}
                   disabled={drawer.depth >= CONSTRAINTS.GRID_MAX}
-                  className="btn btn-ghost btn-icon"
-                  style={STYLES.buttonSmall}
+                  className="btn btn-ghost btn-icon p-1 min-w-[28px] min-h-[28px]"
                   aria-label="Increase depth"
                 >
                   <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -484,32 +429,28 @@ export function Grid() {
           <div className="flex items-center gap-4">
             {/* Show labels toggle */}
             <label
-              className="flex items-center gap-2 cursor-pointer select-none transition-colors"
-              style={STYLES.textSmSecondary}
+              className="flex items-center gap-2 cursor-pointer select-none transition-colors text-sm text-content-secondary"
               title="Show bin labels on the grid"
             >
               <input
                 type="checkbox"
                 checked={showLabels}
                 onChange={toggleShowLabels}
-                className="w-4 h-4 rounded"
-                style={STYLES.checkboxAccent}
+                className="w-4 h-4 rounded accent-accent"
               />
               Labels
             </label>
 
             {/* Show other layers toggle */}
             <label
-              className="flex items-center gap-2 cursor-pointer select-none transition-colors"
-              style={STYLES.textSmSecondary}
+              className="flex items-center gap-2 cursor-pointer select-none transition-colors text-sm text-content-secondary"
               title="Show ghost outlines of bins on layers below (helps see blocked zones)"
             >
               <input
                 type="checkbox"
                 checked={showOtherLayers}
                 onChange={toggleShowOtherLayers}
-                className="w-4 h-4 rounded"
-                style={STYLES.checkboxAccent}
+                className="w-4 h-4 rounded accent-accent"
               />
               Layers below
             </label>
@@ -523,8 +464,7 @@ export function Grid() {
               <button
                 onClick={zoomOut}
                 disabled={!canZoomOut}
-                className="btn btn-secondary btn-icon"
-                style={STYLES.buttonMedium}
+                className="btn btn-secondary btn-icon p-1.5 min-w-[32px] min-h-[32px]"
                 aria-label="Zoom out"
                 title="Zoom out (−)"
               >
@@ -533,16 +473,14 @@ export function Grid() {
                 </svg>
               </button>
               <span
-                className="min-w-[52px] text-center font-medium"
-                style={STYLES.textSmSecondary}
+                className="min-w-[52px] text-center font-medium text-sm text-content-secondary"
               >
                 {Math.round(zoom * 100)}%
               </span>
               <button
                 onClick={zoomIn}
                 disabled={!canZoomIn}
-                className="btn btn-secondary btn-icon"
-                style={STYLES.buttonMedium}
+                className="btn btn-secondary btn-icon p-1.5 min-w-[32px] min-h-[32px]"
                 aria-label="Zoom in"
                 title="Zoom in (+)"
               >
@@ -552,8 +490,7 @@ export function Grid() {
               </button>
               <button
                 onClick={fitToScreen}
-                className="btn btn-secondary"
-                style={STYLES.fitButton}
+                className="btn btn-secondary px-2.5 py-1.5 text-xs"
                 aria-label="Fit grid to screen"
                 title="Fit to screen"
               >
@@ -567,8 +504,7 @@ export function Grid() {
       {/* Grid container with scroll - click background to deselect */}
       <div
         ref={scrollContainerRef}
-        className="flex-1 overflow-auto p-6"
-        style={STYLES.bgPrimary}
+        className="flex-1 overflow-auto p-6 bg-surface"
         onClick={(e) => {
           // Only deselect if clicking directly on this container (not children)
           if (e.target === e.currentTarget) {
@@ -595,27 +531,13 @@ export function Grid() {
                 <button
                   key={`row-${num}`}
                   type="button"
-                  className="flex items-center justify-center select-none transition-colors rounded-sm"
+                  className="flex items-center justify-center select-none transition-colors rounded-sm font-medium text-content-tertiary tabular-nums bg-transparent border-0 cursor-pointer hover:bg-surface-hover hover:text-content-secondary"
                   style={{
                     width: labelSize,
                     gridRow: index + 1,
                     fontSize: labelFontSize,
-                    fontWeight: 'var(--font-medium)',
-                    color: 'var(--text-tertiary)',
-                    fontVariantNumeric: 'tabular-nums',
-                    background: 'transparent',
-                    border: 'none',
-                    cursor: 'pointer',
                   }}
                   onClick={() => handleRowClick(num)}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.backgroundColor = 'var(--bg-hover)';
-                    e.currentTarget.style.color = 'var(--text-secondary)';
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.backgroundColor = 'transparent';
-                    e.currentTarget.style.color = 'var(--text-tertiary)';
-                  }}
                   title={`Select bins in row ${num}`}
                   aria-label={`Select bins in row ${num}`}
                 >
@@ -652,20 +574,17 @@ export function Grid() {
               {/* Empty state overlay */}
               {isEmpty && (
                 <div
-                  className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none"
-                  style={STYLES.emptyStateOverlay}
+                  className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none z-[5]"
                 >
                   <div
-                    className="flex flex-col items-center p-6 rounded-xl max-w-xs text-center"
-                    style={STYLES.emptyStateBox}
+                    className="flex flex-col items-center p-6 rounded-xl max-w-xs text-center bg-surface"
+                    style={{ opacity: 0.95, backdropFilter: 'blur(4px)' }}
                   >
                     <div
-                      className="w-12 h-12 mb-4 flex items-center justify-center rounded-lg"
-                      style={STYLES.emptyStateIcon}
+                      className="w-12 h-12 mb-4 flex items-center justify-center rounded-lg bg-surface-hover"
                     >
                       <svg
-                        className="w-6 h-6"
-                        style={STYLES.colorTertiary}
+                        className="w-6 h-6 text-content-tertiary"
                         fill="none"
                         viewBox="0 0 24 24"
                         stroke="currentColor"
@@ -675,19 +594,18 @@ export function Grid() {
                       </svg>
                     </div>
                     <p
-                      className="font-medium mb-1"
-                      style={STYLES.emptyStateTitle}
+                      className="font-medium mb-1 text-sm text-content-secondary"
                     >
                       {isMobile ? 'Tap and drag to draw a bin' : 'Click and drag to draw a bin'}
                     </p>
-                    <p style={STYLES.emptyStateHint}>
+                    <p className="text-xs text-content-disabled">
                       {isFirstLayer
                         ? (isMobile ? 'Or use Layers tab to select a size' : 'Or select a size from the Bin Palette on the left')
                         : 'Striped cells are blocked by tall bins from layers below'
                       }
                     </p>
                     {!isFirstLayer && (
-                      <p style={STYLES.emptyStateSubhint}>
+                      <p className="text-content-disabled mt-1" style={{ fontSize: '10px' }}>
                         Toggle "Layers below" to see blocked zones
                       </p>
                     )}
@@ -779,27 +697,13 @@ export function Grid() {
                   <button
                     key={`col-${num}`}
                     type="button"
-                    className="flex items-center justify-center select-none transition-colors rounded-sm"
+                    className="flex items-center justify-center select-none transition-colors rounded-sm font-medium text-content-tertiary tabular-nums bg-transparent border-0 cursor-pointer hover:bg-surface-hover hover:text-content-secondary"
                     style={{
                       height: labelSize,
                       gridColumn: index + 1,
                       fontSize: labelFontSize,
-                      fontWeight: 'var(--font-medium)',
-                      color: 'var(--text-tertiary)',
-                      fontVariantNumeric: 'tabular-nums',
-                      background: 'transparent',
-                      border: 'none',
-                      cursor: 'pointer',
                     }}
                     onClick={() => handleColumnClick(num)}
-                    onMouseEnter={(e) => {
-                      e.currentTarget.style.backgroundColor = 'var(--bg-hover)';
-                      e.currentTarget.style.color = 'var(--text-secondary)';
-                    }}
-                    onMouseLeave={(e) => {
-                      e.currentTarget.style.backgroundColor = 'transparent';
-                      e.currentTarget.style.color = 'var(--text-tertiary)';
-                    }}
                     title={`Select bins in column ${num}`}
                     aria-label={`Select bins in column ${num}`}
                   >

@@ -93,9 +93,8 @@ export function BottomSheet({ children, title }: BottomSheetProps) {
       {/* Sheet */}
       <div
         ref={sheetRef}
-        className="fixed left-0 right-0 bottom-0 z-50 flex flex-col rounded-t-2xl transition-transform duration-200"
+        className="fixed left-0 right-0 bottom-0 z-50 flex flex-col rounded-t-2xl transition-transform duration-200 bg-surface-secondary"
         style={{
-          backgroundColor: 'var(--bg-secondary)',
           maxHeight: '85vh',
           transform: `translateY(${dragY}px)`,
           transitionDuration: isDragging ? '0ms' : '200ms',
@@ -125,9 +124,8 @@ export function BottomSheet({ children, title }: BottomSheetProps) {
           />
           {/* Swipe hint - shows during drag */}
           <div
-            className="text-xs mb-2 transition-opacity duration-150"
+            className="text-xs mb-2 transition-opacity duration-150 text-content-disabled"
             style={{
-              color: 'var(--text-disabled)',
               opacity: isDragging ? 1 : 0,
               height: isDragging ? 'auto' : 0,
             }}
@@ -138,8 +136,7 @@ export function BottomSheet({ children, title }: BottomSheetProps) {
           {/* Title row */}
           <div className="w-full flex items-center justify-between px-4">
             <h2
-              className="text-base font-medium"
-              style={{ color: 'var(--text-primary)' }}
+              className="text-base font-medium text-content"
             >
               {title}
             </h2>

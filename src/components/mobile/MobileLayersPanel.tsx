@@ -92,10 +92,9 @@ export function MobileLayersPanel() {
     <div className="pb-4">
       {/* Drawer height control */}
       <div
-        className="flex items-center justify-between mb-4 p-3 rounded-lg"
-        style={{ backgroundColor: 'var(--bg-elevated)' }}
+        className="flex items-center justify-between mb-4 p-3 rounded-lg bg-surface-elevated"
       >
-        <span style={{ color: 'var(--text-secondary)', fontSize: 'var(--text-sm)' }}>
+        <span className="text-content-secondary text-sm">
           Drawer Height
         </span>
         <div className="flex items-center gap-2">
@@ -109,8 +108,7 @@ export function MobileLayersPanel() {
             </svg>
           </button>
           <span
-            className="w-12 text-center font-semibold"
-            style={{ color: 'var(--text-primary)', fontSize: 'var(--text-lg)' }}
+            className="w-12 text-center font-semibold text-content text-lg"
           >
             {drawer.height}u
           </span>
@@ -128,7 +126,7 @@ export function MobileLayersPanel() {
 
       {/* Layer usage indicator */}
       <div className="flex items-center gap-2 mb-3 px-1">
-        <div className="flex-1 h-2 rounded-full overflow-hidden" style={{ backgroundColor: 'var(--bg-elevated)' }}>
+        <div className="flex-1 h-2 rounded-full overflow-hidden bg-surface-elevated">
           <div
             className="h-full rounded-full transition-all"
             style={{
@@ -138,10 +136,7 @@ export function MobileLayersPanel() {
           />
         </div>
         <span
-          style={{
-            fontSize: 'var(--text-xs)',
-            color: totalLayerHeight > drawer.height ? 'var(--color-error)' : 'var(--text-tertiary)',
-          }}
+          className={`text-xs ${totalLayerHeight > drawer.height ? 'text-error' : 'text-content-tertiary'}`}
         >
           {totalLayerHeight}/{drawer.height}u
         </span>
@@ -158,11 +153,7 @@ export function MobileLayersPanel() {
           return (
             <div
               key={layer.id}
-              className="rounded-lg overflow-hidden"
-              style={{
-                backgroundColor: isActive ? 'var(--bg-active)' : 'var(--bg-elevated)',
-                border: isActive ? '2px solid var(--color-primary)' : '2px solid transparent',
-              }}
+              className={`rounded-lg overflow-hidden ${isActive ? 'bg-surface-hover border-2 border-accent' : 'bg-surface-elevated border-2 border-transparent'}`}
             >
               <button
                 className="w-full p-4 text-left"
@@ -183,23 +174,20 @@ export function MobileLayersPanel() {
                       />
                     ) : (
                       <span
-                        className="font-medium truncate block"
-                        style={{ color: 'var(--text-primary)', fontSize: 'var(--text-base)' }}
+                        className="font-medium truncate block text-content text-base"
                       >
                         {layer.name}
                       </span>
                     )}
                     <span
-                      className="text-sm mt-1 block"
-                      style={{ color: 'var(--text-tertiary)' }}
+                      className="text-sm mt-1 block text-content-tertiary"
                     >
                       {binCount} bin{binCount !== 1 ? 's' : ''} · {layer.height}u tall
                     </span>
                   </div>
                   {isActive && (
                     <span
-                      className="px-2 py-1 rounded text-xs font-medium"
-                      style={{ backgroundColor: 'var(--color-primary)', color: '#000' }}
+                      className="px-2 py-1 rounded text-xs font-medium bg-accent text-black"
                     >
                       Active
                     </span>
@@ -209,8 +197,7 @@ export function MobileLayersPanel() {
 
               {/* Layer controls */}
               <div
-                className="flex items-center gap-2 px-4 py-2"
-                style={{ borderTop: '1px solid var(--border-subtle)' }}
+                className="flex items-center gap-2 px-4 py-2 border-t border-stroke-subtle"
               >
                 {/* Height control */}
                 <div className="flex items-center">
@@ -225,8 +212,7 @@ export function MobileLayersPanel() {
                     </svg>
                   </button>
                   <span
-                    className="w-10 text-center text-sm font-medium"
-                    style={{ color: 'var(--text-secondary)' }}
+                    className="w-10 text-center text-sm font-medium text-content-secondary"
                   >
                     {layer.height}u
                   </span>
@@ -258,8 +244,7 @@ export function MobileLayersPanel() {
                 {layers.length > 1 && (
                   <button
                     onClick={() => handleDeleteLayer(layer.id)}
-                    className="btn btn-ghost w-11 h-11 p-0"
-                    style={{ color: 'var(--color-error)' }}
+                    className="btn btn-ghost w-11 h-11 p-0 text-error"
                     aria-label="Delete layer"
                   >
                     <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">

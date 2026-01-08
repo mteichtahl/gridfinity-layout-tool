@@ -87,33 +87,29 @@ export function BinContextMenu({ bin, position, onClose }: BinContextMenuProps) 
     <>
       {/* Backdrop */}
       <div
-        className="fixed inset-0 z-50"
-        style={{ backgroundColor: 'var(--overlay-light)' }}
+        className="fixed inset-0 z-50 bg-overlay-light"
         onClick={onClose}
       />
 
       {/* Menu */}
       <div
         ref={menuRef}
-        className="fixed z-50 rounded-xl overflow-hidden shadow-xl"
+        className="fixed z-50 rounded-xl overflow-hidden shadow-xl bg-surface-elevated border border-stroke-subtle"
         style={{
           left: adjustedPosition.x,
           top: adjustedPosition.y,
-          backgroundColor: 'var(--bg-elevated)',
-          border: '1px solid var(--border-subtle)',
           minWidth: '180px',
         }}
       >
         {/* Header */}
         <div
-          className="px-4 py-3"
-          style={{ borderBottom: '1px solid var(--border-subtle)' }}
+          className="px-4 py-3 border-b border-stroke-subtle"
         >
-          <div className="font-medium" style={{ color: 'var(--text-primary)' }}>
+          <div className="font-medium text-content">
             {bin.width}×{bin.depth} Bin
           </div>
           {bin.label && (
-            <div className="text-sm truncate" style={{ color: 'var(--text-tertiary)' }}>
+            <div className="text-sm truncate text-content-tertiary">
               {bin.label}
             </div>
           )}
@@ -123,12 +119,9 @@ export function BinContextMenu({ bin, position, onClose }: BinContextMenuProps) 
         <div className="py-1">
           <button
             onClick={handleEdit}
-            className="w-full px-4 py-3 flex items-center gap-3 transition-colors"
-            style={{ color: 'var(--text-primary)' }}
-            onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--bg-hover)'}
-            onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+            className="w-full px-4 py-3 flex items-center gap-3 transition-colors text-content hover:bg-surface-hover"
           >
-            <svg className="w-5 h-5" style={{ color: 'var(--text-tertiary)' }} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <svg className="w-5 h-5 text-content-tertiary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
             </svg>
             Edit Properties
@@ -136,12 +129,9 @@ export function BinContextMenu({ bin, position, onClose }: BinContextMenuProps) 
 
           <button
             onClick={handleDuplicate}
-            className="w-full px-4 py-3 flex items-center gap-3 transition-colors"
-            style={{ color: 'var(--text-primary)' }}
-            onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--bg-hover)'}
-            onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+            className="w-full px-4 py-3 flex items-center gap-3 transition-colors text-content hover:bg-surface-hover"
           >
-            <svg className="w-5 h-5" style={{ color: 'var(--text-tertiary)' }} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <svg className="w-5 h-5 text-content-tertiary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
             </svg>
             Duplicate
@@ -150,26 +140,20 @@ export function BinContextMenu({ bin, position, onClose }: BinContextMenuProps) 
           {isOnGrid && (
             <button
               onClick={handleToStaging}
-              className="w-full px-4 py-3 flex items-center gap-3 transition-colors"
-              style={{ color: 'var(--text-primary)' }}
-              onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--bg-hover)'}
-              onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+              className="w-full px-4 py-3 flex items-center gap-3 transition-colors text-content hover:bg-surface-hover"
             >
-              <svg className="w-5 h-5" style={{ color: 'var(--text-tertiary)' }} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <svg className="w-5 h-5 text-content-tertiary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4" />
               </svg>
               Move to Staging
             </button>
           )}
 
-          <div style={{ borderTop: '1px solid var(--border-subtle)', margin: '4px 0' }} />
+          <div className="border-t border-stroke-subtle my-1" />
 
           <button
             onClick={handleDelete}
-            className="w-full px-4 py-3 flex items-center gap-3 transition-colors"
-            style={{ color: 'var(--color-error)' }}
-            onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'var(--color-error-muted)'}
-            onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+            className="w-full px-4 py-3 flex items-center gap-3 transition-colors text-error hover:bg-surface-hover"
           >
             <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />

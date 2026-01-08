@@ -1,17 +1,7 @@
-import { useState, type CSSProperties } from 'react';
+import { useState } from 'react';
 import { useLayoutStore } from '../../store';
 import { calcMaxGridUnits } from '../../constants';
 import { ConfirmDialog } from '../modals/ConfirmDialog';
-
-const STYLES = {
-  sectionHeading: { color: 'var(--text-tertiary)' } as CSSProperties,
-  label: { color: 'var(--text-secondary)' } as CSSProperties,
-  unitSuffix: { color: 'var(--text-tertiary)' } as CSSProperties,
-  hintText: { color: 'var(--text-disabled)' } as CSSProperties,
-  divider: { borderTop: '1px solid var(--border-subtle)' } as CSSProperties,
-  footerText: { color: 'var(--text-disabled)', lineHeight: '1.6' } as CSSProperties,
-  link: { color: 'var(--text-tertiary)' } as CSSProperties,
-} as const;
 
 /**
  * Mobile settings panel with grid configuration and app actions.
@@ -32,16 +22,13 @@ export function MobileSettingsPanel() {
     <div className="pb-4 space-y-6">
       {/* Drawer Dimensions */}
       <section>
-        <h3
-          className="text-xs font-medium uppercase tracking-wide mb-3"
-          style={STYLES.sectionHeading}
-        >
+        <h3 className="text-xs font-medium uppercase tracking-wide mb-3 text-content-tertiary">
           Drawer Dimensions
         </h3>
 
         <div className="grid grid-cols-2 gap-3">
           <div>
-            <label className="block text-sm mb-1" style={STYLES.label}>
+            <label className="block text-sm mb-1 text-content-secondary">
               Width (units)
             </label>
             <input
@@ -54,7 +41,7 @@ export function MobileSettingsPanel() {
             />
           </div>
           <div>
-            <label className="block text-sm mb-1" style={STYLES.label}>
+            <label className="block text-sm mb-1 text-content-secondary">
               Depth (units)
             </label>
             <input
@@ -71,16 +58,13 @@ export function MobileSettingsPanel() {
 
       {/* Grid Settings */}
       <section>
-        <h3
-          className="text-xs font-medium uppercase tracking-wide mb-3"
-          style={STYLES.sectionHeading}
-        >
+        <h3 className="text-xs font-medium uppercase tracking-wide mb-3 text-content-tertiary">
           Grid Settings
         </h3>
 
         <div className="space-y-3">
           <div className="flex items-center justify-between">
-            <label className="text-sm" style={STYLES.label}>
+            <label className="text-sm text-content-secondary">
               1 grid unit
             </label>
             <div className="flex items-center gap-2">
@@ -92,12 +76,12 @@ export function MobileSettingsPanel() {
                 min={1}
                 max={200}
               />
-              <span style={STYLES.unitSuffix}>mm</span>
+              <span className="text-content-tertiary">mm</span>
             </div>
           </div>
 
           <div className="flex items-center justify-between">
-            <label className="text-sm" style={STYLES.label}>
+            <label className="text-sm text-content-secondary">
               1u height
             </label>
             <div className="flex items-center gap-2">
@@ -109,12 +93,12 @@ export function MobileSettingsPanel() {
                 min={1}
                 max={50}
               />
-              <span style={STYLES.unitSuffix}>mm</span>
+              <span className="text-content-tertiary">mm</span>
             </div>
           </div>
 
           <div className="flex items-center justify-between">
-            <label className="text-sm" style={STYLES.label}>
+            <label className="text-sm text-content-secondary">
               Print bed size
             </label>
             <div className="flex items-center gap-2">
@@ -127,14 +111,11 @@ export function MobileSettingsPanel() {
                 max={500}
                 step={10}
               />
-              <span style={STYLES.unitSuffix}>mm</span>
+              <span className="text-content-tertiary">mm</span>
             </div>
           </div>
 
-          <div
-            className="text-sm text-right"
-            style={STYLES.hintText}
-          >
+          <div className="text-sm text-right text-content-disabled">
             Max bin size: {maxGridUnits}×{maxGridUnits}
           </div>
         </div>
@@ -142,10 +123,7 @@ export function MobileSettingsPanel() {
 
       {/* Actions */}
       <section>
-        <h3
-          className="text-xs font-medium uppercase tracking-wide mb-3"
-          style={STYLES.sectionHeading}
-        >
+        <h3 className="text-xs font-medium uppercase tracking-wide mb-3 text-content-tertiary">
           Actions
         </h3>
 
@@ -163,17 +141,13 @@ export function MobileSettingsPanel() {
       </section>
 
       {/* Info */}
-      <section
-        className="pt-4 text-center"
-        style={STYLES.divider}
-      >
-        <div className="text-xs" style={STYLES.footerText}>
+      <section className="pt-4 text-center border-t border-stroke-subtle">
+        <div className="text-xs text-content-disabled leading-relaxed">
           <a
             href="https://www.youtube.com/c/ZackFreedman"
             target="_blank"
             rel="noopener noreferrer"
-            style={STYLES.link}
-            className="hover:underline"
+            className="hover:underline text-content-tertiary"
           >
             Gridfinity
           </a>
@@ -184,8 +158,7 @@ export function MobileSettingsPanel() {
             href="https://www.linkedin.com/in/andyhmai/"
             target="_blank"
             rel="noopener noreferrer"
-            style={STYLES.link}
-            className="hover:underline"
+            className="hover:underline text-content-tertiary"
           >
             Andy Aragon
           </a>

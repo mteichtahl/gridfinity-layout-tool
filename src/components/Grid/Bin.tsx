@@ -225,12 +225,9 @@ function BinComponent({ bin, category, layer, drawer, isGhost, isSelected, onSta
       {/* Tall bin indicator badge */}
       {isTall && !isGhost && (
         <div
-          className="absolute top-0.5 right-0.5 px-1.5 py-0.5 rounded-sm flex items-center gap-0.5 pointer-events-none"
+          className="absolute top-0.5 right-0.5 px-1.5 py-0.5 rounded-sm flex items-center gap-0.5 pointer-events-none bg-surface text-xs font-medium"
           style={{
-            backgroundColor: 'var(--bg-primary)',
             color: 'var(--color-warning)',
-            fontSize: 'var(--text-xs)',
-            fontWeight: 'var(--font-medium)',
             boxShadow: 'var(--shadow-sm)'
           }}
           title={`Spans multiple layers (${bin.height}u)`}

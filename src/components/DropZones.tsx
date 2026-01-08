@@ -116,18 +116,16 @@ export function DropZones() {
         </svg>
         <div>
           <div
-            className="font-medium transition-colors"
+            className="font-medium transition-colors text-sm"
             style={{
-              fontSize: 'var(--text-sm)',
               color: dropTarget === 'trash' ? 'white' : 'var(--text-primary)'
             }}
           >
             Delete {binLabel}
           </div>
           <div
-            className="transition-colors"
+            className="transition-colors text-xs"
             style={{
-              fontSize: 'var(--text-xs)',
               color: dropTarget === 'trash' ? 'var(--text-on-dark-muted)' : 'var(--text-tertiary)'
             }}
           >
@@ -166,18 +164,16 @@ export function DropZones() {
           </svg>
           <div>
             <div
-              className="font-medium transition-colors"
+              className="font-medium transition-colors text-sm"
               style={{
-                fontSize: 'var(--text-sm)',
                 color: dropTarget === 'staging' ? 'white' : 'var(--text-primary)'
               }}
             >
               Stage {binLabel}
             </div>
             <div
-              className="transition-colors"
+              className="transition-colors text-xs"
               style={{
-                fontSize: 'var(--text-xs)',
                 color: dropTarget === 'staging' ? 'var(--text-on-dark-muted)' : 'var(--text-tertiary)'
               }}
             >

@@ -96,8 +96,7 @@ export function MobileCategoriesPanel() {
   return (
     <div className="pb-4">
       <p
-        className="text-sm mb-4"
-        style={{ color: 'var(--text-tertiary)' }}
+        className="text-sm mb-4 text-content-tertiary"
       >
         Select a category to use when drawing bins.
       </p>
@@ -112,11 +111,7 @@ export function MobileCategoriesPanel() {
           return (
             <div
               key={category.id}
-              className="rounded-lg overflow-hidden"
-              style={{
-                backgroundColor: isActive ? 'var(--bg-active)' : 'var(--bg-elevated)',
-                border: isActive ? '2px solid var(--color-primary)' : '2px solid transparent',
-              }}
+              className={`rounded-lg overflow-hidden ${isActive ? 'bg-surface-hover border-2 border-accent' : 'bg-surface-elevated border-2 border-transparent'}`}
             >
               {isEditing ? (
                 <div className="p-4 space-y-3">
@@ -177,15 +172,13 @@ export function MobileCategoriesPanel() {
                     style={{ backgroundColor: category.color, boxShadow: 'var(--shadow-sm)' }}
                   />
                   <span
-                    className="flex-1 text-left font-medium truncate"
-                    style={{ color: 'var(--text-primary)' }}
+                    className="flex-1 text-left font-medium truncate text-content"
                   >
                     {category.name}
                   </span>
                   {isActive && (
                     <span
-                      className="px-2 py-1 rounded text-xs font-medium"
-                      style={{ backgroundColor: 'var(--color-primary)', color: '#000' }}
+                      className="px-2 py-1 rounded text-xs font-medium bg-accent text-black"
                     >
                       Active
                     </span>
