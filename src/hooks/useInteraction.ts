@@ -397,7 +397,7 @@ export function useInteraction(gridRef: RefObject<HTMLDivElement | null>) {
                   x: newX,
                   y: newY,
                   layerId: activeLayerId,
-                  height: layer?.height || bin.height,
+                  height: Math.max(bin.height, layer?.height ?? bin.height),
                 });
               }
             });
@@ -459,7 +459,7 @@ export function useInteraction(gridRef: RefObject<HTMLDivElement | null>) {
                 x: interaction.currentCoord!.x,
                 y: interaction.currentCoord!.y,
                 layerId: activeLayerId,
-                height: layer?.height || bin.height,
+                height: Math.max(bin.height, layer?.height ?? bin.height),
               });
             });
             setSelectedBin(interaction.binId);
