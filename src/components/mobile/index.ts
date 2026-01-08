@@ -1,6 +1,7 @@
 export { MobileHeader } from './MobileHeader';
 export { BottomNavBar } from './BottomNavBar';
-export { BottomSheet, getPanelTitle } from './BottomSheet';
+export { BottomSheet } from './BottomSheet';
+export { getPanelTitle } from './panelUtils';
 export { MobileLayersPanel } from './MobileLayersPanel';
 export { MobileCategoriesPanel } from './MobileCategoriesPanel';
 export { MobileInspector } from './MobileInspector';

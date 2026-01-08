@@ -5,7 +5,6 @@ import { SHORTCUTS } from '../constants';
 
 export function useKeyboard() {
   const selectedBinIds = useUIStore(state => state.selectedBinIds);
-  const setSelectedBin = useUIStore(state => state.setSelectedBin);
   const setSelectedBins = useUIStore(state => state.setSelectedBins);
   const setInteraction = useUIStore(state => state.setInteraction);
   const setPaintSize = useUIStore(state => state.setPaintSize);
@@ -149,7 +148,7 @@ export function useKeyboard() {
       }
       return;
     }
-  }, [selectedBinIds, layout, canUndo, canRedo, undo, redo, zoomIn, zoomOut, deleteBin, duplicateBin, updateBin, setSelectedBin, setSelectedBins, setInteraction, setPaintSize, execute]);
+  }, [selectedBinIds, layout, canUndo, canRedo, undo, redo, zoomIn, zoomOut, deleteBin, duplicateBin, updateBin, setSelectedBins, setInteraction, setPaintSize, execute]);
 
   useEffect(() => {
     window.addEventListener('keydown', handleKeyDown);

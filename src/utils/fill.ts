@@ -26,16 +26,13 @@ export function fillAllWithSize(
 
   for (let y = 0; y < layout.drawer.depth; y += binDepth) {
     for (let x = 0; x < layout.drawer.width; x += binWidth) {
-      // Check if we've exceeded max bins
       if (newBins.length >= CONSTRAINTS.QUICK_FILL_MAX_BINS) {
         break;
       }
 
-      // Calculate actual size (may be smaller at edges)
       const actualWidth = Math.min(binWidth, layout.drawer.width - x);
       const actualDepth = Math.min(binDepth, layout.drawer.depth - y);
 
-      // Skip if any cell in this region is already covered
       let alreadyCovered = false;
       for (let cx = x; cx < x + actualWidth && !alreadyCovered; cx++) {
         for (let cy = y; cy < y + actualDepth && !alreadyCovered; cy++) {
@@ -49,7 +46,6 @@ export function fillAllWithSize(
         continue;
       }
 
-      // Create temporary layout with new bins for validation
       const tempLayout: Layout = {
         ...layout,
         bins: [...layout.bins, ...newBins],
@@ -76,7 +72,6 @@ export function fillAllWithSize(
         };
         newBins.push(newBin);
 
-        // Mark cells as covered
         for (let cx = x; cx < x + actualWidth; cx++) {
           for (let cy = y; cy < y + actualDepth; cy++) {
             covered.add(`${cx},${cy}`);
@@ -109,14 +104,12 @@ export function fillGaps(
   const newBins: Bin[] = [];
   const workingLayout = { ...layout };
 
-  // Simple greedy approach: try progressively smaller sizes
   const sizes: Array<{ w: number; d: number }> = [];
   for (let w = maxPrintSize; w >= 1; w--) {
     for (let d = maxPrintSize; d >= 1; d--) {
       sizes.push({ w, d });
     }
   }
-  // Sort by area descending
   sizes.sort((a, b) => (b.w * b.d) - (a.w * a.d));
 
   let changed = true;
@@ -125,7 +118,6 @@ export function fillGaps(
 
     for (let y = 0; y < layout.drawer.depth && newBins.length < CONSTRAINTS.QUICK_FILL_MAX_BINS; y++) {
       for (let x = 0; x < layout.drawer.width && newBins.length < CONSTRAINTS.QUICK_FILL_MAX_BINS; x++) {
-        // Try each size at this position
         for (const size of sizes) {
           const tempLayout: Layout = {
             ...workingLayout,

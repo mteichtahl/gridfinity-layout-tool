@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
-import { useUIStore, type MobilePanel } from '../../store/ui';
+import { useUIStore } from '../../store/ui';
 
 interface BottomSheetProps {
   children: React.ReactNode;
@@ -165,24 +165,4 @@ export function BottomSheet({ children, title }: BottomSheetProps) {
       </div>
     </>
   );
-}
-
-/**
- * Get the title for a mobile panel
- */
-export function getPanelTitle(panel: MobilePanel): string {
-  switch (panel) {
-    case 'layers':
-      return 'Layers & Bins';
-    case 'inspector':
-      return 'Bin Properties';
-    case 'categories':
-      return 'Categories';
-    case 'print':
-      return 'Print List';
-    case 'settings':
-      return 'Settings';
-    default:
-      return '';
-  }
 }

@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { useCallback, useRef } from 'react';
+import { useCallback, useRef, useEffect } from 'react';
 import type { Layout } from '../types';
 import { useLayoutStore } from './layout';
 import { CONSTRAINTS } from '../constants';
@@ -26,7 +26,6 @@ export const useHistoryStore = create<HistoryState>((set, get) => ({
   push: (layout) => {
     set(state => {
       const newPast = [...state.past, layout];
-      // Trim to limit
       if (newPast.length > CONSTRAINTS.UNDO_LIMIT) {
         newPast.shift();
       }
@@ -88,10 +87,11 @@ export function useUndoableAction() {
 
   // Use ref to track current layout without causing callback to change
   const layoutRef = useRef(layout);
-  layoutRef.current = layout;
+  useEffect(() => {
+    layoutRef.current = layout;
+  }, [layout]);
 
   const execute = useCallback((action: () => void) => {
-    // Deep clone current state before action using ref
     push(JSON.parse(JSON.stringify(layoutRef.current)));
     action();
   }, [push]); // Only depends on push, which is stable from Zustand

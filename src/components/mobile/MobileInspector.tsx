@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useUIStore, useLayoutStore, useUndoableAction } from '../../store';
 import { STAGING_ID, CONSTRAINTS, calcMaxGridUnits } from '../../constants';
+import { getLayerZStart } from '../../utils/collision';
 import { ConfirmDialog } from '../modals/ConfirmDialog';
 
 /**
@@ -29,16 +30,8 @@ export function MobileInspector() {
   const maxGridUnits = calcMaxGridUnits(layout.printBedSize, layout.gridUnitMm);
 
   // Calculate max height
-  const getLayerZStart = (layerId: string) => {
-    let z = 0;
-    for (const l of layout.layers) {
-      if (l.id === layerId) return z;
-      z += l.height;
-    }
-    return z;
-  };
   const maxBinHeight = bin && layer
-    ? layout.drawer.height - getLayerZStart(bin.layerId)
+    ? layout.drawer.height - getLayerZStart(bin.layerId, layout.layers)
     : 1;
 
   const handleUpdateBin = (field: string, value: string | number) => {

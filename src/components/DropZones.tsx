@@ -25,7 +25,9 @@ export function DropZones() {
 
   // Use ref to track current dropTarget without causing effect re-runs
   const dropTargetRef = useRef(dropTarget);
-  dropTargetRef.current = dropTarget;
+  useEffect(() => {
+    dropTargetRef.current = dropTarget;
+  }, [dropTarget]);
 
   // Determine if we're in a dragging state
   const isDragging = interactionType === 'drag' || interactionType === 'stagingDrag';

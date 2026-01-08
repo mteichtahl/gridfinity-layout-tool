@@ -115,7 +115,9 @@ export function Grid() {
 
   // Use ref to track current drawer dimensions without causing effect re-runs
   const drawerRef = useRef(drawer);
-  drawerRef.current = drawer;
+  useEffect(() => {
+    drawerRef.current = drawer;
+  }, [drawer]);
 
   const handleResizeStart = useCallback((direction: ResizeDirection, e: React.MouseEvent) => {
     e.preventDefault();

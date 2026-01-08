@@ -65,7 +65,6 @@ export function binsCollide(binA: Bin, binB: Bin, layers: Layer[]): boolean {
     return false;
   }
 
-  // Check vertical overlap
   const rectA = getBin3DRect(binA, layers);
   const rectB = getBin3DRect(binB, layers);
 
@@ -81,7 +80,6 @@ export function getBlockedZones(
   bins: Bin[],
   layers: Layer[]
 ): BlockedZone[] {
-  // Handle empty or invalid layer ID
   if (!targetLayerId) return [];
 
   const targetLayerIndex = layers.findIndex(l => l.id === targetLayerId);
@@ -92,14 +90,11 @@ export function getBlockedZones(
   const blocked: BlockedZone[] = [];
 
   for (const bin of bins) {
-    // Skip staging bins
     if (bin.layerId === STAGING_ID) continue;
 
-    // Skip bins on or above target layer
     const binLayerIndex = layers.findIndex(l => l.id === bin.layerId);
     if (binLayerIndex >= targetLayerIndex) continue;
 
-    // Check if bin protrudes into target layer
     const binRect = getBin3DRect(bin, layers);
     if (binRect.zEnd > targetZStart) {
       blocked.push({
@@ -149,16 +144,13 @@ export function checkLayerReorderCollisions(
   const collisions: Array<{ binA: Bin; binB: Bin }> = [];
   const placedBins = bins.filter(b => b.layerId !== STAGING_ID);
 
-  // Check each pair of bins for collisions under new layer order
   for (let i = 0; i < placedBins.length; i++) {
     for (let j = i + 1; j < placedBins.length; j++) {
       const binA = placedBins[i];
       const binB = placedBins[j];
 
-      // Skip if no footprint overlap
       if (!footprintsOverlap(binA, binB)) continue;
 
-      // Calculate z-ranges under NEW layer order
       const rectA = getBin3DRect(binA, newLayers);
       const rectB = getBin3DRect(binB, newLayers);
 

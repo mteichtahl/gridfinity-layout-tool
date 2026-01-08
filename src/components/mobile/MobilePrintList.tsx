@@ -14,8 +14,8 @@ export function MobilePrintList() {
   const maxGridUnits = calcMaxGridUnits(layout.printBedSize, layout.gridUnitMm);
 
   const printRows = useMemo(
-    () => generatePrintList(layout.bins, maxGridUnits, layout.gridUnitMm, layout.heightUnitMm),
-    [layout.bins, maxGridUnits, layout.gridUnitMm, layout.heightUnitMm]
+    () => generatePrintList(layout.bins, maxGridUnits),
+    [layout.bins, maxGridUnits]
   );
   const totalBins = useMemo(() => getTotalBins(printRows), [printRows]);
   const totalPieces = useMemo(() => getTotalPieces(printRows), [printRows]);

@@ -58,7 +58,6 @@ export const useLayoutStore = create<LayoutState>()(
       const id = generateId();
       const bin: Bin = { ...binData, id };
 
-      // Validate placement
       if (bin.layerId !== STAGING_ID) {
         const result = canPlaceBin(
           { x: bin.x, y: bin.y, width: bin.width, depth: bin.depth, height: bin.height },
@@ -95,7 +94,6 @@ export const useLayoutStore = create<LayoutState>()(
       const bin = layout.bins.find(b => b.id === id);
       if (!bin) return null;
 
-      // Staging bins just create another staging copy
       if (bin.layerId === STAGING_ID) {
         return addBin({
           layerId: STAGING_ID,
@@ -110,7 +108,6 @@ export const useLayoutStore = create<LayoutState>()(
         });
       }
 
-      // Try positions: right, below, left, above
       const offsets = [
         { dx: bin.width, dy: 0 },   // right
         { dx: 0, dy: -bin.depth },  // below (y decreases going down visually)
@@ -143,7 +140,6 @@ export const useLayoutStore = create<LayoutState>()(
         }
       }
 
-      // No valid position found, send to staging
       return addBin({
         layerId: STAGING_ID,
         x: 0,
@@ -222,7 +218,6 @@ export const useLayoutStore = create<LayoutState>()(
       set(state => {
         const layer = state.layout.layers.find(l => l.id === id);
         if (layer) {
-          // If height is changing, clamp it
           if (updates.height !== undefined) {
             const othersHeight = state.layout.layers
               .filter(l => l.id !== id)
@@ -254,12 +249,10 @@ export const useLayoutStore = create<LayoutState>()(
       if (fromIndex < 0 || fromIndex >= layout.layers.length) return { success: false, error: 'Invalid source index' };
       if (toIndex < 0 || toIndex >= layout.layers.length) return { success: false, error: 'Invalid target index' };
 
-      // Create new layer order
       const newLayers = [...layout.layers];
       const [moved] = newLayers.splice(fromIndex, 1);
       newLayers.splice(toIndex, 0, moved);
 
-      // Check for collisions with new order
       const collisions = checkLayerReorderCollisions(layout.bins, layout.layers, newLayers);
       if (collisions.length > 0) {
         return {
@@ -268,7 +261,6 @@ export const useLayoutStore = create<LayoutState>()(
         };
       }
 
-      // Apply the reorder
       set(state => {
         state.layout.layers = newLayers;
       });
@@ -280,7 +272,6 @@ export const useLayoutStore = create<LayoutState>()(
       set(state => {
         const drawer = state.layout.drawer;
 
-        // Apply updates with constraints
         if (updates.width !== undefined) {
           drawer.width = Math.max(CONSTRAINTS.GRID_MIN, Math.min(CONSTRAINTS.GRID_MAX, updates.width));
         }
@@ -324,9 +315,7 @@ export const useLayoutStore = create<LayoutState>()(
     deleteCategory: (id) => {
       const { layout } = get();
 
-      // Can't delete if in use
       if (layout.bins.some(b => b.category === id)) return false;
-      // Must have at least one
       if (layout.categories.length <= CONSTRAINTS.CATEGORIES_MIN) return false;
 
       set(state => {

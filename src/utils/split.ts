@@ -1,9 +1,6 @@
 import type { Bin, PrintPiece, PrintRow } from '../types';
 import { STAGING_ID } from '../constants';
 
-// Default Gridfinity dimensions (used as fallback)
-const DEFAULT_GRID_SIZE_MM = 42;  // 1 grid unit = 42mm
-const DEFAULT_HEIGHT_UNIT_MM = 7; // 1u height = 7mm
 
 /**
  * Estimate filament usage in meters for a single bin.
@@ -24,9 +21,7 @@ const DEFAULT_HEIGHT_UNIT_MM = 7; // 1u height = 7mm
 function calcFilament(
   width: number,
   depth: number,
-  height: number,
-  _gridSizeMm: number,
-  _heightUnitMm: number
+  height: number
 ): number {
   // Base: floor, stacking lip, and internal grid structure
   const baseContribution = 0.5 * width * depth;
@@ -111,9 +106,7 @@ function mergePieces(pieces: PrintPiece[]): PrintPiece[] {
  */
 export function generatePrintList(
   bins: Bin[],
-  maxPrintSize: number,
-  gridUnitMm: number = DEFAULT_GRID_SIZE_MM,
-  heightUnitMm: number = DEFAULT_HEIGHT_UNIT_MM
+  maxPrintSize: number
 ): PrintRow[] {
   // Filter out staging bins
   const placedBins = bins.filter(b => b.layerId !== STAGING_ID);
@@ -146,7 +139,7 @@ export function generatePrintList(
 
     // Calculate filament for all pieces in this row
     const filamentPerBin = mergedPieces.reduce(
-      (sum, p) => sum + calcFilament(p.width, p.depth, group.height, gridUnitMm, heightUnitMm) * p.count,
+      (sum, p) => sum + calcFilament(p.width, p.depth, group.height) * p.count,
       0
     );
     const filament = Math.round(filamentPerBin * group.count * 10) / 10; // Round to 1 decimal

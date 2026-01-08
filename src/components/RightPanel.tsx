@@ -2,6 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { useUIStore, useLayoutStore, useUndoableAction } from '../store';
 import { STAGING_ID, CONSTRAINTS, calcMaxGridUnits } from '../constants';
 import { generatePrintList, getTotalBins, getTotalPieces, getTotalFilament, getSpoolEstimate } from '../utils/split';
+import { getLayerZStart } from '../utils/collision';
 import { exportPrintListTSV } from '../utils/storage';
 import { ConfirmDialog } from './modals/ConfirmDialog';
 import type { PrintPiece } from '../types';
@@ -113,16 +114,8 @@ export function RightPanel() {
   const layer = bin ? layout.layers.find(l => l.id === bin.layerId) : null;
 
   // Calculate max height for selected bin
-  const getLayerZStart = (layerId: string) => {
-    let z = 0;
-    for (const l of layout.layers) {
-      if (l.id === layerId) return z;
-      z += l.height;
-    }
-    return z;
-  };
   const maxBinHeight = bin && layer
-    ? layout.drawer.height - getLayerZStart(bin.layerId)
+    ? layout.drawer.height - getLayerZStart(bin.layerId, layout.layers)
     : 1;
 
   // Calculate max grid units from print bed size (accounting for gaps between bins)
@@ -130,8 +123,8 @@ export function RightPanel() {
 
   // Memoize print list calculation - expensive operation
   const printRows = useMemo(
-    () => generatePrintList(layout.bins, maxGridUnits, layout.gridUnitMm, layout.heightUnitMm),
-    [layout.bins, maxGridUnits, layout.gridUnitMm, layout.heightUnitMm]
+    () => generatePrintList(layout.bins, maxGridUnits),
+    [layout.bins, maxGridUnits]
   );
   const totalBins = useMemo(() => getTotalBins(printRows), [printRows]);
   const totalPieces = useMemo(() => getTotalPieces(printRows), [printRows]);

@@ -14,11 +14,11 @@ export function DragPreview() {
 
   const [mousePos, setMousePos] = useState<{ x: number; y: number } | null>(null);
 
+  const isDragging = interaction && (interaction.type === 'drag' || interaction.type === 'stagingDrag');
+
   // Track mouse position during drag
   useEffect(() => {
-    const isDragging = interaction && (interaction.type === 'drag' || interaction.type === 'stagingDrag');
     if (!isDragging) {
-      setMousePos(null);
       return;
     }
 
@@ -26,10 +26,12 @@ export function DragPreview() {
       setMousePos({ x: e.clientX, y: e.clientY });
     };
 
-    // Set initial position
     document.addEventListener('pointermove', handlePointerMove);
-    return () => document.removeEventListener('pointermove', handlePointerMove);
-  }, [interaction?.type]);
+    return () => {
+      document.removeEventListener('pointermove', handlePointerMove);
+      setMousePos(null);
+    };
+  }, [isDragging]);
 
   if (!interaction || !mousePos) return null;
 
