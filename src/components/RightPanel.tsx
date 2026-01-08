@@ -85,6 +85,9 @@ const STYLES = {
   splitDetails: { fontSize: 'var(--text-xs)', color: 'var(--text-secondary)' } as CSSProperties,
   splitHeader: { fontWeight: 'var(--font-medium)', marginBottom: '4px' } as CSSProperties,
   totalRow: { fontSize: 'var(--text-sm)', color: 'var(--text-primary)' } as CSSProperties,
+  multiSelectHint: { fontSize: 'var(--text-sm)', color: 'var(--text-secondary)', marginBottom: 'var(--space-md)' } as CSSProperties,
+  heightDisplay: { fontSize: 'var(--text-lg)', color: 'var(--text-primary)' } as CSSProperties,
+  emptyStateText: { fontSize: 'var(--text-sm)', color: 'var(--text-secondary)', marginBottom: '4px' } as CSSProperties,
 } as const;
 
 /**
@@ -372,7 +375,7 @@ export function RightPanel() {
             </button>
           </div>
 
-          <p style={{ fontSize: 'var(--text-sm)', color: 'var(--text-secondary)', marginBottom: 'var(--space-md)' }}>
+          <p style={STYLES.multiSelectHint}>
             Drag to move all selected bins together, or use arrow keys to nudge.
           </p>
 
@@ -492,7 +495,7 @@ export function RightPanel() {
                 </button>
                 <span
                   className="flex-1 text-center font-semibold"
-                  style={{ fontSize: 'var(--text-lg)', color: 'var(--text-primary)' }}
+                  style={STYLES.heightDisplay}
                 >
                   {bin.height}u
                 </span>
@@ -605,7 +608,7 @@ export function RightPanel() {
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
               </svg>
             </div>
-            <p style={{ fontSize: 'var(--text-sm)', color: 'var(--text-secondary)', marginBottom: '4px' }}>
+            <p style={STYLES.emptyStateText}>
               No bin selected
             </p>
             <p style={STYLES.labelDisabled}>
