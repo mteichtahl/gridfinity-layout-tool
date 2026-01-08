@@ -139,7 +139,7 @@ export function ActiveLayerPanel() {
                       borderRadius: '2px',
                     }}
                   />
-                  <span className={`text-[9px] ${isActive ? '' : 'text-content-tertiary'}`}>{size}×{size}</span>
+                  <span className={`text-[9px] ${isActive ? '' : 'text-content-secondary'}`}>{size}×{size}</span>
                 </button>
               );
             })}
@@ -193,7 +193,7 @@ export function ActiveLayerPanel() {
                       borderRadius: '2px',
                     }}
                   />
-                  <span className={`text-[9px] ${isActive ? '' : 'text-content-tertiary'}`}>{w}×{d}</span>
+                  <span className={`text-[9px] ${isActive ? '' : 'text-content-secondary'}`}>{w}×{d}</span>
                 </button>
               );
             })}
