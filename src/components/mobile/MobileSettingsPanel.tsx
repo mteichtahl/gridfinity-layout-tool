@@ -34,14 +34,14 @@ export function MobileSettingsPanel() {
       <section>
         <h3
           className="text-xs font-medium uppercase tracking-wide mb-3"
-          style={{ color: 'var(--text-tertiary)' }}
+          style={STYLES.sectionHeading}
         >
           Drawer Dimensions
         </h3>
 
         <div className="grid grid-cols-2 gap-3">
           <div>
-            <label className="block text-sm mb-1" style={{ color: 'var(--text-secondary)' }}>
+            <label className="block text-sm mb-1" style={STYLES.label}>
               Width (units)
             </label>
             <input
@@ -54,7 +54,7 @@ export function MobileSettingsPanel() {
             />
           </div>
           <div>
-            <label className="block text-sm mb-1" style={{ color: 'var(--text-secondary)' }}>
+            <label className="block text-sm mb-1" style={STYLES.label}>
               Depth (units)
             </label>
             <input
@@ -73,14 +73,14 @@ export function MobileSettingsPanel() {
       <section>
         <h3
           className="text-xs font-medium uppercase tracking-wide mb-3"
-          style={{ color: 'var(--text-tertiary)' }}
+          style={STYLES.sectionHeading}
         >
           Grid Settings
         </h3>
 
         <div className="space-y-3">
           <div className="flex items-center justify-between">
-            <label className="text-sm" style={{ color: 'var(--text-secondary)' }}>
+            <label className="text-sm" style={STYLES.label}>
               1 grid unit
             </label>
             <div className="flex items-center gap-2">
@@ -92,12 +92,12 @@ export function MobileSettingsPanel() {
                 min={1}
                 max={200}
               />
-              <span style={{ color: 'var(--text-tertiary)' }}>mm</span>
+              <span style={STYLES.unitSuffix}>mm</span>
             </div>
           </div>
 
           <div className="flex items-center justify-between">
-            <label className="text-sm" style={{ color: 'var(--text-secondary)' }}>
+            <label className="text-sm" style={STYLES.label}>
               1u height
             </label>
             <div className="flex items-center gap-2">
@@ -109,12 +109,12 @@ export function MobileSettingsPanel() {
                 min={1}
                 max={50}
               />
-              <span style={{ color: 'var(--text-tertiary)' }}>mm</span>
+              <span style={STYLES.unitSuffix}>mm</span>
             </div>
           </div>
 
           <div className="flex items-center justify-between">
-            <label className="text-sm" style={{ color: 'var(--text-secondary)' }}>
+            <label className="text-sm" style={STYLES.label}>
               Print bed size
             </label>
             <div className="flex items-center gap-2">
@@ -127,13 +127,13 @@ export function MobileSettingsPanel() {
                 max={500}
                 step={10}
               />
-              <span style={{ color: 'var(--text-tertiary)' }}>mm</span>
+              <span style={STYLES.unitSuffix}>mm</span>
             </div>
           </div>
 
           <div
             className="text-sm text-right"
-            style={{ color: 'var(--text-disabled)' }}
+            style={STYLES.hintText}
           >
             Max bin size: {maxGridUnits}×{maxGridUnits}
           </div>
@@ -144,7 +144,7 @@ export function MobileSettingsPanel() {
       <section>
         <h3
           className="text-xs font-medium uppercase tracking-wide mb-3"
-          style={{ color: 'var(--text-tertiary)' }}
+          style={STYLES.sectionHeading}
         >
           Actions
         </h3>
@@ -165,14 +165,14 @@ export function MobileSettingsPanel() {
       {/* Info */}
       <section
         className="pt-4 text-center"
-        style={{ borderTop: '1px solid var(--border-subtle)' }}
+        style={STYLES.divider}
       >
-        <div className="text-xs" style={{ color: 'var(--text-disabled)', lineHeight: '1.6' }}>
+        <div className="text-xs" style={STYLES.footerText}>
           <a
             href="https://www.youtube.com/c/ZackFreedman"
             target="_blank"
             rel="noopener noreferrer"
-            style={{ color: 'var(--text-tertiary)' }}
+            style={STYLES.link}
             className="hover:underline"
           >
             Gridfinity
@@ -184,7 +184,7 @@ export function MobileSettingsPanel() {
             href="https://www.linkedin.com/in/andyhmai/"
             target="_blank"
             rel="noopener noreferrer"
-            style={{ color: 'var(--text-tertiary)' }}
+            style={STYLES.link}
             className="hover:underline"
           >
             Andy Aragon

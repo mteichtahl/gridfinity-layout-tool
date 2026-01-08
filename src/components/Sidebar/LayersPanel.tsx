@@ -1,9 +1,32 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, type CSSProperties } from 'react';
 import { useShallow } from 'zustand/shallow';
 import { useLayoutStore, useUIStore, useUndoableAction } from '../../store';
 import { CONSTRAINTS } from '../../constants';
 import { getDisplayLayers } from '../../utils/collision';
 import { ConfirmDialog } from '../modals/ConfirmDialog';
+
+const STYLES = {
+  panel: { padding: 'var(--space-lg)' } as CSSProperties,
+  sectionHeaderNoMargin: { margin: 0 } as CSSProperties,
+  separatorText: { color: 'var(--text-disabled)', fontSize: 'var(--text-xs)' } as CSSProperties,
+  inputFontXs: { fontSize: 'var(--text-xs)' } as CSSProperties,
+  unitSuffix: { color: 'var(--text-tertiary)', fontSize: 'var(--text-xs)' } as CSSProperties,
+  errorBox: {
+    backgroundColor: 'var(--color-error-muted)',
+    border: '1px solid var(--color-error)',
+    color: 'var(--color-error)',
+    fontSize: 'var(--text-xs)',
+  } as CSSProperties,
+  dragHandle: { color: 'var(--text-disabled)' } as CSSProperties,
+  layerName: { color: 'var(--text-primary)' } as CSSProperties,
+  heightBadge: {
+    backgroundColor: 'var(--bg-elevated)',
+    color: 'var(--text-secondary)',
+  } as CSSProperties,
+  deleteButton: { color: 'var(--text-tertiary)' } as CSSProperties,
+  statsRow: { fontSize: '11px', color: 'var(--text-disabled)' } as CSSProperties,
+  progressBarBg: { backgroundColor: 'var(--bg-elevated)', maxWidth: '60px' } as CSSProperties,
+} as const;
 
 export function LayersPanel() {
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -153,12 +176,10 @@ export function LayersPanel() {
   return (
     <div
       className="panel"
-      style={{
-        padding: 'var(--space-lg)',
-      }}
+      style={STYLES.panel}
     >
       <div className="flex justify-between items-center mb-3">
-        <h2 className="section-header" style={{ margin: 0 }}>Layers</h2>
+        <h2 className="section-header" style={STYLES.sectionHeaderNoMargin}>Layers</h2>
         <div className="flex items-center gap-1">
           <span
             className="text-xs font-medium"
@@ -169,18 +190,18 @@ export function LayersPanel() {
           >
             {totalLayerHeight}
           </span>
-          <span style={{ color: 'var(--text-disabled)', fontSize: 'var(--text-xs)' }}>/</span>
+          <span style={STYLES.separatorText}>/</span>
           <input
             type="number"
             value={drawer.height}
             onChange={(e) => handleDrawerHeightChange(e.target.value)}
             className="input w-10 py-0.5 px-1 text-center"
-            style={{ fontSize: 'var(--text-xs)' }}
+            style={STYLES.inputFontXs}
             min={1}
             title="Drawer height"
             aria-label="Drawer height"
           />
-          <span style={{ color: 'var(--text-tertiary)', fontSize: 'var(--text-xs)' }}>u</span>
+          <span style={STYLES.unitSuffix}>u</span>
         </div>
       </div>
 
@@ -188,12 +209,7 @@ export function LayersPanel() {
       {reorderError && (
         <div
           className="mb-3 p-2 rounded-md flex items-center gap-2 animate-shake"
-          style={{
-            backgroundColor: 'var(--color-error-muted)',
-            border: '1px solid var(--color-error)',
-            color: 'var(--color-error)',
-            fontSize: 'var(--text-xs)',
-          }}
+          style={STYLES.errorBox}
         >
           <svg className="w-4 h-4 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
@@ -255,7 +271,7 @@ export function LayersPanel() {
                 {layers.length > 1 && (
                   <div
                     className="flex-shrink-0 cursor-grab active:cursor-grabbing"
-                    style={{ color: 'var(--text-disabled)' }}
+                    style={STYLES.dragHandle}
                   >
                     <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20">
                       <path d="M7 2a2 2 0 1 0 .001 4.001A2 2 0 0 0 7 2zm0 6a2 2 0 1 0 .001 4.001A2 2 0 0 0 7 8zm0 6a2 2 0 1 0 .001 4.001A2 2 0 0 0 7 14zm6-8a2 2 0 1 0-.001-4.001A2 2 0 0 0 13 6zm0 2a2 2 0 1 0 .001 4.001A2 2 0 0 0 13 8zm0 6a2 2 0 1 0 .001 4.001A2 2 0 0 0 13 14z" />
@@ -278,7 +294,7 @@ export function LayersPanel() {
                 ) : (
                   <span
                     className="flex-1 min-w-0 text-sm truncate"
-                    style={{ color: 'var(--text-primary)' }}
+                    style={STYLES.layerName}
                     onDoubleClick={(e) => { e.stopPropagation(); setEditingId(layer.id); }}
                     title="Double-click to rename"
                   >
@@ -302,10 +318,7 @@ export function LayersPanel() {
                 ) : (
                   <span
                     className="flex-shrink-0 px-2 py-0.5 rounded text-xs"
-                    style={{
-                      backgroundColor: 'var(--bg-elevated)',
-                      color: 'var(--text-secondary)',
-                    }}
+                    style={STYLES.heightBadge}
                     onDoubleClick={(e) => { e.stopPropagation(); setEditingId(`${layer.id}-height`); }}
                     title="Double-click to edit height"
                   >
@@ -318,7 +331,7 @@ export function LayersPanel() {
                   <button
                     onClick={(e) => handleDeleteLayer(layer.id, e)}
                     className="flex-shrink-0 p-1 rounded opacity-0 group-hover:opacity-100 transition-opacity"
-                    style={{ color: 'var(--text-tertiary)' }}
+                    style={STYLES.deleteButton}
                     onMouseEnter={(e) => { e.currentTarget.style.color = 'var(--color-error)'; }}
                     onMouseLeave={(e) => { e.currentTarget.style.color = 'var(--text-tertiary)'; }}
                     aria-label={`Delete ${layer.name}`}
@@ -333,17 +346,13 @@ export function LayersPanel() {
               {/* Stats row */}
               <div
                 className="flex items-center gap-3 mt-1.5"
-                style={{
-                  fontSize: '11px',
-                  color: 'var(--text-disabled)',
-                  marginLeft: layers.length > 1 ? '22px' : '0',
-                }}
+                style={{ ...STYLES.statsRow, marginLeft: layers.length > 1 ? '22px' : '0' }}
               >
                 <span>{binCount} bin{binCount !== 1 ? 's' : ''}</span>
                 <div className="flex items-center gap-1.5 flex-1">
                   <div
                     className="flex-1 h-1 rounded-full overflow-hidden"
-                    style={{ backgroundColor: 'var(--bg-elevated)', maxWidth: '60px' }}
+                    style={STYLES.progressBarBg}
                   >
                     <div
                       className="h-full rounded-full"

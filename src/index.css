@@ -1,5 +1,66 @@
 @import "tailwindcss";
 
+/* Extend Tailwind with CSS variable mappings using semantic naming */
+@theme {
+  /* Surface colors (backgrounds) - use as bg-surface, bg-surface-secondary, etc. */
+  --color-surface: var(--bg-primary);
+  --color-surface-secondary: var(--bg-secondary);
+  --color-surface-elevated: var(--bg-elevated);
+  --color-surface-hover: var(--bg-hover);
+  --color-surface-active: var(--bg-active);
+
+  /* Content colors (text) - use as text-content, text-content-secondary, etc. */
+  --color-content: var(--text-primary);
+  --color-content-secondary: var(--text-secondary);
+  --color-content-tertiary: var(--text-tertiary);
+  --color-content-disabled: var(--text-disabled);
+  --color-on-light: var(--text-on-light);
+  --color-on-dark: var(--text-on-dark);
+  --color-on-dark-muted: var(--text-on-dark-muted);
+
+  /* Stroke colors (borders) - use as border-stroke, border-stroke-subtle, etc. */
+  --color-stroke: var(--border-default);
+  --color-stroke-subtle: var(--border-subtle);
+  --color-stroke-strong: var(--border-strong);
+  --color-stroke-on-color: var(--border-on-color);
+
+  /* Semantic colors - use as text-success, bg-error, etc. */
+  --color-success: var(--color-success);
+  --color-warning: var(--color-warning);
+  --color-error: var(--color-error);
+  --color-danger: var(--color-danger);
+  --color-info: var(--color-info);
+  --color-accent: var(--color-primary);
+  --color-accent-hover: var(--color-primary-hover);
+
+  /* Muted semantic colors */
+  --color-success-muted: var(--color-success-muted);
+  --color-warning-muted: var(--color-warning-muted);
+  --color-error-muted: var(--color-error-muted);
+  --color-danger-muted: var(--color-danger-muted);
+  --color-info-muted: var(--color-info-muted);
+  --color-accent-muted: var(--color-primary-muted);
+
+  /* Overlay colors - use as bg-overlay-light, etc. */
+  --color-overlay-light: var(--overlay-light);
+  --color-overlay-medium: var(--overlay-medium);
+  --color-overlay-dark: var(--overlay-dark);
+
+  /* Grid colors */
+  --color-grid-bg: var(--grid-bg);
+  --color-grid-cell: var(--grid-cell);
+  --color-grid-cell-hover: var(--grid-cell-hover);
+
+  /* Staging colors */
+  --color-staging-bg: var(--staging-bg);
+  --color-staging-cell: var(--staging-cell);
+
+  /* Selection colors */
+  --color-selection-ring: var(--selection-ring);
+  --color-selection-glow: var(--selection-glow);
+  --color-selection-bg: var(--selection-bg);
+}
+
 :root {
   /* ===========================================
      DESIGN TOKENS - Gridfinity Layout Tool

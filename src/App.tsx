@@ -140,12 +140,12 @@ export default function App() {
   // Mobile layout
   if (isMobile) {
     return (
-      <div className="h-screen flex flex-col overflow-hidden" style={{ backgroundColor: 'var(--bg-primary)', color: 'var(--text-primary)' }}>
+      <div className="h-screen flex flex-col overflow-hidden bg-surface text-content">
         {/* Mobile Header */}
         <MobileHeader onMenuClick={() => setActiveMobilePanel('settings')} />
 
         {/* Main content area - Grid takes full width */}
-        <main className="flex-1 flex flex-col overflow-hidden" style={{ backgroundColor: 'var(--bg-primary)' }}>
+        <main className="flex-1 flex flex-col overflow-hidden bg-surface">
           <Grid />
           <Staging />
         </main>
@@ -201,13 +201,13 @@ export default function App() {
   // Tablet layout - full width grid with overlay panels
   if (isTablet) {
     return (
-      <div className="h-screen flex flex-col overflow-hidden" style={{ backgroundColor: 'var(--bg-primary)', color: 'var(--text-primary)' }}>
+      <div className="h-screen flex flex-col overflow-hidden bg-surface text-content">
         {/* Header */}
         <Header onHelpClick={() => setIsHelpOpen(true)} />
 
         {/* Main content area - Grid takes full width */}
         <div className="flex-1 flex overflow-hidden">
-          <main className="flex-1 flex flex-col overflow-hidden" style={{ backgroundColor: 'var(--bg-primary)' }}>
+          <main className="flex-1 flex flex-col overflow-hidden bg-surface">
             <Grid />
             <Staging />
           </main>
@@ -274,7 +274,7 @@ export default function App() {
 
   // Desktop layout (unchanged)
   return (
-    <div className="h-screen flex flex-col overflow-hidden" style={{ backgroundColor: 'var(--bg-primary)', color: 'var(--text-primary)' }}>
+    <div className="h-screen flex flex-col overflow-hidden bg-surface text-content">
       {/* Header */}
       <Header onHelpClick={() => setIsHelpOpen(true)} />
 
@@ -284,7 +284,7 @@ export default function App() {
         <Sidebar />
 
         {/* Grid area */}
-        <main className="flex-1 flex flex-col overflow-hidden" style={{ backgroundColor: 'var(--bg-primary)' }}>
+        <main className="flex-1 flex flex-col overflow-hidden bg-surface">
           <Grid />
           <Staging />
         </main>
