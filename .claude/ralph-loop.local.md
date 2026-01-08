@@ -1,9 +1,9 @@
 ---
 active: true
 iteration: 1
-max_iterations: 20
+max_iterations: 15
 completion_promise: "DONE"
-started_at: "2026-01-08T07:25:11Z"
+started_at: "2026-01-08T07:30:41Z"
 ---
 
-Convert inline arrow functions in onClick handlers to useCallback where the handler is passed to child components. Focus on Grid/index.tsx, RightPanel.tsx, and LayersPanel.tsx. Output <promise>DONE</promise> when npm run build passes.
+Extract inline style objects in RightPanel.tsx to module-level STYLES constant, similar to how Grid/index.tsx does it. Focus on repeated patterns like fontSize, color combinations. Output <promise>DONE</promise> when npm run build passes.
