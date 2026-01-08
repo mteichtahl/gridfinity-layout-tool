@@ -4,6 +4,7 @@ import { useUIStore, useLayoutStore, useUndoableAction } from '../store';
 import { STAGING_ID, CONSTRAINTS, calcMaxGridUnits } from '../constants';
 import { generatePrintList, getTotalBins, getTotalPieces, getTotalFilament, getSpoolEstimate } from '../utils/split';
 import { getLayerZStart } from '../utils/collision';
+import { clamp } from '../utils/validation';
 import { exportPrintListTSV } from '../utils/storage';
 import { ConfirmDialog } from './modals/ConfirmDialog';
 import type { PrintPiece } from '../types';
@@ -222,7 +223,7 @@ export function RightPanel() {
         updateBin(bin.id, { [field]: Math.max(1, parseInt(value as string, 10) || 1) });
       } else if (field === 'height') {
         const minHeight = layer?.height || 1;
-        const newHeight = Math.max(minHeight, Math.min(maxBinHeight, typeof value === 'number' ? value : parseInt(value, 10) || minHeight));
+        const newHeight = clamp(typeof value === 'number' ? value : parseInt(value, 10) || minHeight, minHeight, maxBinHeight);
         updateBin(bin.id, { height: newHeight });
       } else {
         updateBin(bin.id, { [field]: value });

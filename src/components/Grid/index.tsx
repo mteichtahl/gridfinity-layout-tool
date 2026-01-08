@@ -3,6 +3,7 @@ import { useShallow } from 'zustand/shallow';
 import { useUIStore, useLayoutStore, useUndoableAction } from '../../store';
 import { useInteraction, useResponsive } from '../../hooks';
 import { BASE_CELL_SIZE, STAGING_ID, CONSTRAINTS } from '../../constants';
+import { clamp } from '../../utils/validation';
 import { GridCanvas } from './GridCanvas';
 import { Overlay } from './Overlay';
 import { ConfirmDialog } from '../modals/ConfirmDialog';
@@ -12,14 +13,46 @@ type ResizeDirection = 'width' | 'depth' | 'both' | null;
 
 // Frequently-used style constants
 const STYLES = {
+  // Text styles
   textXsTertiary: { fontSize: 'var(--text-xs)', color: 'var(--text-tertiary)' } as CSSProperties,
   textSmTertiary: { fontSize: 'var(--text-sm)', color: 'var(--text-tertiary)' } as CSSProperties,
   textSmPrimary: { fontSize: 'var(--text-sm)', color: 'var(--text-primary)' } as CSSProperties,
   textSmSecondary: { fontSize: 'var(--text-sm)', color: 'var(--text-secondary)' } as CSSProperties,
+  textSmMedium: { fontSize: 'var(--text-sm)', fontWeight: 'var(--font-medium)' } as CSSProperties,
+  // Button styles
   buttonSmall: { padding: '4px', minWidth: '28px', minHeight: '28px' } as CSSProperties,
   buttonMedium: { padding: '6px', minWidth: '32px', minHeight: '32px' } as CSSProperties,
   buttonCompact: { minWidth: 'auto', minHeight: 'auto' } as CSSProperties,
-  borderSubtle: { borderBottom: '1px solid var(--border-subtle)' } as CSSProperties,
+  fitButton: { padding: '6px 10px', fontSize: 'var(--text-xs)' } as CSSProperties,
+  // Container styles
+  bgPrimary: { backgroundColor: 'var(--bg-primary)' } as CSSProperties,
+  bgSecondary: { backgroundColor: 'var(--bg-secondary)' } as CSSProperties,
+  toolbar: { backgroundColor: 'var(--bg-secondary)', borderBottom: '1px solid var(--border-subtle)' } as CSSProperties,
+  elevatedBox: { backgroundColor: 'var(--bg-elevated)', border: '1px solid var(--border-subtle)' } as CSSProperties,
+  // Indicators
+  primaryDot: { backgroundColor: 'var(--color-primary)' } as CSSProperties,
+  colorPrimary: { color: 'var(--color-primary)' } as CSSProperties,
+  colorTertiary: { color: 'var(--text-tertiary)' } as CSSProperties,
+  // Checkboxes
+  checkboxAccent: { accentColor: 'var(--color-primary)' } as CSSProperties,
+  // Empty state
+  emptyStateOverlay: { zIndex: 5 } as CSSProperties,
+  emptyStateBox: { backgroundColor: 'rgba(15, 15, 18, 0.85)', backdropFilter: 'blur(4px)' } as CSSProperties,
+  emptyStateIcon: { backgroundColor: 'var(--bg-hover)' } as CSSProperties,
+  emptyStateTitle: { color: 'var(--text-secondary)', fontSize: 'var(--text-sm)' } as CSSProperties,
+  emptyStateHint: { color: 'var(--text-disabled)', fontSize: 'var(--text-xs)' } as CSSProperties,
+  emptyStateSubhint: { color: 'var(--text-disabled)', fontSize: '10px', marginTop: '4px' } as CSSProperties,
+  // Paint mode
+  paintModeText: { fontSize: 'var(--text-sm)', color: 'var(--color-primary)', fontWeight: 'var(--font-medium)' } as CSSProperties,
+  // Label buttons (for row/column selection)
+  labelButtonBase: {
+    fontWeight: 'var(--font-medium)',
+    color: 'var(--text-tertiary)',
+    fontVariantNumeric: 'tabular-nums',
+    background: 'transparent',
+    border: 'none',
+    cursor: 'pointer',
+  } as CSSProperties,
 } as const;
 
 /**
@@ -143,7 +176,7 @@ export function Grid() {
 
   // Dimension change handlers
   const handleDimensionChange = (field: 'width' | 'depth', delta: number) => {
-    const newValue = Math.max(1, Math.min(CONSTRAINTS.GRID_MAX, drawer[field] + delta));
+    const newValue = clamp(drawer[field] + delta, 1, CONSTRAINTS.GRID_MAX);
     if (newValue !== drawer[field]) {
       const newWidth = field === 'width' ? newValue : drawer.width;
       const newDepth = field === 'depth' ? newValue : drawer.depth;
@@ -180,14 +213,14 @@ export function Grid() {
 
       if (resizeDirection === 'width' || resizeDirection === 'both') {
         const widthDelta = Math.round(dx / cellStep);
-        const newWidth = Math.max(1, Math.min(CONSTRAINTS.GRID_MAX, resizeStart.width + widthDelta));
+        const newWidth = clamp(resizeStart.width + widthDelta, 1, CONSTRAINTS.GRID_MAX);
         if (newWidth !== currentDrawer.width) updates.width = newWidth;
       }
 
       if (resizeDirection === 'depth' || resizeDirection === 'both') {
         // Depth increases downward visually (positive dy = increase depth)
         const depthDelta = Math.round(dy / cellStep);
-        const newDepth = Math.max(1, Math.min(CONSTRAINTS.GRID_MAX, resizeStart.depth + depthDelta));
+        const newDepth = clamp(resizeStart.depth + depthDelta, 1, CONSTRAINTS.GRID_MAX);
         if (newDepth !== currentDrawer.depth) updates.depth = newDepth;
       }
 
@@ -308,33 +341,27 @@ export function Grid() {
   const rowLabels = Array.from({ length: drawer.depth }, (_, i) => drawer.depth - i);
 
   return (
-    <div className="flex flex-col h-full" style={{ backgroundColor: 'var(--bg-primary)' }}>
+    <div className="flex flex-col h-full" style={STYLES.bgPrimary}>
       {/* Toolbar - mobile vs desktop */}
       {isMobile ? (
         <MobileGridToolbar onFitToScreen={fitToScreen} />
       ) : (
         <div
           className="flex items-center justify-between px-4 py-3"
-          style={{
-            backgroundColor: 'var(--bg-secondary)',
-            borderBottom: '1px solid var(--border-subtle)',
-          }}
+          style={STYLES.toolbar}
         >
           {/* Left: Layer indicator */}
           <div className="flex items-center gap-3">
             {activeLayer && (
               <div
                 className="flex items-center gap-2 px-3 py-1.5 rounded-md"
-                style={{
-                  backgroundColor: 'var(--bg-elevated)',
-                  border: '1px solid var(--border-subtle)',
-                }}
+                style={STYLES.elevatedBox}
               >
                 <div
                   className="w-2 h-2 rounded-full"
-                  style={{ backgroundColor: 'var(--color-primary)' }}
+                  style={STYLES.primaryDot}
                 />
-                <span style={{ fontSize: 'var(--text-sm)', fontWeight: 'var(--font-medium)' }}>
+                <span style={STYLES.textSmMedium}>
                   {activeLayer.name}
                 </span>
                 <span style={STYLES.textXsTertiary}>
@@ -353,10 +380,10 @@ export function Grid() {
               {paintSize ? (
                 <>
                   {/* Paint brush icon */}
-                  <svg className="w-4 h-4" style={{ color: 'var(--color-primary)' }} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <svg className="w-4 h-4" style={STYLES.colorPrimary} fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
                   </svg>
-                  <span style={{ fontSize: 'var(--text-sm)', color: 'var(--color-primary)', fontWeight: 'var(--font-medium)' }}>
+                  <span style={STYLES.paintModeText}>
                     Paint {paintSize.width}×{paintSize.depth}
                   </span>
                   <button
@@ -373,7 +400,7 @@ export function Grid() {
               ) : (
                 <>
                   {/* Pencil/draw icon */}
-                  <svg className="w-4 h-4" style={{ color: 'var(--text-tertiary)' }} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <svg className="w-4 h-4" style={STYLES.colorTertiary} fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
                   </svg>
                   <span style={STYLES.textSmTertiary}>
@@ -386,10 +413,7 @@ export function Grid() {
             {/* Grid dimensions */}
             <div
               className="flex items-center gap-1 px-2 py-1 rounded-md"
-              style={{
-                backgroundColor: 'var(--bg-elevated)',
-                border: '1px solid var(--border-subtle)',
-              }}
+              style={STYLES.elevatedBox}
             >
               <span style={STYLES.textXsTertiary}>Grid</span>
               <div className="flex items-center">
@@ -397,7 +421,7 @@ export function Grid() {
                   onClick={() => handleDimensionChange('width', -1)}
                   disabled={drawer.width <= 1}
                   className="btn btn-ghost btn-icon"
-                  style={{ padding: '4px', minWidth: '28px', minHeight: '28px' }}
+                  style={STYLES.buttonSmall}
                   aria-label="Decrease width"
                 >
                   <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -406,7 +430,7 @@ export function Grid() {
                 </button>
                 <span
                   className="min-w-[28px] text-center font-medium tabular-nums"
-                  style={{ fontSize: 'var(--text-sm)', color: 'var(--text-primary)' }}
+                  style={STYLES.textSmPrimary}
                 >
                   {drawer.width}
                 </span>
@@ -414,7 +438,7 @@ export function Grid() {
                   onClick={() => handleDimensionChange('width', 1)}
                   disabled={drawer.width >= CONSTRAINTS.GRID_MAX}
                   className="btn btn-ghost btn-icon"
-                  style={{ padding: '4px', minWidth: '28px', minHeight: '28px' }}
+                  style={STYLES.buttonSmall}
                   aria-label="Increase width"
                 >
                   <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -428,7 +452,7 @@ export function Grid() {
                   onClick={() => handleDimensionChange('depth', -1)}
                   disabled={drawer.depth <= 1}
                   className="btn btn-ghost btn-icon"
-                  style={{ padding: '4px', minWidth: '28px', minHeight: '28px' }}
+                  style={STYLES.buttonSmall}
                   aria-label="Decrease depth"
                 >
                   <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -437,7 +461,7 @@ export function Grid() {
                 </button>
                 <span
                   className="min-w-[28px] text-center font-medium tabular-nums"
-                  style={{ fontSize: 'var(--text-sm)', color: 'var(--text-primary)' }}
+                  style={STYLES.textSmPrimary}
                 >
                   {drawer.depth}
                 </span>
@@ -445,7 +469,7 @@ export function Grid() {
                   onClick={() => handleDimensionChange('depth', 1)}
                   disabled={drawer.depth >= CONSTRAINTS.GRID_MAX}
                   className="btn btn-ghost btn-icon"
-                  style={{ padding: '4px', minWidth: '28px', minHeight: '28px' }}
+                  style={STYLES.buttonSmall}
                   aria-label="Increase depth"
                 >
                   <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -461,7 +485,7 @@ export function Grid() {
             {/* Show labels toggle */}
             <label
               className="flex items-center gap-2 cursor-pointer select-none transition-colors"
-              style={{ fontSize: 'var(--text-sm)', color: 'var(--text-secondary)' }}
+              style={STYLES.textSmSecondary}
               title="Show bin labels on the grid"
             >
               <input
@@ -469,9 +493,7 @@ export function Grid() {
                 checked={showLabels}
                 onChange={toggleShowLabels}
                 className="w-4 h-4 rounded"
-                style={{
-                  accentColor: 'var(--color-primary)',
-                }}
+                style={STYLES.checkboxAccent}
               />
               Labels
             </label>
@@ -479,7 +501,7 @@ export function Grid() {
             {/* Show other layers toggle */}
             <label
               className="flex items-center gap-2 cursor-pointer select-none transition-colors"
-              style={{ fontSize: 'var(--text-sm)', color: 'var(--text-secondary)' }}
+              style={STYLES.textSmSecondary}
               title="Show ghost outlines of bins on layers below (helps see blocked zones)"
             >
               <input
@@ -487,9 +509,7 @@ export function Grid() {
                 checked={showOtherLayers}
                 onChange={toggleShowOtherLayers}
                 className="w-4 h-4 rounded"
-                style={{
-                  accentColor: 'var(--color-primary)',
-                }}
+                style={STYLES.checkboxAccent}
               />
               Layers below
             </label>
@@ -533,7 +553,7 @@ export function Grid() {
               <button
                 onClick={fitToScreen}
                 className="btn btn-secondary"
-                style={{ padding: '6px 10px', fontSize: 'var(--text-xs)' }}
+                style={STYLES.fitButton}
                 aria-label="Fit grid to screen"
                 title="Fit to screen"
               >
@@ -548,7 +568,7 @@ export function Grid() {
       <div
         ref={scrollContainerRef}
         className="flex-1 overflow-auto p-6"
-        style={{ backgroundColor: 'var(--bg-primary)' }}
+        style={STYLES.bgPrimary}
         onClick={(e) => {
           // Only deselect if clicking directly on this container (not children)
           if (e.target === e.currentTarget) {
@@ -633,22 +653,19 @@ export function Grid() {
               {isEmpty && (
                 <div
                   className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none"
-                  style={{ zIndex: 5 }}
+                  style={STYLES.emptyStateOverlay}
                 >
                   <div
                     className="flex flex-col items-center p-6 rounded-xl max-w-xs text-center"
-                    style={{
-                      backgroundColor: 'rgba(15, 15, 18, 0.85)',
-                      backdropFilter: 'blur(4px)',
-                    }}
+                    style={STYLES.emptyStateBox}
                   >
                     <div
                       className="w-12 h-12 mb-4 flex items-center justify-center rounded-lg"
-                      style={{ backgroundColor: 'var(--bg-hover)' }}
+                      style={STYLES.emptyStateIcon}
                     >
                       <svg
                         className="w-6 h-6"
-                        style={{ color: 'var(--text-tertiary)' }}
+                        style={STYLES.colorTertiary}
                         fill="none"
                         viewBox="0 0 24 24"
                         stroke="currentColor"
@@ -659,18 +676,18 @@ export function Grid() {
                     </div>
                     <p
                       className="font-medium mb-1"
-                      style={{ color: 'var(--text-secondary)', fontSize: 'var(--text-sm)' }}
+                      style={STYLES.emptyStateTitle}
                     >
                       {isMobile ? 'Tap and drag to draw a bin' : 'Click and drag to draw a bin'}
                     </p>
-                    <p style={{ color: 'var(--text-disabled)', fontSize: 'var(--text-xs)' }}>
+                    <p style={STYLES.emptyStateHint}>
                       {isFirstLayer
                         ? (isMobile ? 'Or use Layers tab to select a size' : 'Or select a size from the Bin Palette on the left')
                         : 'Striped cells are blocked by tall bins from layers below'
                       }
                     </p>
                     {!isFirstLayer && (
-                      <p style={{ color: 'var(--text-disabled)', fontSize: '10px', marginTop: '4px' }}>
+                      <p style={STYLES.emptyStateSubhint}>
                         Toggle "Layers below" to see blocked zones
                       </p>
                     )}

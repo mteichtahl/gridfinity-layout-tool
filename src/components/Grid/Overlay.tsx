@@ -1,5 +1,6 @@
 import type { RefObject } from 'react';
 import { useUIStore, useLayoutStore } from '../../store';
+import { clamp } from '../../utils/validation';
 
 interface OverlayProps {
   gridRef: RefObject<HTMLDivElement | null>;
@@ -76,8 +77,8 @@ export function Overlay({ cellSize, gap }: OverlayProps) {
         const bin = bins.find((b) => b.id === binId);
         if (!bin) continue;
 
-        const newX = Math.max(0, Math.min(bin.x + deltaX, drawer.width - bin.width));
-        const newY = Math.max(0, Math.min(bin.y + deltaY, drawer.depth - bin.depth));
+        const newX = clamp(bin.x + deltaX, 0, drawer.width - bin.width);
+        const newY = clamp(bin.y + deltaY, 0, drawer.depth - bin.depth);
 
         const left = gap + newX * (cellSize + gap);
         const top = gap + (drawer.depth - newY - bin.depth) * (cellSize + gap);

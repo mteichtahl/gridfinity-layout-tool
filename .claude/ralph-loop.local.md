@@ -1,9 +1,9 @@
 ---
 active: true
 iteration: 1
-max_iterations: 5
+max_iterations: 10
 completion_promise: "DONE"
-started_at: "2026-01-08T07:39:36Z"
+started_at: "2026-01-08T07:42:01Z"
 ---
 
-Fix ESLint errors - run npm run lint and fix all errors until it passes with 0 errors. Output <promise>DONE</promise> when npm run lint shows no errors.
+Extract inline styles from src/components/Grid/index.tsx to a module-level STYLES constant. Keep only dynamic styles inline (those using variables or props). Output <promise>DONE</promise> when npm run build passes.

@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import type { Interaction } from '../types';
 import { CONSTRAINTS } from '../constants';
+import { clamp } from '../utils/validation';
 
 export type DropTarget = 'trash' | 'staging' | null;
 
@@ -127,7 +128,7 @@ export const useUIStore = create<UIState>((set) => ({
   setActiveCategory: (id) => set({ activeCategoryId: id }),
 
   setZoom: (zoom) => set({
-    zoom: Math.max(CONSTRAINTS.ZOOM_MIN, Math.min(CONSTRAINTS.ZOOM_MAX, zoom))
+    zoom: clamp(zoom, CONSTRAINTS.ZOOM_MIN, CONSTRAINTS.ZOOM_MAX)
   }),
 
   zoomIn: () => set(state => ({

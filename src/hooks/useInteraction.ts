@@ -3,7 +3,7 @@ import type { RefObject } from 'react';
 import type { Coord, Rect, ResizeHandle } from '../types';
 import { useUIStore, useLayoutStore, useUndoableAction } from '../store';
 import { useGridCoords } from './useGridCoords';
-import { canPlaceBin } from '../utils/validation';
+import { canPlaceBin, clamp } from '../utils/validation';
 import { STAGING_ID } from '../constants';
 
 export function useInteraction(gridRef: RefObject<HTMLDivElement | null>) {
@@ -150,8 +150,8 @@ export function useInteraction(gridRef: RefObject<HTMLDivElement | null>) {
             const bin = layout.bins.find(b => b.id === binId);
             if (!bin) continue;
 
-            const newX = Math.max(0, Math.min(bin.x + deltaX, layout.drawer.width - bin.width));
-            const newY = Math.max(0, Math.min(bin.y + deltaY, layout.drawer.depth - bin.depth));
+            const newX = clamp(bin.x + deltaX, 0, layout.drawer.width - bin.width);
+            const newY = clamp(bin.y + deltaY, 0, layout.drawer.depth - bin.depth);
 
             // Check placement excluding all bins being dragged
             const result = canPlaceBin(
@@ -170,8 +170,8 @@ export function useInteraction(gridRef: RefObject<HTMLDivElement | null>) {
         }
 
         // Calculate new position for primary bin (used for preview)
-        const newX = Math.max(0, Math.min(primaryBin.x + deltaX, layout.drawer.width - primaryBin.width));
-        const newY = Math.max(0, Math.min(primaryBin.y + deltaY, layout.drawer.depth - primaryBin.depth));
+        const newX = clamp(primaryBin.x + deltaX, 0, layout.drawer.width - primaryBin.width);
+        const newY = clamp(primaryBin.y + deltaY, 0, layout.drawer.depth - primaryBin.depth);
 
         setInteraction({
           ...interaction,
@@ -222,8 +222,8 @@ export function useInteraction(gridRef: RefObject<HTMLDivElement | null>) {
         if (!bin) return;
 
         // Calculate where the bin would be placed (centered on cursor)
-        const targetX = Math.max(0, Math.min(clamped.x, layout.drawer.width - bin.width));
-        const targetY = Math.max(0, Math.min(clamped.y, layout.drawer.depth - bin.depth));
+        const targetX = clamp(clamped.x, 0, layout.drawer.width - bin.width);
+        const targetY = clamp(clamped.y, 0, layout.drawer.depth - bin.depth);
 
         // Validate placement
         const result = canPlaceBin(
@@ -390,8 +390,8 @@ export function useInteraction(gridRef: RefObject<HTMLDivElement | null>) {
                 const bin = layout.bins.find(b => b.id === binId);
                 if (!bin) continue;
 
-                const newX = Math.max(0, Math.min(bin.x + deltaX, layout.drawer.width - bin.width));
-                const newY = Math.max(0, Math.min(bin.y + deltaY, layout.drawer.depth - bin.depth));
+                const newX = clamp(bin.x + deltaX, 0, layout.drawer.width - bin.width);
+                const newY = clamp(bin.y + deltaY, 0, layout.drawer.depth - bin.depth);
 
                 updateBin(binId, {
                   x: newX,

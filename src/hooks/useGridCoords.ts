@@ -3,6 +3,7 @@ import type { RefObject } from 'react';
 import type { Coord } from '../types';
 import { useUIStore, useLayoutStore } from '../store';
 import { BASE_CELL_SIZE } from '../constants';
+import { clamp } from '../utils/validation';
 
 /**
  * Convert mouse position to grid coordinates.
@@ -30,8 +31,8 @@ export function useGridCoords(gridRef: RefObject<HTMLDivElement | null>) {
   }, [gridRef, cellSize, drawer.depth]);
 
   const clampCoords = useCallback((coord: Coord): Coord => ({
-    x: Math.max(0, Math.min(coord.x, drawer.width - 1)),
-    y: Math.max(0, Math.min(coord.y, drawer.depth - 1)),
+    x: clamp(coord.x, 0, drawer.width - 1),
+    y: clamp(coord.y, 0, drawer.depth - 1),
   }), [drawer.width, drawer.depth]);
 
   const isInBounds = useCallback((coord: Coord): boolean => {
