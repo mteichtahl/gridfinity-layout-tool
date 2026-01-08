@@ -76,20 +76,14 @@ export function Header({ onHelpClick }: HeaderProps) {
   const modKey = isMac ? '⌘' : 'Ctrl';
 
   return (
-    <header
-      className="h-12 flex items-center justify-between px-4"
-      style={{
-        backgroundColor: 'var(--bg-secondary)',
-        borderBottom: '1px solid var(--border-subtle)'
-      }}
-    >
+    <header className="h-12 flex items-center justify-between px-4 bg-surface-secondary border-b border-stroke-subtle">
       <div className="flex items-center gap-4">
-        <h1 className="text-lg font-semibold" style={{ color: 'var(--text-primary)' }}>
+        <h1 className="text-lg font-semibold text-content">
           Gridfinity Layout Tool
         </h1>
 
         {/* Divider */}
-        <div className="w-px h-6" style={{ backgroundColor: 'var(--border-subtle)' }} />
+        <div className="w-px h-6 bg-stroke-subtle" />
 
         {/* Layout name */}
         {isEditing ? (
@@ -101,30 +95,15 @@ export function Header({ onHelpClick }: HeaderProps) {
             onBlur={handleNameSubmit}
             onKeyDown={handleNameKeyDown}
             maxLength={CONSTRAINTS.NAME_MAX_LENGTH}
-            className="px-3 py-1.5 rounded-md text-sm transition-all"
+            className="px-3 py-1.5 rounded-md text-sm transition-all bg-surface-elevated border border-accent text-content"
             style={{
-              backgroundColor: 'var(--bg-elevated)',
-              border: '1px solid var(--color-primary)',
-              color: 'var(--text-primary)',
               boxShadow: '0 0 0 3px var(--color-primary-muted)'
             }}
           />
         ) : (
           <button
             onClick={handleNameClick}
-            className="px-3 py-1.5 text-sm rounded-md transition-all hover:scale-[1.02]"
-            style={{
-              color: 'var(--text-secondary)',
-              backgroundColor: 'transparent'
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.backgroundColor = 'var(--bg-hover)';
-              e.currentTarget.style.color = 'var(--text-primary)';
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.backgroundColor = 'transparent';
-              e.currentTarget.style.color = 'var(--text-secondary)';
-            }}
+            className="px-3 py-1.5 text-sm rounded-md transition-all hover:scale-[1.02] text-content-secondary bg-transparent hover:bg-surface-hover hover:text-content"
             title="Click to edit layout name"
           >
             {layout.name}
@@ -135,11 +114,10 @@ export function Header({ onHelpClick }: HeaderProps) {
       <div className="flex items-center gap-1">
         {/* Tablet panel toggle buttons */}
         {isTablet && (
-          <div className="flex items-center mr-2" style={{ borderRight: '1px solid var(--border-subtle)', paddingRight: '8px' }}>
+          <div className="flex items-center mr-2 border-r border-stroke-subtle pr-2">
             <button
               onClick={toggleLeftPanel}
-              className="btn btn-ghost btn-icon"
-              style={!leftPanelCollapsed ? { backgroundColor: 'var(--bg-hover)' } : undefined}
+              className={`btn btn-ghost btn-icon ${!leftPanelCollapsed ? 'bg-surface-hover' : ''}`}
               title="Toggle sidebar panel"
               aria-label="Toggle sidebar panel"
               aria-pressed={!leftPanelCollapsed}
@@ -150,8 +128,7 @@ export function Header({ onHelpClick }: HeaderProps) {
             </button>
             <button
               onClick={toggleRightPanel}
-              className="btn btn-ghost btn-icon"
-              style={!rightPanelCollapsed ? { backgroundColor: 'var(--bg-hover)' } : undefined}
+              className={`btn btn-ghost btn-icon ${!rightPanelCollapsed ? 'bg-surface-hover' : ''}`}
               title="Toggle inspector panel"
               aria-label="Toggle inspector panel"
               aria-pressed={!rightPanelCollapsed}
@@ -164,7 +141,7 @@ export function Header({ onHelpClick }: HeaderProps) {
         )}
 
         {/* Undo/Redo buttons */}
-        <div className="flex items-center mr-2" style={{ borderRight: '1px solid var(--border-subtle)', paddingRight: '8px' }}>
+        <div className="flex items-center mr-2 border-r border-stroke-subtle pr-2">
           <button
             onClick={undo}
             disabled={!canUndo}

@@ -164,47 +164,33 @@ export function Staging() {
 
   return (
     <div
-      className="px-4 py-3 overflow-x-auto"
+      className="px-4 py-3 overflow-x-auto border-t-2 border-dashed border-stroke"
       style={{
         backgroundColor: 'var(--bg-tertiary)',
-        borderTop: '2px dashed var(--border-default)',
       }}
     >
       {/* Header */}
       <div className="flex items-center justify-between mb-2">
         <div className="flex items-center gap-2">
           <svg
-            className="w-4 h-4"
-            style={{ color: 'var(--text-tertiary)' }}
+            className="w-4 h-4 text-content-tertiary"
             fill="none"
             viewBox="0 0 24 24"
             stroke="currentColor"
           >
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
           </svg>
-          <span style={{ fontSize: 'var(--text-sm)', color: 'var(--text-secondary)', fontWeight: 'var(--font-medium)' }}>
+          <span className="text-sm text-content-secondary font-medium">
             Staging
           </span>
-          <span
-            className="px-1.5 py-0.5 rounded"
-            style={{
-              fontSize: 'var(--text-xs)',
-              backgroundColor: 'var(--bg-hover)',
-              color: 'var(--text-tertiary)',
-            }}
-          >
+          <span className="px-1.5 py-0.5 rounded text-xs bg-surface-hover text-content-tertiary">
             {stagingBins.length} {stagingBins.length === 1 ? 'bin' : 'bins'}
           </span>
         </div>
 
         <button
           onClick={() => setShowClearConfirm(true)}
-          className="btn btn-ghost flex items-center gap-1.5"
-          style={{
-            padding: '4px 8px',
-            fontSize: 'var(--text-xs)',
-            color: 'var(--text-tertiary)',
-          }}
+          className="btn btn-ghost flex items-center gap-1.5 p-[4px_8px] text-xs text-content-tertiary"
         >
           <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />

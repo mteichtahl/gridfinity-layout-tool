@@ -11,63 +11,59 @@ Replace inline styles using CSS variables with Tailwind utility classes by exten
 
 ## Migration Strategy
 
-### Phase 1: Extend Tailwind Theme
-Add `@theme` block to `index.css` mapping CSS variables to Tailwind utilities:
+### Phase 1: Extend Tailwind Theme (COMPLETED)
+Added `@theme` block to `index.css` with semantic naming to avoid redundant class names:
 
 ```css
 @theme {
-  /* Text colors */
-  --color-text-primary: var(--text-primary);
-  --color-text-secondary: var(--text-secondary);
-  --color-text-tertiary: var(--text-tertiary);
-  --color-text-disabled: var(--text-disabled);
+  /* Surface colors (backgrounds) - use as bg-surface, bg-surface-secondary, etc. */
+  --color-surface: var(--bg-primary);
+  --color-surface-secondary: var(--bg-secondary);
+  --color-surface-elevated: var(--bg-elevated);
+  --color-surface-hover: var(--bg-hover);
+  --color-surface-active: var(--bg-active);
 
-  /* Background colors */
-  --color-bg-primary: var(--bg-primary);
-  --color-bg-secondary: var(--bg-secondary);
-  --color-bg-elevated: var(--bg-elevated);
-  --color-bg-hover: var(--bg-hover);
+  /* Content colors (text) - use as text-content, text-content-secondary, etc. */
+  --color-content: var(--text-primary);
+  --color-content-secondary: var(--text-secondary);
+  --color-content-tertiary: var(--text-tertiary);
+  --color-content-disabled: var(--text-disabled);
+  --color-on-light: var(--text-on-light);
+  --color-on-dark: var(--text-on-dark);
 
-  /* Border colors */
-  --color-border-subtle: var(--border-subtle);
-  --color-border-default: var(--border-default);
+  /* Stroke colors (borders) - use as border-stroke, border-stroke-subtle, etc. */
+  --color-stroke: var(--border-default);
+  --color-stroke-subtle: var(--border-subtle);
+  --color-stroke-strong: var(--border-strong);
 
-  /* Semantic colors */
-  --color-primary: var(--color-primary);
-  --color-success: var(--color-success);
-  --color-warning: var(--color-warning);
-  --color-error: var(--color-error);
-  --color-danger: var(--color-danger);
-
-  /* Overlay colors */
-  --color-overlay-light: var(--overlay-light);
-  --color-overlay-medium: var(--overlay-medium);
-  --color-overlay-dark: var(--overlay-dark);
+  /* Semantic colors - use as text-success, bg-error, etc. */
+  --color-success, --color-warning, --color-error, --color-danger, --color-info;
+  --color-accent: var(--color-primary);  /* Primary action color */
 }
 ```
 
-### Phase 2: Migrate Text Colors
-Replace patterns like:
-- `style={{ color: 'var(--text-primary)' }}` → `className="text-text-primary"`
-- `style={{ color: 'var(--text-secondary)' }}` → `className="text-text-secondary"`
-- `style={{ color: 'var(--text-tertiary)' }}` → `className="text-text-tertiary"`
-- `style={{ color: 'var(--text-disabled)' }}` → `className="text-text-disabled"`
-- `style={{ color: 'var(--color-error)' }}` → `className="text-error"`
-- `style={{ color: 'var(--color-primary)' }}` → `className="text-primary"`
+### Phase 2: Migrate Inline Styles
+Replace patterns using semantic class names:
 
-### Phase 3: Migrate Background Colors
-Replace patterns like:
-- `style={{ backgroundColor: 'var(--bg-primary)' }}` → `className="bg-bg-primary"`
-- `style={{ backgroundColor: 'var(--bg-secondary)' }}` → `className="bg-bg-secondary"`
-- `style={{ backgroundColor: 'var(--bg-elevated)' }}` → `className="bg-bg-elevated"`
+**Text colors:**
+- `style={{ color: 'var(--text-primary)' }}` → `className="text-content"`
+- `style={{ color: 'var(--text-secondary)' }}` → `className="text-content-secondary"`
+- `style={{ color: 'var(--text-tertiary)' }}` → `className="text-content-tertiary"`
+- `style={{ color: 'var(--text-disabled)' }}` → `className="text-content-disabled"`
+- `style={{ color: 'var(--color-error)' }}` → `className="text-error"`
+- `style={{ color: 'var(--color-primary)' }}` → `className="text-accent"`
+
+**Background colors:**
+- `style={{ backgroundColor: 'var(--bg-primary)' }}` → `className="bg-surface"`
+- `style={{ backgroundColor: 'var(--bg-secondary)' }}` → `className="bg-surface-secondary"`
+- `style={{ backgroundColor: 'var(--bg-elevated)' }}` → `className="bg-surface-elevated"`
 - `style={{ backgroundColor: 'var(--overlay-dark)' }}` → `className="bg-overlay-dark"`
 
-### Phase 4: Migrate Border Colors
-Replace patterns like:
-- `style={{ borderColor: 'var(--border-subtle)' }}` → `className="border-border-subtle"`
-- `style={{ borderTop: '1px solid var(--border-subtle)' }}` → `className="border-t border-border-subtle"`
+**Border colors:**
+- `style={{ borderColor: 'var(--border-subtle)' }}` → `className="border-stroke-subtle"`
+- `style={{ borderTop: '1px solid var(--border-subtle)' }}` → `className="border-t border-stroke-subtle"`
 
-### Phase 5: Cleanup
+### Phase 3: Cleanup
 - Remove unused `STYLES` constants from components
 - Remove unused `CSSProperties` imports
 - Verify build passes

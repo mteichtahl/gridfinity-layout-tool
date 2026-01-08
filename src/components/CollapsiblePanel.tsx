@@ -47,28 +47,17 @@ export function CollapsiblePanel({
     >
       {/* Header */}
       <button
-        className="w-full flex items-center justify-between px-4 py-3 transition-colors"
-        style={{
-          background: 'transparent',
-          color: 'var(--text-primary)',
-        }}
+        className="w-full flex items-center justify-between px-4 py-3 transition-colors bg-transparent text-content hover:bg-surface-hover"
         onClick={() => setIsExpanded(!isExpanded)}
-        onMouseEnter={(e) => {
-          e.currentTarget.style.background = 'var(--bg-hover)';
-        }}
-        onMouseLeave={(e) => {
-          e.currentTarget.style.background = 'transparent';
-        }}
         aria-expanded={isExpanded}
       >
-        <span className="section-header" style={{ margin: 0 }}>
+        <span className="section-header m-0">
           {title}
         </span>
         <div className="flex items-center gap-2">
-          {badge && <span className="text-xs" style={{ color: 'var(--text-tertiary)' }}>{badge}</span>}
+          {badge && <span className="text-xs text-content-tertiary">{badge}</span>}
           <svg
-            className={`w-4 h-4 transition-transform duration-200 ${isExpanded ? 'rotate-0' : '-rotate-90'}`}
-            style={{ color: 'var(--text-tertiary)' }}
+            className={`w-4 h-4 transition-transform duration-200 text-content-tertiary ${isExpanded ? 'rotate-0' : '-rotate-90'}`}
             fill="none"
             viewBox="0 0 24 24"
             stroke="currentColor"

@@ -72,8 +72,7 @@ export function ConfirmDialog({
 
   return (
     <div
-      className="fixed inset-0 flex items-center justify-center z-50 animate-fade-in"
-      style={{ backgroundColor: 'var(--overlay-dark)' }}
+      className="fixed inset-0 flex items-center justify-center z-50 animate-fade-in bg-overlay-dark"
       onClick={onCancel}
       role="presentation"
     >
@@ -83,35 +82,21 @@ export function ConfirmDialog({
         aria-modal="true"
         aria-labelledby="dialog-title"
         aria-describedby="dialog-description"
-        className="max-w-md w-full mx-4 animate-scale-in"
+        className="max-w-md w-full mx-4 animate-scale-in bg-surface-secondary border border-stroke rounded-[var(--radius-xl)] p-[var(--space-2xl)]"
         style={{
-          backgroundColor: 'var(--bg-secondary)',
-          border: '1px solid var(--border-default)',
-          borderRadius: 'var(--radius-xl)',
-          padding: 'var(--space-2xl)',
           boxShadow: 'var(--shadow-xl)',
         }}
         onClick={(e) => e.stopPropagation()}
       >
         <h2
           id="dialog-title"
-          className="mb-2"
-          style={{
-            fontSize: 'var(--text-xl)',
-            fontWeight: 'var(--font-semibold)',
-            color: 'var(--text-primary)',
-          }}
+          className="mb-2 text-xl font-semibold text-content"
         >
           {title}
         </h2>
         <p
           id="dialog-description"
-          className="mb-6"
-          style={{
-            fontSize: 'var(--text-sm)',
-            color: 'var(--text-secondary)',
-            lineHeight: 1.5,
-          }}
+          className="mb-6 text-sm text-content-secondary leading-[1.5]"
         >
           {message}
         </p>
