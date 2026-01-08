@@ -168,7 +168,7 @@ export function Staging() {
     >
       {/* Header */}
       <div className="flex items-center justify-between mb-2">
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2" title="Drag bins here to save them for later. Drag back to the grid to place.">
           <svg
             className="w-4 h-4 text-content-tertiary"
             fill="none"
