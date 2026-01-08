@@ -12,7 +12,7 @@ export function getPanelTitle(panel: MobilePanel): string {
     case 'categories':
       return 'Categories';
     case 'print':
-      return 'Print List';
+      return 'Bin List';
     case 'settings':
       return 'Settings';
     default:

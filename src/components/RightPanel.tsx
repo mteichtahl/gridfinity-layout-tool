@@ -612,7 +612,7 @@ export function RightPanel() {
             >
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
             </svg>
-            <h2 className="section-header m-0">Print List</h2>
+            <h2 className="section-header m-0">Bin List</h2>
             {printRows.length > 0 && (
               <span className="badge badge-info">{totalBins}</span>
             )}
@@ -628,7 +628,7 @@ export function RightPanel() {
               }}
               className="btn btn-ghost p-1.5 min-w-0 min-h-0"
               title="Copy as TSV for spreadsheets"
-              aria-label="Copy print list as TSV"
+              aria-label="Copy bin list as TSV"
             >
               {copyFeedback ? (
                 <svg className="w-4 h-4 text-[var(--color-success)]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
