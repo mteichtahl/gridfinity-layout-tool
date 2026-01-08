@@ -99,20 +99,20 @@ export function MobilePrintList() {
 
       {/* Print list items */}
       <div className="space-y-2">
-        {printRows.map((row, index) => (
+        {printRows.map((row) => (
           <div
-            key={index}
+            key={`${row.size}-${row.height}-${row.labels.join(',')}`}
             className="p-3 rounded-lg"
             style={{ backgroundColor: 'var(--bg-elevated)' }}
           >
             <div className="flex items-center gap-3">
               {/* Category colors */}
               <div className="flex gap-1">
-                {row.categoryIds.slice(0, 3).map((catId, i) => {
+                {row.categoryIds.slice(0, 3).map((catId) => {
                   const cat = layout.categories.find(c => c.id === catId);
                   return (
                     <div
-                      key={i}
+                      key={catId}
                       className="w-4 h-4 rounded"
                       style={{ backgroundColor: cat?.color || '#6b7280' }}
                     />

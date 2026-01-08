@@ -62,9 +62,9 @@ function SplitPreview({ width, depth, pieces }: { width: number; depth: number; 
         height: depth * cellSize + (depth - 1) * gap,
       }}
     >
-      {placedPieces.map((placed, i) => (
+      {placedPieces.map((placed) => (
         <div
-          key={i}
+          key={`${placed.x}-${placed.y}-${placed.piece.width}x${placed.piece.depth}`}
           className="absolute flex items-center justify-center"
           style={{
             left: placed.x * (cellSize + gap),
@@ -697,7 +697,7 @@ export function RightPanel() {
                     const [w, d] = row.size.split('×').map(Number);
 
                     return (
-                      <React.Fragment key={index}>
+                      <React.Fragment key={`${row.size}-${row.height}-${row.labels.join(',')}`}>
                         <tr
                           className="transition-colors"
                           style={{
@@ -716,11 +716,11 @@ export function RightPanel() {
                                   className="inline-flex gap-0.5"
                                   title={row.categoryIds.map(catId => layout.categories.find(c => c.id === catId)?.name || 'Unknown').join(', ')}
                                 >
-                                  {row.categoryIds.slice(0, 3).map((catId, i) => {
+                                  {row.categoryIds.slice(0, 3).map((catId) => {
                                     const cat = layout.categories.find(c => c.id === catId);
                                     return (
                                       <span
-                                        key={i}
+                                        key={catId}
                                         className="w-2.5 h-2.5 rounded-full flex-shrink-0"
                                         style={{ backgroundColor: cat?.color || '#6b7280' }}
                                         aria-label={cat?.name || 'Unknown category'}
@@ -802,8 +802,8 @@ export function RightPanel() {
                                   <div style={{ fontWeight: 'var(--font-medium)', marginBottom: '4px' }}>
                                     Split into {row.totalPieces} pieces:
                                   </div>
-                                  {row.pieces.map((piece, i) => (
-                                    <div key={i} style={{ color: 'var(--text-tertiary)' }}>
+                                  {row.pieces.map((piece) => (
+                                    <div key={`${piece.width}x${piece.depth}`} style={{ color: 'var(--text-tertiary)' }}>
                                       {piece.count}× {piece.width}×{piece.depth}
                                     </div>
                                   ))}

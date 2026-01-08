@@ -288,9 +288,9 @@ function ShortcutRow({
         {description}
       </span>
       <div className="flex gap-1">
-        {keyArray.map((key, index) => (
+        {keyArray.map((key) => (
           <kbd
-            key={index}
+            key={key}
             className="px-2 py-1 rounded font-mono"
             style={{
               fontSize: 'var(--text-xs)',

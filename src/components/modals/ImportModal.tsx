@@ -171,8 +171,8 @@ function ImportModalContent({ onClose, onImport }: Omit<ImportModalProps, 'isOpe
                 Validation Errors:
               </div>
               <ul className="text-sm text-red-300 space-y-1">
-                {errors.map((error, index) => (
-                  <li key={index}>• {error}</li>
+                {errors.map((error) => (
+                  <li key={error}>• {error}</li>
                 ))}
               </ul>
             </div>
