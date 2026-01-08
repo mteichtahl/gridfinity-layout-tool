@@ -150,7 +150,8 @@ export function Overlay({ cellSize, gap }: OverlayProps) {
               top: origTop,
               width: origWidth,
               height: origHeight,
-              border: '2px dashed rgba(113, 113, 122, 0.6)',
+              border: '2px dashed rgba(255, 255, 255, 0.8)',
+              boxShadow: '0 0 0 1px rgba(0, 0, 0, 0.4)',
               pointerEvents: 'none',
               borderRadius: '2px',
             }}

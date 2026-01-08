@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import { useLayoutStore, useUIStore, useUndoableAction } from '../../store';
 import { CONSTRAINTS } from '../../constants';
 import { getDisplayLayers } from '../../utils/collision';
@@ -131,6 +131,10 @@ export function LayersPanel() {
 
   const layerToDelete = deleteLayerId ? layers.find(l => l.id === deleteLayerId) : null;
   const binsInLayer = deleteLayerId ? bins.filter(b => b.layerId === deleteLayerId).length : 0;
+
+  const cancelDeleteLayer = useCallback(() => {
+    setDeleteLayerId(null);
+  }, []);
 
   // Reversed for display (topmost layer first)
   const displayLayers = getDisplayLayers(layers);
@@ -368,7 +372,7 @@ export function LayersPanel() {
         confirmText="Delete"
         destructive
         onConfirm={confirmDeleteLayer}
-        onCancel={() => setDeleteLayerId(null)}
+        onCancel={cancelDeleteLayer}
       />
     </div>
   );

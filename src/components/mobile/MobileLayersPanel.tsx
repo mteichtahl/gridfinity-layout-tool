@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import { useLayoutStore, useUIStore, useUndoableAction } from '../../store';
 import { CONSTRAINTS } from '../../constants';
 import { getDisplayLayers } from '../../utils/collision';
@@ -74,6 +74,10 @@ export function MobileLayersPanel() {
   const layerToDelete = deleteLayerId ? layers.find(l => l.id === deleteLayerId) : null;
   const binsInLayer = deleteLayerId ? bins.filter(b => b.layerId === deleteLayerId).length : 0;
   const canAddLayer = totalLayerHeight < drawer.height;
+
+  const cancelDeleteLayer = useCallback(() => {
+    setDeleteLayerId(null);
+  }, []);
 
   return (
     <div className="pb-4">
@@ -279,7 +283,7 @@ export function MobileLayersPanel() {
         confirmText="Delete"
         destructive
         onConfirm={confirmDeleteLayer}
-        onCancel={() => setDeleteLayerId(null)}
+        onCancel={cancelDeleteLayer}
       />
     </div>
   );

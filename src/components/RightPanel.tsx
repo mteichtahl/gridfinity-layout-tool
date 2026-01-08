@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useCallback } from 'react';
 import { useUIStore, useLayoutStore, useUndoableAction } from '../store';
 import { STAGING_ID, CONSTRAINTS, calcMaxGridUnits } from '../constants';
 import { generatePrintList, getTotalBins, getTotalPieces, getTotalFilament, getSpoolEstimate } from '../utils/split';
@@ -187,6 +187,10 @@ export function RightPanel() {
   };
 
   const needsSplit = bin ? (bin.width > maxGridUnits || bin.depth > maxGridUnits) : false;
+
+  const cancelDelete = useCallback(() => {
+    setConfirmDelete(null);
+  }, []);
 
   if (collapsed) {
     return (
@@ -859,7 +863,7 @@ export function RightPanel() {
         confirmText="Delete"
         destructive
         onConfirm={confirmDeleteBin}
-        onCancel={() => setConfirmDelete(null)}
+        onCancel={cancelDelete}
       />
     </aside>
   );
