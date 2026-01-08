@@ -1,4 +1,5 @@
 import { useState, useCallback } from 'react';
+import { useShallow } from 'zustand/shallow';
 import { useLayoutStore, useUIStore, useUndoableAction } from '../../store';
 import { CONSTRAINTS } from '../../constants';
 import { getDisplayLayers } from '../../utils/collision';
@@ -11,18 +12,26 @@ export function MobileLayersPanel() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [deleteLayerId, setDeleteLayerId] = useState<string | null>(null);
 
-  const layout = useLayoutStore(state => state.layout);
+  const { layout, addLayer, updateLayer, deleteLayer, updateDrawer } = useLayoutStore(
+    useShallow((state) => ({
+      layout: state.layout,
+      addLayer: state.addLayer,
+      updateLayer: state.updateLayer,
+      deleteLayer: state.deleteLayer,
+      updateDrawer: state.updateDrawer,
+    }))
+  );
   const layers = layout.layers;
   const bins = layout.bins;
   const drawer = layout.drawer;
-  const activeLayerId = useUIStore(state => state.activeLayerId);
-  const setActiveLayer = useUIStore(state => state.setActiveLayer);
-  const closeMobilePanel = useUIStore(state => state.closeMobilePanel);
 
-  const addLayer = useLayoutStore(state => state.addLayer);
-  const updateLayer = useLayoutStore(state => state.updateLayer);
-  const deleteLayer = useLayoutStore(state => state.deleteLayer);
-  const updateDrawer = useLayoutStore(state => state.updateDrawer);
+  const { activeLayerId, setActiveLayer, closeMobilePanel } = useUIStore(
+    useShallow((state) => ({
+      activeLayerId: state.activeLayerId,
+      setActiveLayer: state.setActiveLayer,
+      closeMobilePanel: state.closeMobilePanel,
+    }))
+  );
 
   const { execute } = useUndoableAction();
 

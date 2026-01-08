@@ -1,4 +1,5 @@
 import { useState, useCallback } from 'react';
+import { useShallow } from 'zustand/shallow';
 import { useLayoutStore, useUIStore, useUndoableAction } from '../../store';
 import { CONSTRAINTS } from '../../constants';
 import { getDisplayLayers } from '../../utils/collision';
@@ -11,18 +12,26 @@ export function LayersPanel() {
   const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
   const [reorderError, setReorderError] = useState<string | null>(null);
 
-  const layout = useLayoutStore(state => state.layout);
+  const { layout, addLayer, updateLayer, deleteLayer, reorderLayers, updateDrawer } = useLayoutStore(
+    useShallow((state) => ({
+      layout: state.layout,
+      addLayer: state.addLayer,
+      updateLayer: state.updateLayer,
+      deleteLayer: state.deleteLayer,
+      reorderLayers: state.reorderLayers,
+      updateDrawer: state.updateDrawer,
+    }))
+  );
   const layers = layout.layers;
   const bins = layout.bins;
   const drawer = layout.drawer;
-  const activeLayerId = useUIStore(state => state.activeLayerId);
-  const setActiveLayer = useUIStore(state => state.setActiveLayer);
 
-  const addLayer = useLayoutStore(state => state.addLayer);
-  const updateLayer = useLayoutStore(state => state.updateLayer);
-  const deleteLayer = useLayoutStore(state => state.deleteLayer);
-  const reorderLayers = useLayoutStore(state => state.reorderLayers);
-  const updateDrawer = useLayoutStore(state => state.updateDrawer);
+  const { activeLayerId, setActiveLayer } = useUIStore(
+    useShallow((state) => ({
+      activeLayerId: state.activeLayerId,
+      setActiveLayer: state.setActiveLayer,
+    }))
+  );
 
   const { execute } = useUndoableAction();
 

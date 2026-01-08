@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useShallow } from 'zustand/shallow';
 import { useUIStore, useLayoutStore, useUndoableAction } from '../../store';
 import { STAGING_ID, CONSTRAINTS, calcMaxGridUnits } from '../../constants';
 import { getLayerZStart } from '../../utils/collision';
@@ -10,14 +11,22 @@ import { ConfirmDialog } from '../modals/ConfirmDialog';
 export function MobileInspector() {
   const [confirmDelete, setConfirmDelete] = useState(false);
 
-  const selectedBinIds = useUIStore(state => state.selectedBinIds);
-  const setSelectedBins = useUIStore(state => state.setSelectedBins);
-  const closeMobilePanel = useUIStore(state => state.closeMobilePanel);
+  const { selectedBinIds, setSelectedBins, closeMobilePanel } = useUIStore(
+    useShallow((state) => ({
+      selectedBinIds: state.selectedBinIds,
+      setSelectedBins: state.setSelectedBins,
+      closeMobilePanel: state.closeMobilePanel,
+    }))
+  );
 
-  const layout = useLayoutStore(state => state.layout);
-  const updateBin = useLayoutStore(state => state.updateBin);
-  const deleteBin = useLayoutStore(state => state.deleteBin);
-  const moveBinToStaging = useLayoutStore(state => state.moveBinToStaging);
+  const { layout, updateBin, deleteBin, moveBinToStaging } = useLayoutStore(
+    useShallow((state) => ({
+      layout: state.layout,
+      updateBin: state.updateBin,
+      deleteBin: state.deleteBin,
+      moveBinToStaging: state.moveBinToStaging,
+    }))
+  );
 
   const { execute } = useUndoableAction();
 

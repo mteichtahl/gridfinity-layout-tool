@@ -1,3 +1,4 @@
+import { useShallow } from 'zustand/shallow';
 import { useUIStore, useLayoutStore } from '../../store';
 import { CONSTRAINTS } from '../../constants';
 
@@ -10,13 +11,25 @@ interface MobileGridToolbarProps {
  * Shows layer indicator, paint mode, and basic zoom.
  */
 export function MobileGridToolbar({ onFitToScreen }: MobileGridToolbarProps) {
-  const zoom = useUIStore(state => state.zoom);
-  const zoomIn = useUIStore(state => state.zoomIn);
-  const zoomOut = useUIStore(state => state.zoomOut);
-  const activeLayerId = useUIStore(state => state.activeLayerId);
-  const paintSize = useUIStore(state => state.paintSize);
-  const setPaintSize = useUIStore(state => state.setPaintSize);
-  const toggleMobilePanel = useUIStore(state => state.toggleMobilePanel);
+  const {
+    zoom,
+    zoomIn,
+    zoomOut,
+    activeLayerId,
+    paintSize,
+    setPaintSize,
+    toggleMobilePanel,
+  } = useUIStore(
+    useShallow((state) => ({
+      zoom: state.zoom,
+      zoomIn: state.zoomIn,
+      zoomOut: state.zoomOut,
+      activeLayerId: state.activeLayerId,
+      paintSize: state.paintSize,
+      setPaintSize: state.setPaintSize,
+      toggleMobilePanel: state.toggleMobilePanel,
+    }))
+  );
 
   const layers = useLayoutStore(state => state.layout.layers);
   const activeLayer = layers.find(l => l.id === activeLayerId);

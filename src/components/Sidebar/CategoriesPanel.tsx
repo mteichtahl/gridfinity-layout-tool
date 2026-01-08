@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useShallow } from 'zustand/shallow';
 import { useLayoutStore, useUIStore, useUndoableAction } from '../../store';
 import { CONSTRAINTS } from '../../constants';
 import { ConfirmDialog } from '../modals/ConfirmDialog';
@@ -26,14 +27,22 @@ export function CategoriesPanel() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [deleteConfirm, setDeleteConfirm] = useState<{ id: string; name: string } | null>(null);
 
-  const categories = useLayoutStore(state => state.layout.categories);
-  const bins = useLayoutStore(state => state.layout.bins);
-  const activeCategoryId = useUIStore(state => state.activeCategoryId);
-  const setActiveCategory = useUIStore(state => state.setActiveCategory);
+  const { categories, bins, addCategory, updateCategory, deleteCategory } = useLayoutStore(
+    useShallow((state) => ({
+      categories: state.layout.categories,
+      bins: state.layout.bins,
+      addCategory: state.addCategory,
+      updateCategory: state.updateCategory,
+      deleteCategory: state.deleteCategory,
+    }))
+  );
 
-  const addCategory = useLayoutStore(state => state.addCategory);
-  const updateCategory = useLayoutStore(state => state.updateCategory);
-  const deleteCategory = useLayoutStore(state => state.deleteCategory);
+  const { activeCategoryId, setActiveCategory } = useUIStore(
+    useShallow((state) => ({
+      activeCategoryId: state.activeCategoryId,
+      setActiveCategory: state.setActiveCategory,
+    }))
+  );
 
   const { execute } = useUndoableAction();
 
