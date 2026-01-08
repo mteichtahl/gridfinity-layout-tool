@@ -139,7 +139,7 @@ export function Staging() {
       }
     });
     setShowClearConfirm(false);
-    addToast(`Deleted ${count} staged bins`, 'success');
+    addToast(`Deleted ${count} stashed bins`, 'success');
   };
 
   const isDraggingStagingBin = interaction?.type === 'stagingDrag';
@@ -191,7 +191,7 @@ export function Staging() {
     }
   }
 
-  // Show when bins are staged OR when dragging from grid (as drop target)
+  // Show when bins are stashed OR when dragging from grid (as drop target)
   const hasBins = stagingBins.length > 0;
   if (!hasBins && !isDraggingFromGrid) {
     return null;
