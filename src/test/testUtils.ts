@@ -1,6 +1,9 @@
 import { afterEach, vi } from 'vitest';
 import { cleanup } from '@testing-library/react';
-import type { Layout, LayoutLibrary } from '@/core/types';
+import { expect } from 'vitest';
+import type { Bin, Layout, LayoutLibrary } from '@/core/types';
+import type { Result } from '@/core/result/types';
+import { isOk, isErr } from '@/core/result';
 import { createDefaultLayout } from '@/core/constants';
 import { useLayoutStore } from '@/core/store/layout';
 import { useHistoryStore } from '@/core/store/history';
@@ -122,6 +125,67 @@ export function resetAllStores(): void {
 }
 
 /**
+ * Factory to create test bins with variations.
+ * Prevents inline factory duplication across test files.
+ *
+ * @param overrides - Partial bin to merge with defaults
+ * @returns A new Bin object
+ *
+ * @example
+ * const bin = createTestBin({ id: 'bin-1', x: 3, y: 5 });
+ * const stagingBin = createTestBin({ layerId: '__staging__' });
+ */
+export function createTestBin(overrides: Partial<Bin> = {}): Bin {
+  return {
+    id: 'test-bin',
+    layerId: 'layer1',
+    x: 0,
+    y: 0,
+    width: 1,
+    depth: 1,
+    height: 3,
+    category: 'cat1',
+    label: '',
+    notes: '',
+    ...overrides,
+  };
+}
+
+/**
+ * Assert that a Result is Ok and return the unwrapped value.
+ * Combines the assertion and type narrowing in one step, replacing:
+ *
+ *   expect(isOk(result)).toBe(true);
+ *   if (isOk(result)) { expect(result.value).toBe(42); }
+ *
+ * With:
+ *
+ *   expect(expectOk(result)).toBe(42);
+ */
+export function expectOk<T>(result: Result<T, unknown>): T {
+  expect(isOk(result)).toBe(true);
+  if (!isOk(result)) throw new Error('Expected Ok result');
+  return result.value;
+}
+
+/**
+ * Assert that a Result is Err and return the unwrapped error.
+ * Combines the assertion and type narrowing in one step, replacing:
+ *
+ *   expect(isErr(result)).toBe(true);
+ *   if (isErr(result)) { expect(result.error.code).toBe('NOT_FOUND'); }
+ *
+ * With:
+ *
+ *   expect(expectErr(result).code).toBe('NOT_FOUND');
+ */
+export function expectErr<E>(result: Result<unknown, E>): E {
+  expect(isErr(result)).toBe(true);
+  if (!isErr(result)) throw new Error('Expected Err result');
+  return result.error;
+}
+
+/**
  * Create a test library with one default entry.
  * Used by resetAllStores and can be used in tests that need custom library setup.
  *
@@ -165,7 +229,19 @@ export function createTestLibrary(layoutId?: string): LayoutLibrary {
  * const layoutWithBins = createTestLayout({ bins: [testBin1, testBin2] });
  */
 export function createTestLayout(overrides?: Partial<Layout>): Layout {
-  const defaultLayout = createDefaultLayout();
+  // Use deterministic defaults instead of createDefaultLayout() which generates random IDs.
+  // This ensures tests can reference layer/category IDs predictably.
+  const defaultLayout: Layout = {
+    version: '1.0',
+    name: 'Test Layout',
+    drawer: { width: 10, depth: 8, height: 12 },
+    printBedSize: 256,
+    gridUnitMm: 42,
+    heightUnitMm: 7,
+    categories: [{ id: 'cat1', name: 'General', color: '#3b82f6' }],
+    layers: [{ id: 'layer1', name: 'Layer 1', height: 3 }],
+    bins: [],
+  };
 
   if (!overrides) {
     return defaultLayout;
