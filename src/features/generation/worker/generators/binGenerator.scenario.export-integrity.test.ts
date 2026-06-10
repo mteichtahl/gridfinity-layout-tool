@@ -9,8 +9,10 @@
  *     unparseable for some meshes (compartment partitions especially). brepjs
  *     now builds the binary STL from the mesh; this guards that fix across every
  *     feature combination.
- *  2. The solid is non-empty and watertight (manifold, no boundary edges) — a
- *     printable result, not a degenerate/empty boolean output.
+ *  2. The solid is non-empty and watertight — no boundary edges (hole-free) for
+ *     every scenario, and fully 2-manifold except for a documented handful whose
+ *     input has a measure-zero self-contact (see
+ *     MEASURE_ZERO_SELF_CONTACT_SCENARIOS).
  *  3. No NaN/Infinity coordinates.
  *
  * Generation validity (vertex counts, structure) is already covered by
@@ -82,23 +84,39 @@ function analyze(stl: ArrayBuffer, label: string): ManifoldStats {
 }
 
 /**
- * Scenarios whose exported STL is still non-manifold after the GH #2085 repairs
- * (interior-void-shell collapse, the scoop-fillet flat-bottom-edge selector, the
- * sharp-corner chamfer profile, and the deferred-socket export fuse — see
- * `keepOuterShell`, `findBottomEdges`, `cutoutProfileDrawing`, and shellStage).
+ * Scenarios that export a CLOSED (hole-free) mesh which is nonetheless
+ * non-manifold along a measure-zero self-contact — not a boolean artifact but a
+ * geometric inevitability of the input:
  *
- * The two left are not boolean artifacts but a genuine geometry pathology: two
- * cavity cuts placed exactly tangent leave a zero-thickness knife-edge pinch in
- * the wall between them (a single non-manifold edge along the contact line). A
- * watertight mesh can't represent a measure-zero contact, so these can only be
- * made manifold by perturbing the design (overlapping or separating the
- * cavities) — a product decision, not a generation bug. Keyed by
+ *  - `2 circle inserts`: two cavity cuts placed exactly tangent (centres 2r
+ *    apart) leave a zero-thickness knife edge in the wall between them. Any
+ *    realistic spacing — overlapping OR separated by a hair — is fully manifold
+ *    (verified); only the exact-tangent limit pinches.
+ *  - `XOR keeps non-overlapping regions`: the symmetric difference of two
+ *    overlapping rectangles always meets at the overlap's corners, so the two
+ *    kept regions touch along the corner edges by construction.
+ *
+ * A 2-manifold mesh can't represent a measure-zero contact, so forcing these to
+ * be manifold would mean silently perturbing the user's geometry. They are
+ * still printable: the mesh has NO boundary edges (no holes), and slicers
+ * resolve the self-contact via the fill rule. So instead of skipping them, the
+ * matrix holds them to the real printable guarantee — zero boundary edges — and
+ * tolerates a bounded, inherent non-manifold contact (asserted below). Keyed by
  * `${category} › ${name}`.
  */
-const QUARANTINED_NON_MANIFOLD = new Set<string>([
+const MEASURE_ZERO_SELF_CONTACT_SCENARIOS = new Set<string>([
   'multiple inserts › 2×2 with 2 circle inserts',
   'pathfinder › exclude group: XOR keeps non-overlapping regions',
 ]);
+
+/**
+ * Upper bound on the non-manifold edges tolerated along a measure-zero
+ * self-contact. Observed baselines are 1 (circle tangent point) and 2 (XOR
+ * overlap corners); the small headroom absorbs minor tessellation differences,
+ * while a genuine manifold-breaking regression — which scatters non-manifold
+ * edges across whole walls — blows past the cap and trips the test.
+ */
+const MAX_MEASURE_ZERO_CONTACT_EDGES = 8;
 
 describe('export integrity: full scenario matrix → binary STL', () => {
   // Reset the last-solid pointer so each scenario actually builds and exports
@@ -115,8 +133,8 @@ describe('export integrity: full scenario matrix → binary STL', () => {
 
   for (const scenario of ALL_SCENARIOS) {
     const label = `${scenario.category} › ${scenario.name}`;
-    const testFn = QUARANTINED_NON_MANIFOLD.has(label) ? it.skip : it;
-    testFn(
+    const measureZeroSelfContact = MEASURE_ZERO_SELF_CONTACT_SCENARIOS.has(label);
+    it(
       label,
       async () => {
         const params = buildParams(scenario.params);
@@ -131,9 +149,31 @@ describe('export integrity: full scenario matrix → binary STL', () => {
         // 3. No NaN/Infinity coordinates.
         expect(stats.minFinite, `${scenario.name}: finite coordinates`).toBe(true);
 
-        // 4. Watertight: a printable mesh has no non-manifold or boundary edges.
-        expect(stats.nonManifoldEdges, `${scenario.name}: non-manifold edges`).toBe(0);
+        // 4. Hole-free: no boundary edges. This is the real printable-watertight
+        //    guarantee and holds for EVERY scenario, including the measure-zero
+        //    self-contact cases.
         expect(stats.boundaryEdges, `${scenario.name}: boundary edges`).toBe(0);
+
+        // 5. Fully 2-manifold (no edge shared by >2 triangles) — required of
+        //    every scenario except the documented measure-zero self-contact
+        //    cases (see MEASURE_ZERO_SELF_CONTACT_SCENARIOS). Those are bounded
+        //    on BOTH sides rather than left unchecked: a lower bound of >0 makes
+        //    the carve-out self-expiring — if a kernel upgrade ever resolves the
+        //    pinch, this fails and signals the scenario can rejoin the strict
+        //    tier — and the upper cap catches a hole-free-but-manifold-broken
+        //    regression that the boundary-edge check (4) alone would miss.
+        if (measureZeroSelfContact) {
+          expect(
+            stats.nonManifoldEdges,
+            `${scenario.name}: non-manifold edges (self-contact must persist)`
+          ).toBeGreaterThan(0);
+          expect(
+            stats.nonManifoldEdges,
+            `${scenario.name}: non-manifold edges (must stay bounded)`
+          ).toBeLessThanOrEqual(MAX_MEASURE_ZERO_CONTACT_EDGES);
+        } else {
+          expect(stats.nonManifoldEdges, `${scenario.name}: non-manifold edges`).toBe(0);
+        }
       },
       scenario.timeout
     );
