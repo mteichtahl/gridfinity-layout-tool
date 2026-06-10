@@ -82,25 +82,22 @@ function analyze(stl: ArrayBuffer, label: string): ManifoldStats {
 }
 
 /**
- * Scenarios whose exported STL is still non-manifold after the interior-void-
- * shell repair (`keepOuterShell`). They split across three further root causes
- * — magnet/screw+feature combos with an open/residually-non-manifold outer
- * shell, the through-wall handle cut, and single-shell pinch edges (XOR,
- * touching inserts, solid-cutout scoops). Tracked in GH #2085; un-skip each as
- * its root cause is fixed. Keyed by `${category} › ${name}`.
+ * Scenarios whose exported STL is still non-manifold after the GH #2085 repairs
+ * (interior-void-shell collapse, the scoop-fillet flat-bottom-edge selector, the
+ * sharp-corner chamfer profile, and the deferred-socket export fuse — see
+ * `keepOuterShell`, `findBottomEdges`, `cutoutProfileDrawing`, and shellStage).
+ *
+ * The two left are not boolean artifacts but a genuine geometry pathology: two
+ * cavity cuts placed exactly tangent leave a zero-thickness knife-edge pinch in
+ * the wall between them (a single non-manifold edge along the contact line). A
+ * watertight mesh can't represent a measure-zero contact, so these can only be
+ * made manifold by perturbing the design (overlapping or separating the
+ * cavities) — a product decision, not a generation bug. Keyed by
+ * `${category} › ${name}`.
  */
 const QUARANTINED_NON_MANIFOLD = new Set<string>([
-  'combined features › 4×4 magnet + label bracket + half-sockets',
-  'permutation matrix › 3×3 magnet+screw base + scoop + label + lip',
-  'permutation matrix › 4×4 magnet + compartments + scoop + label (mega)',
-  'regressions › #canary lip + scoop + compartments + magnet base + tall',
-  'handles › oval shape handles on front wall',
   'multiple inserts › 2×2 with 2 circle inserts',
   'pathfinder › exclude group: XOR keeps non-overlapping regions',
-  'solid cutouts › 2×2 solid with rectangle, edge gate disables a single wall',
-  'solid cutouts › 2×2 solid with rectangle with scoop cutout',
-  'solid+cutout matrix › solid + grouped cutouts with scoop at 45°',
-  'solid cutouts › 2×2 solid with chamfered + scooped rectangle cutout',
 ]);
 
 describe('export integrity: full scenario matrix → binary STL', () => {

@@ -128,9 +128,18 @@ function cutoutProfileDrawing(p: {
       return drawRoundedRectangle(p.w, p.d, Math.max(0.01, slotCornerRadius(p.w, p.d) - 0.01));
     case 'rectangle':
     default: {
+      // Sharp corners when no radius is requested. A 0.01mm "rounded" corner is
+      // a near-degenerate arc; lofting it leaves a pinched corner seam that a
+      // later scoop fillet corrupts into open sliver faces at the flared rim
+      // (GH #2085). A true four-line rectangle gives the loft clean corner edges
+      // the fillet blends cleanly, exactly like the non-chamfered box path.
+      if (p.cornerRadius <= 0) {
+        const hw = p.w / 2;
+        const hd = p.d / 2;
+        return draw([-hw, -hd]).lineTo([hw, -hd]).lineTo([hw, hd]).lineTo([-hw, hd]).close();
+      }
       const maxCR = Math.min(p.w, p.d) / 2 - 0.01;
-      const r = p.cornerRadius > 0 ? Math.min(p.cornerRadius, maxCR) : 0.01;
-      return drawRoundedRectangle(p.w, p.d, Math.max(0.01, r));
+      return drawRoundedRectangle(p.w, p.d, Math.min(p.cornerRadius, maxCR));
     }
   }
 }
@@ -423,7 +432,20 @@ function polylineSelfIntersects(poly: readonly { x: number; y: number }[]): bool
   }
   return false;
 }
-/** Find edges near a target Z height within XY bounds, with tolerance margins. */
+/**
+ * Find the bottom-plane edges within XY bounds — the edges a scoop fillet should
+ * round.
+ *
+ * Selects edges that lie *flat* in the z≈zTarget plane (the cutout floor), not
+ * merely edges that touch it. A box's four vertical corner edges have
+ * `zMin = zTarget` but span the full cut depth; the older "z range overlaps
+ * zTarget" test picked them up, so the scoop fillet rounded the corners all the
+ * way to the top rim. That left a degenerate sliver face where the rounded
+ * vertical surface met the sharp top edges — an open (single-face) edge that
+ * survives as a non-manifold edge in the exported STL (GH #2085). Requiring the
+ * whole edge to sit in the bottom plane keeps verticals sharp and scoops only
+ * the floor ring, as intended.
+ */
 export function findBottomEdges(
   shape: Shape3D,
   zTarget: number,
@@ -433,12 +455,12 @@ export function findBottomEdges(
   return edgeFinder()
     .when((e) => {
       const bounds = getBounds(e);
-      const zOverlaps = bounds.zMin <= zTarget + 0.1 && bounds.zMax >= zTarget - 0.1;
+      const inBottomPlane = bounds.zMin >= zTarget - 0.1 && bounds.zMax <= zTarget + 0.1;
       const xOverlaps =
         bounds.xMax >= xyBounds.minX - margin && bounds.xMin <= xyBounds.maxX + margin;
       const yOverlaps =
         bounds.yMax >= xyBounds.minY - margin && bounds.yMin <= xyBounds.maxY + margin;
-      return zOverlaps && xOverlaps && yOverlaps;
+      return inBottomPlane && xOverlaps && yOverlaps;
     })
     .findAll(shape);
 }
