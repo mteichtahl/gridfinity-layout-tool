@@ -35,7 +35,7 @@ describe('GridCell', () => {
     expect(screen.getByRole('button')).toBeInTheDocument();
   });
 
-  it('shows dimension label only on multi-cell compartments at the visual top-left', () => {
+  it('shows the cell-span label on a multi-cell compartment anchor cell', () => {
     // 2x2 grid where all cells share id=0 (one big merged compartment)
     const config = makeConfig({ cells: [0, 0, 0, 0] });
     // idx=2 is row=1,col=0 — visual top-left under flex-col-reverse

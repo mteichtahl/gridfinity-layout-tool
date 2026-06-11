@@ -30,6 +30,11 @@ import {
   isRectangularSelection,
   cellIndex,
 } from '@/features/bin-designer/utils/compartments';
+import {
+  formatCompactMm,
+  minUniformCavity,
+  solveCountForMinCavity,
+} from '@/features/bin-designer/utils/compartmentDimensions';
 import { getInteriorDims } from '@/features/bin-designer/utils/dividerAngle';
 import { useTranslation } from '@/i18n';
 import { useResponsive } from '@/shared/hooks/useResponsive';
@@ -41,6 +46,8 @@ import { DividerTiltSubsection } from './DividerTiltSubsection';
 import { rowKeyOf } from './useDividerTiltSubsection';
 
 const EMPTY_HIGHLIGHT_SET: ReadonlySet<number> = new Set();
+
+const GRID_MODES = ['count', 'size'] as const;
 
 export function CompartmentEditor() {
   const t = useTranslation();
@@ -63,6 +70,7 @@ export function CompartmentEditor() {
     setPreviewSelection,
     setSelectedDividerKey,
     setHoveredDividerKey,
+    setHoveredCompartmentId,
   } = useDesignerStore(
     useShallow((s) => ({
       compartments: s.params.compartments,
@@ -81,6 +89,7 @@ export function CompartmentEditor() {
       setPreviewSelection: s.setPreviewSelection,
       setSelectedDividerKey: s.setSelectedDividerKey,
       setHoveredDividerKey: s.setHoveredDividerKey,
+      setHoveredCompartmentId: s.setHoveredCompartmentId,
     }))
   );
 
@@ -101,12 +110,34 @@ export function CompartmentEditor() {
   // Preview color synced with 3D preview (cross-tab + same-window CustomEvent)
   const previewColor = usePreviewColor();
 
+  // Whether the grid is set by cell count (cols/rows) or target size (mm).
+  const [sizeMode, setSizeMode] = useState<'count' | 'size'>('count');
+
+  // By-size targets the user typed (the field holds the target, not the achieved
+  // size, so we can show how far the fit-guarantee landed from it). Null until
+  // the user enters size mode, then seeded from the current grid.
+  const [targetW, setTargetW] = useState<number | null>(null);
+  const [targetD, setTargetD] = useState<number | null>(null);
+
   // Selection state for drag-to-merge
   const [selection, setSelection] = useState<Set<number>>(new Set());
   const [dragStart, setDragStart] = useState<number | null>(null);
   const [isDragging, setIsDragging] = useState(false);
   const [hoverIdx, setHoverIdx] = useState<number | null>(null);
   const gridRef = useRef<HTMLDivElement>(null);
+
+  // Mirror the hovered cell's compartment to the store so the 3D preview can
+  // draw that one compartment's dimension lines. Cleared while dragging (the
+  // ghost-merge preview takes over) and on unmount (cleanup nulls it).
+  useEffect(() => {
+    // Guard hoverIdx against the current grid: a resize can leave a stale
+    // hoverIdx pointing past the regenerated cells array.
+    const id = hoverIdx !== null && !isDragging && hoverIdx < cells.length ? cells[hoverIdx] : null;
+    setHoveredCompartmentId(id);
+    return () => {
+      setHoveredCompartmentId(null);
+    };
+  }, [hoverIdx, isDragging, cells, setHoveredCompartmentId]);
 
   // Pre-compute cell counts per compartment to avoid repeated O(n) scans
   const compartmentCellCounts = useMemo(() => {
@@ -316,6 +347,62 @@ export function CompartmentEditor() {
     [cols, rows, setCompartmentGrid]
   );
 
+  // By-size mode (fit-guarantee): pick the largest count whose tightest
+  // compartment stays >= the requested mm, so every compartment is at least
+  // that size. setCompartmentGrid regenerates the uniform grid (it validates min
+  // cell size and silently no-ops if the target is infeasible).
+  const applyTargetWidth = useCallback(
+    (target: number) => {
+      const clamped = Math.min(
+        interiorW,
+        Math.max(DESIGNER_CONSTRAINTS.MIN_COMPARTMENT_SIZE, target)
+      );
+      setTargetW(clamped);
+      setCompartmentGrid(
+        solveCountForMinCavity(
+          interiorW,
+          thickness,
+          clamped,
+          DESIGNER_CONSTRAINTS.MIN_COMPARTMENT_GRID,
+          DESIGNER_CONSTRAINTS.MAX_COMPARTMENT_GRID
+        ),
+        rows
+      );
+      setSelection(new Set());
+    },
+    [interiorW, thickness, rows, setCompartmentGrid]
+  );
+
+  const applyTargetDepth = useCallback(
+    (target: number) => {
+      const clamped = Math.min(
+        interiorD,
+        Math.max(DESIGNER_CONSTRAINTS.MIN_COMPARTMENT_SIZE, target)
+      );
+      setTargetD(clamped);
+      setCompartmentGrid(
+        cols,
+        solveCountForMinCavity(
+          interiorD,
+          thickness,
+          clamped,
+          DESIGNER_CONSTRAINTS.MIN_COMPARTMENT_GRID,
+          DESIGNER_CONSTRAINTS.MAX_COMPARTMENT_GRID
+        )
+      );
+      setSelection(new Set());
+    },
+    [interiorD, thickness, cols, setCompartmentGrid]
+  );
+
+  // Entering size mode seeds the targets from the current grid so the fields
+  // show a sensible starting value (and zero delta) before the user types.
+  const enterSizeMode = useCallback(() => {
+    setTargetW(Math.round(minUniformCavity(interiorW, cols, thickness) * 10) / 10);
+    setTargetD(Math.round(minUniformCavity(interiorD, rows, thickness) * 10) / 10);
+    setSizeMode('size');
+  }, [interiorW, interiorD, cols, rows, thickness]);
+
   const handleThicknessChange = useCallback(
     (newThickness: number) => {
       setParam('compartments', { ...compartments, thickness: newThickness });
@@ -330,6 +417,24 @@ export function CompartmentEditor() {
 
   const compartmentCount = getCompartmentCount(compartments);
   const hasMergedCompartments = compartmentCount < cols * rows;
+
+  // By-size readouts: the smallest (guaranteed) compartment per axis, and the
+  // delta from the user's typed target. With fit-guarantee the achieved minimum
+  // is normally >= target (positive delta); it goes negative only when even one
+  // compartment can't reach the target (target larger than the interior).
+  const achievedMinW = minUniformCavity(interiorW, cols, thickness);
+  const achievedMinD = minUniformCavity(interiorD, rows, thickness);
+  const fitNote = (achieved: number, target: number | null): string | null => {
+    if (target === null) return null;
+    const d = Math.round((achieved - target) * 10) / 10;
+    const delta = `${d >= 0 ? '+' : '−'}${formatCompactMm(Math.abs(d))}`;
+    return t('binDesigner.compartmentEditor.fitActual', {
+      value: formatCompactMm(achieved),
+      delta,
+    });
+  };
+  const fitNoteW = fitNote(achievedMinW, targetW);
+  const fitNoteD = fitNote(achievedMinD, targetD);
 
   // Check if hovered cell is in a multi-cell compartment (splittable)
   const hoveredIsSplittable = useMemo(() => {
@@ -379,39 +484,115 @@ export function CompartmentEditor() {
   return (
     <div className="space-y-5">
       {/* Bin Grid controls (above the 2D layout) */}
-      <section>
-        <div className="grid grid-cols-2 gap-3">
-          <div>
-            <span className="mb-1 block text-xs text-content-tertiary">
-              {t('binDesigner.columns')}
-            </span>
-            <StepperControl
-              value={cols}
-              onChange={handleColsChange}
-              onStep={handleColsStep}
-              min={DESIGNER_CONSTRAINTS.MIN_COMPARTMENT_GRID}
-              max={DESIGNER_CONSTRAINTS.MAX_COMPARTMENT_GRID}
-              step={1}
-              variant={stepperVariant}
-              ariaLabel="Columns"
-            />
-          </div>
-          <div>
-            <span className="mb-1 block text-xs text-content-tertiary">
-              {t('binDesigner.rows')}
-            </span>
-            <StepperControl
-              value={rows}
-              onChange={handleRowsChange}
-              onStep={handleRowsStep}
-              min={DESIGNER_CONSTRAINTS.MIN_COMPARTMENT_GRID}
-              max={DESIGNER_CONSTRAINTS.MAX_COMPARTMENT_GRID}
-              step={1}
-              variant={stepperVariant}
-              ariaLabel="Rows"
-            />
+      <section className="space-y-3">
+        {/* Mode toggle: set the grid by cell count, or by target compartment size (mm) */}
+        <div className="flex items-center justify-between">
+          <span className="text-xs text-content-tertiary">
+            {t('binDesigner.compartmentEditor.gridMode')}
+          </span>
+          <div className="flex gap-0.5">
+            {GRID_MODES.map((mode) => (
+              <button
+                key={mode}
+                type="button"
+                onClick={() => (mode === 'size' ? enterSizeMode() : setSizeMode('count'))}
+                className={`rounded px-2 py-0.5 text-[11px] font-medium transition-colors ${
+                  sizeMode === mode
+                    ? 'bg-accent text-on-accent'
+                    : 'border border-stroke-subtle bg-surface-elevated text-content-secondary hover:bg-surface-hover'
+                }`}
+              >
+                {mode === 'count'
+                  ? t('binDesigner.compartmentEditor.gridModeCount')
+                  : t('binDesigner.compartmentEditor.gridModeSize')}
+              </button>
+            ))}
           </div>
         </div>
+
+        {sizeMode === 'count' ? (
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <span className="mb-1 block text-xs text-content-tertiary">
+                {t('binDesigner.columns')}
+              </span>
+              <StepperControl
+                value={cols}
+                onChange={handleColsChange}
+                onStep={handleColsStep}
+                min={DESIGNER_CONSTRAINTS.MIN_COMPARTMENT_GRID}
+                max={DESIGNER_CONSTRAINTS.MAX_COMPARTMENT_GRID}
+                step={1}
+                variant={stepperVariant}
+                ariaLabel={t('binDesigner.columns')}
+              />
+            </div>
+            <div>
+              <span className="mb-1 block text-xs text-content-tertiary">
+                {t('binDesigner.rows')}
+              </span>
+              <StepperControl
+                value={rows}
+                onChange={handleRowsChange}
+                onStep={handleRowsStep}
+                min={DESIGNER_CONSTRAINTS.MIN_COMPARTMENT_GRID}
+                max={DESIGNER_CONSTRAINTS.MAX_COMPARTMENT_GRID}
+                step={1}
+                variant={stepperVariant}
+                ariaLabel={t('binDesigner.rows')}
+              />
+            </div>
+          </div>
+        ) : (
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <span className="mb-1 block text-xs text-content-tertiary">
+                {t('binDesigner.compartmentEditor.targetWidth')}
+              </span>
+              <StepperControl
+                value={targetW ?? Math.round(achievedMinW * 10) / 10}
+                onChange={applyTargetWidth}
+                onStep={(delta) => applyTargetWidth((targetW ?? achievedMinW) + delta)}
+                min={DESIGNER_CONSTRAINTS.MIN_COMPARTMENT_SIZE}
+                max={Math.round(interiorW)}
+                step={1}
+                inputDecimals={1}
+                variant={stepperVariant}
+                ariaLabel={t('binDesigner.compartmentEditor.targetWidth')}
+              />
+              {fitNoteW && (
+                <span className="mt-1 block text-[11px] tabular-nums text-content-tertiary">
+                  {fitNoteW}
+                </span>
+              )}
+            </div>
+            <div>
+              <span className="mb-1 block text-xs text-content-tertiary">
+                {t('binDesigner.compartmentEditor.targetDepth')}
+              </span>
+              <StepperControl
+                value={targetD ?? Math.round(achievedMinD * 10) / 10}
+                onChange={applyTargetDepth}
+                onStep={(delta) => applyTargetDepth((targetD ?? achievedMinD) + delta)}
+                min={DESIGNER_CONSTRAINTS.MIN_COMPARTMENT_SIZE}
+                max={Math.round(interiorD)}
+                step={1}
+                inputDecimals={1}
+                variant={stepperVariant}
+                ariaLabel={t('binDesigner.compartmentEditor.targetDepth')}
+              />
+              {fitNoteD && (
+                <span className="mt-1 block text-[11px] tabular-nums text-content-tertiary">
+                  {fitNoteD}
+                </span>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* Height (mm) lives with the size inputs; it proxies the same divider
+            height value as the control in the lower section. */}
+        {sizeMode === 'size' && compartmentCount > 1 && <DividerHeightControl />}
       </section>
 
       {/* 2D Layout editor (hidden when 1x1 grid) */}
@@ -549,7 +730,8 @@ export function CompartmentEditor() {
             options={thicknessOptions}
             unit="mm"
           />
-          <DividerHeightControl />
+          {/* In size mode the height field is grouped with the size inputs above. */}
+          {sizeMode === 'count' && <DividerHeightControl />}
         </section>
       )}
 
