@@ -1,1 +1,0 @@
-export { SliderInput } from './SliderInput';
