@@ -4,6 +4,7 @@
  * "Go to" deep-link button; tips render description-only.
  */
 
+import { Button } from '@/design-system';
 import { useTranslation } from '@/i18n';
 import type { HelpEntry } from '@/shared/help/helpEntry';
 import { KeyboardKey } from './HelpModalSections';
@@ -46,16 +47,17 @@ export function HelpSearchResultRow({
       {entry.kind === 'shortcut' ? (
         <ShortcutKeyCaps entry={entry} modifierKey={modifierKey} />
       ) : entry.kind === 'feature' && showJumpButton ? (
-        <button
+        <Button
           type="button"
-          className="btn btn-secondary btn-sm shrink-0"
+          variant="secondary"
+          className="shrink-0"
           onClick={() => {
             onJump();
             void jumpToHelpTarget(entry.target);
           }}
         >
           {t('help.goTo')}
-        </button>
+        </Button>
       ) : null}
     </div>
   );
