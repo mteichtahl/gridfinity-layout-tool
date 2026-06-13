@@ -236,7 +236,12 @@ export const Collapsible = forwardRef<HTMLDivElement, CollapsibleProps>(
           id={contentId}
           role="region"
           aria-labelledby={triggerId}
+          // Keep BOTH: `inert` is the modern signal (focus + AT removal) but
+          // jsdom and some assistive tech don't honor it yet, so `aria-hidden`
+          // stays as the portable fallback that keeps collapsed controls out of
+          // the accessibility tree.
           aria-hidden={!expanded}
+          inert={!expanded ? true : undefined}
           className={cn(
             'overflow-hidden',
             hasToggled && 'transition-all duration-200',
