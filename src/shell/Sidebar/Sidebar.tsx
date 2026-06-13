@@ -3,6 +3,7 @@ import { useShallow } from 'zustand/react/shallow';
 import { useViewStore } from '@/core/store/view';
 import { useDrawerSettings } from '@/shared/hooks/useDrawerSettings';
 import { CONSTRAINTS } from '@/core/constants';
+import { Button, IconButton } from '@/design-system';
 import { RulerIcon } from '@/design-system/Icon';
 import type { SettingsTabId } from '@/shell/Modals/SettingsModal/types';
 import { ActiveLayerPanel } from '@/features/layers/components/ActiveLayerPanel';
@@ -157,9 +158,10 @@ export function Sidebar() {
       {collapsed ? (
         // Collapsed state - expand button at top, UserDock pinned at bottom
         <div className="flex flex-col items-center h-full py-2">
-          <button
+          <IconButton
+            size="sm"
+            touchTarget={false}
             onClick={toggle}
-            className="btn btn-ghost btn-icon"
             title={t('sidebar.expandPanel')}
             aria-label={t('sidebar.expandLeftPanel')}
           >
@@ -168,7 +170,7 @@ export function Sidebar() {
                 <path key={d} strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={d} />
               ))}
             </svg>
-          </button>
+          </IconButton>
           {cloudSyncEnabled && (
             <div className="mt-auto w-full">
               <UserDock variant="compact" />
@@ -179,16 +181,18 @@ export function Sidebar() {
         // Expanded state
         <div className="flex flex-col h-full animate-fade-in">
           <div
-            className={`flex items-center gap-3 px-4 py-2 border-b border-stroke-subtle transition-shadow duration-200 ${
+            className={`flex items-center gap-3 px-4 h-[47px] border-b border-stroke-subtle transition-shadow duration-200 ${
               isScrolled ? 'shadow-elevated' : ''
             }`}
           >
             <h2 className="flex-1 text-xs leading-none font-semibold text-content-tertiary uppercase tracking-wider">
               {t('sidebar.tools')}
             </h2>
-            <button
+            <IconButton
+              size="sm"
+              touchTarget={false}
               onClick={() => setShowSettingsModal(true)}
-              className="p-2 rounded-md transition-colors text-content-tertiary hover:bg-surface-hover hover:text-content"
+              className="h-8 w-8 text-content-tertiary"
               title={t('sidebar.settings')}
               aria-label={t('sidebar.openSettings')}
             >
@@ -203,10 +207,12 @@ export function Sidebar() {
                   />
                 ))}
               </svg>
-            </button>
-            <button
+            </IconButton>
+            <IconButton
+              size="sm"
+              touchTarget={false}
               onClick={toggle}
-              className="p-2 rounded-md transition-colors text-content-tertiary hover:bg-surface-hover hover:text-content"
+              className="h-8 w-8 text-content-tertiary"
               title={t('sidebar.collapsePanel')}
               aria-label={t('sidebar.collapseLeftPanel')}
             >
@@ -221,7 +227,7 @@ export function Sidebar() {
                   />
                 ))}
               </svg>
-            </button>
+            </IconButton>
           </div>
           <div
             ref={scrollRef}
@@ -248,12 +254,14 @@ export function Sidebar() {
 
             {/* Inspiration Gallery - Prominent placement */}
             <div className="px-4 py-4 border-b border-stroke-subtle">
-              <button
+              <Button
+                variant="ghost"
+                fullWidth
                 onClick={() => {
                   setShowInspirationGallery(true);
                   if (shouldPulseGallery) dismissGalleryPulse();
                 }}
-                className={`w-full flex items-center gap-3 text-left p-3 rounded-lg bg-gradient-to-r from-accent/10 to-info/10 hover:from-accent/20 hover:to-info/20 border border-accent/20 transition-all group ${shouldPulseGallery ? 'animate-gallery-pulse' : ''}`}
+                className={`justify-start gap-3 text-left p-3 rounded-lg bg-gradient-to-r from-accent/10 to-info/10 hover:from-accent/20 hover:to-info/20 border border-accent/20 group ${shouldPulseGallery ? 'animate-gallery-pulse' : ''}`}
               >
                 <div className="w-10 h-10 rounded-lg bg-accent/20 flex items-center justify-center group-hover:scale-105 transition-transform">
                   <svg
@@ -297,7 +305,7 @@ export function Sidebar() {
                     />
                   ))}
                 </svg>
-              </button>
+              </Button>
             </div>
 
             {/* Grid Size */}
@@ -511,17 +519,19 @@ export function Sidebar() {
                       />
                     </SettingsRow>
                   </div>
-                  <button
+                  <Button
+                    variant="secondary"
+                    fullWidth
                     type="button"
                     onClick={resetGridfinityStandard}
                     disabled={
                       gridUnitMm === CONSTRAINTS.GRID_UNIT_MM_DEFAULT &&
                       heightUnitMm === CONSTRAINTS.HEIGHT_UNIT_MM_DEFAULT
                     }
-                    className="w-full text-[11px] py-1.5 px-2 mt-1 rounded text-content-tertiary hover:text-content hover:bg-surface-hover border border-stroke-subtle transition-colors disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:text-content-tertiary disabled:hover:bg-transparent"
+                    className="text-[11px] py-1.5 px-2 mt-1 text-content-tertiary hover:text-content"
                   >
                     {t('settings.resetGridfinityStandard')}
-                  </button>
+                  </Button>
                 </div>
               </CollapsibleSection>
             </div>

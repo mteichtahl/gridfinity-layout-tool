@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
+import { Button, cn } from '@/design-system';
 import { ICON_PATHS } from '@/shared/constants/iconPaths';
 
 interface TwoClickDeleteButtonProps {
@@ -83,19 +84,24 @@ export function TwoClickDeleteButton({
     [disabled, isConfirming, onDelete]
   );
 
-  const baseStyles = 'w-full px-3 py-2 text-left text-sm flex flex-col gap-0.5 transition-colors';
   const stateStyles = effectiveConfirming
-    ? 'bg-danger text-on-dark'
-    : 'text-danger hover:bg-surface disabled:opacity-50 disabled:cursor-not-allowed';
+    ? 'text-on-dark'
+    : 'text-danger hover:bg-surface hover:text-danger';
 
   return (
-    <button
+    <Button
       ref={buttonRef}
+      variant={effectiveConfirming ? 'danger' : 'ghost'}
+      fullWidth
       type="button"
       role="menuitem"
       onClick={handleClick}
       disabled={disabled}
-      className={`${baseStyles} ${stateStyles} ${className}`}
+      className={cn(
+        'flex-col items-start justify-start gap-0.5 rounded-none px-3 py-2 text-left text-sm font-normal',
+        stateStyles,
+        className
+      )}
     >
       <span className="flex items-center gap-2">
         <svg
@@ -114,6 +120,6 @@ export function TwoClickDeleteButton({
       {effectiveConfirming && confirmSubtext && (
         <span className="text-xs opacity-70 ml-6">{confirmSubtext}</span>
       )}
-    </button>
+    </Button>
   );
 }

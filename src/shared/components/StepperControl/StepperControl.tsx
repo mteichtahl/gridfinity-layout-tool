@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
+import { Button } from '@/design-system';
 import { DeferredNumberInput } from '@/shared/components/DeferredNumberInput';
 
 /**
@@ -201,18 +202,21 @@ export function StepperControl({
   const decreaseDisabled = disabled || optimisticValue <= min;
   const increaseDisabled = disabled || optimisticValue >= max;
 
-  // Button styles based on variant
+  // Button styles based on variant. The mobile `secondary` variant supplies the
+  // filled look; desktop/compact use `ghost` and override bg/border via these
+  // classes so the +/- buttons keep their connected, border-sharing appearance.
+  const buttonVariant = isMobile ? 'secondary' : 'ghost';
   const buttonBaseClass = isMobile
-    ? 'btn btn-secondary w-12 h-12 p-0'
+    ? 'w-12 h-12 p-0'
     : `h-full ${isCompact ? 'px-1' : 'px-2'} border border-stroke-subtle bg-surface-elevated text-content-tertiary hover:text-content hover:bg-surface-hover disabled:opacity-50 transition-colors`;
 
   const decreaseButtonClass = isMobile
     ? `${buttonBaseClass} rounded-r-none`
-    : `${buttonBaseClass} rounded-l border-r-0`;
+    : `${buttonBaseClass} rounded-l rounded-r-none border-r-0`;
 
   const increaseButtonClass = isMobile
     ? `${buttonBaseClass} rounded-l-none`
-    : `${buttonBaseClass} rounded-r border-l-0`;
+    : `${buttonBaseClass} rounded-r rounded-l-none border-l-0`;
 
   // Container height
   const heightClass = isCompact ? 'h-6' : isMobile ? '' : 'h-8';
@@ -232,7 +236,8 @@ export function StepperControl({
   return (
     <div className={`flex items-center ${heightClass} ${className}`}>
       {/* Decrease button */}
-      <button
+      <Button
+        variant={buttonVariant}
         type="button"
         onClick={() => handleStep(-1)}
         disabled={decreaseDisabled}
@@ -240,7 +245,7 @@ export function StepperControl({
         aria-label={`Decrease ${ariaLabel}`}
       >
         <MinusIcon size={iconSize} />
-      </button>
+      </Button>
 
       {/* Input or display */}
       {displayValue !== undefined ? (
@@ -265,7 +270,8 @@ export function StepperControl({
       )}
 
       {/* Increase button */}
-      <button
+      <Button
+        variant={buttonVariant}
         type="button"
         onClick={() => handleStep(1)}
         disabled={increaseDisabled}
@@ -273,7 +279,7 @@ export function StepperControl({
         aria-label={`Increase ${ariaLabel}`}
       >
         <PlusIcon size={iconSize} />
-      </button>
+      </Button>
     </div>
   );
 }
