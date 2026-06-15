@@ -75,6 +75,105 @@ describe('useBaseSection', () => {
     expect(useDesignerStore.getState().params.base.magnetDiameter).toBe(6.5);
   });
 
+  it('toggleLightweight flips the boolean and exposes it as state', () => {
+    const { result } = renderHook(() => useBaseSection());
+
+    expect(result.current.state.hasLightweight).toBe(false);
+
+    act(() => {
+      result.current.handlers.toggleLightweight();
+    });
+
+    expect(useDesignerStore.getState().params.base.lightweight).toBe(true);
+    expect(result.current.state.hasLightweight).toBe(true);
+  });
+
+  it('lightweight coexists with magnet style (allow-all, no constraint clearing)', () => {
+    const { result } = renderHook(() => useBaseSection());
+
+    act(() => {
+      result.current.handlers.toggleLightweight();
+    });
+    act(() => {
+      result.current.handlers.toggleMagnet();
+    });
+
+    const base = useDesignerStore.getState().params.base;
+    expect(base.lightweight).toBe(true);
+    expect(base.style).toBe('magnet');
+  });
+
+  it('lightweight is greyed out with a reason when a scoop is present', () => {
+    useDesignerStore.setState({
+      params: { ...DEFAULT_BIN_PARAMS, scoop: { enabled: true, radius: 'auto' } },
+    });
+    const { result } = renderHook(() => useBaseSection());
+    expect(result.current.handlers.lightweightDisabledReason).toBeTruthy();
+
+    act(() => {
+      result.current.handlers.toggleLightweight();
+    });
+    // Blocked: scoop must be cleared first.
+    expect(useDesignerStore.getState().params.base.lightweight).toBe(false);
+  });
+
+  it('lightweight stays selectable with leftover cutouts after leaving solid mode', () => {
+    // Cutouts persist as inert data once the bin returns to a cavity style; they
+    // must not block re-selecting lightweight (regression: deadlock — couldn't
+    // enable lightweight to clear them because they blocked it).
+    useDesignerStore.setState({
+      params: { ...DEFAULT_BIN_PARAMS, style: 'standard', cutouts: [{ id: 'c1' } as never] },
+    });
+    const { result } = renderHook(() => useBaseSection());
+    expect(result.current.handlers.lightweightDisabledReason).toBeUndefined();
+
+    act(() => {
+      result.current.handlers.toggleLightweight();
+    });
+
+    const p = useDesignerStore.getState().params;
+    expect(p.base.lightweight).toBe(true);
+    // Enabling lightweight clears the dormant cutouts via the reverse rule.
+    expect(p.cutouts).toEqual([]);
+  });
+
+  it('cutouts still block lightweight in solid mode', () => {
+    useDesignerStore.setState({
+      params: { ...DEFAULT_BIN_PARAMS, style: 'solid', cutouts: [{ id: 'c1' } as never] },
+    });
+    const { result } = renderHook(() => useBaseSection());
+    expect(result.current.handlers.lightweightDisabledReason).toBeTruthy();
+  });
+
+  it('enabling flat clears lightweight (mutually exclusive — flat has no socket)', () => {
+    useDesignerStore.setState({
+      params: { ...DEFAULT_BIN_PARAMS, base: { ...DEFAULT_BIN_PARAMS.base, lightweight: true } },
+    });
+    const { result } = renderHook(() => useBaseSection());
+
+    act(() => {
+      result.current.handlers.toggleFlat();
+    });
+
+    const base = useDesignerStore.getState().params.base;
+    expect(base.style).toBe('flat');
+    expect(base.lightweight).toBe(false);
+  });
+
+  it('lightweight is greyed out with a reason on a flat base', () => {
+    useDesignerStore.setState({
+      params: { ...DEFAULT_BIN_PARAMS, base: { ...DEFAULT_BIN_PARAMS.base, style: 'flat' } },
+    });
+    const { result } = renderHook(() => useBaseSection());
+    expect(result.current.handlers.lightweightDisabledReason).toBeTruthy();
+
+    act(() => {
+      result.current.handlers.toggleLightweight();
+    });
+    // Blocked: can't enable lightweight on a flat base.
+    expect(useDesignerStore.getState().params.base.lightweight).toBe(false);
+  });
+
   it('setScrewDiameter updates screwDiameter directly', () => {
     const { result } = renderHook(() => useBaseSection());
 

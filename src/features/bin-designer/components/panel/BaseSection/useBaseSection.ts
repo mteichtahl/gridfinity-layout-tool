@@ -26,12 +26,16 @@ export function useBaseSection() {
   const screwStatus = getFeatureStatus(params, 'base.screw');
   const flatStatus = getFeatureStatus(params, 'base.flat');
   const halfSocketsStatus = getFeatureStatus(params, 'base.halfSockets');
+  const lightweightStatus = getFeatureStatus(params, 'base.lightweight');
 
   const magnetDisabledReason = magnetStatus.reason ? t(magnetStatus.reason) : undefined;
   const screwDisabledReason = screwStatus.reason ? t(screwStatus.reason) : undefined;
   const flatDisabledReason = flatStatus.reason ? t(flatStatus.reason) : undefined;
   const halfSocketsDisabledReason = halfSocketsStatus.reason
     ? t(halfSocketsStatus.reason)
+    : undefined;
+  const lightweightDisabledReason = lightweightStatus.reason
+    ? t(lightweightStatus.reason)
     : undefined;
 
   const toggleMagnet = useCallback(() => {
@@ -56,6 +60,15 @@ export function useBaseSection() {
   const toggleStackingLip = useCallback(() => {
     updateBase({ stackingLip: !base.stackingLip });
   }, [base.stackingLip, updateBase]);
+
+  const toggleLightweight = useCallback(() => {
+    if (!base.lightweight && !lightweightStatus.available) return;
+    const { params: resolved } = resolveConstraints(params, {
+      feature: 'base.lightweight',
+      enabled: !base.lightweight,
+    });
+    setParams(resolved);
+  }, [params, base.lightweight, lightweightStatus.available, setParams]);
 
   const toggleHalfSockets = useCallback(() => {
     if (!hasHalfSockets && !halfSocketsStatus.available) return;
@@ -96,11 +109,12 @@ export function useBaseSection() {
   );
 
   return {
-    state: { base, hasMagnet, hasScrew, isFlat, hasHalfSockets },
+    state: { base, hasMagnet, hasScrew, isFlat, hasHalfSockets, hasLightweight: base.lightweight },
     handlers: {
       toggleMagnet,
       toggleScrew,
       toggleStackingLip,
+      toggleLightweight,
       toggleHalfSockets,
       toggleFlat,
       setMagnetDiameter,
@@ -110,6 +124,7 @@ export function useBaseSection() {
       screwDisabledReason,
       flatDisabledReason,
       halfSocketsDisabledReason,
+      lightweightDisabledReason,
     },
   };
 }

@@ -221,7 +221,10 @@ export const scoopRampsFeature: FeatureBuilder = {
   name: 'scoopRamps',
   tag: FeatureTag.SCOOP,
   target: 'fuse',
-  shouldBuild: (ctx) => !ctx.dimensions.isSlotted,
+  // Lightweight floors have no solid material for a ramp to rest on (it would
+  // bridge the cup recesses), so the scoop is mutually exclusive with lightweight
+  // in the UI; suppress it here too for any legacy design carrying both.
+  shouldBuild: (ctx) => !ctx.dimensions.isSlotted && !ctx.dimensions.lightweight,
   cacheKey: (ctx) => {
     const { dimensions: dim, params } = ctx;
     return compactKey(

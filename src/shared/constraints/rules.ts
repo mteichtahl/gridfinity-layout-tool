@@ -36,6 +36,67 @@ export const CONSTRAINT_RULES: readonly ConstraintRule[] = [
     reason: 'binDesigner.halfSocketsDisablesFlatFloor',
   },
   {
+    description: 'Flat base disables lightweight (no socket floor to shell)',
+    source: 'base.flat',
+    when: (p) => p.base.style === 'flat',
+    disables: ['base.lightweight'],
+    reason: 'binDesigner.flatFloorDisablesLightweight',
+  },
+  {
+    description: 'Lightweight incompatible with flat floor',
+    source: 'base.lightweight',
+    when: (p) => p.base.lightweight,
+    disables: ['base.flat'],
+    reason: 'binDesigner.lightweightDisablesFlatFloor',
+  },
+  {
+    description: 'Lightweight floor disables finger scoop (would bridge the recesses)',
+    source: 'base.lightweight',
+    when: (p) => p.base.lightweight,
+    disables: ['scoop'],
+    reason: 'binDesigner.lightweightDisablesScoop',
+  },
+  {
+    description: 'Finger scoop incompatible with lightweight floor',
+    source: 'scoop',
+    when: (p) => p.scoop.enabled,
+    disables: ['base.lightweight'],
+    reason: 'binDesigner.scoopDisablesLightweight',
+  },
+  {
+    description: 'Lightweight floor disables top cutouts',
+    source: 'base.lightweight',
+    when: (p) => p.base.lightweight,
+    disables: ['cutouts'],
+    reason: 'binDesigner.lightweightDisablesCutouts',
+  },
+  {
+    // Cutouts only cut the floor in solid mode; the array persists as inert data
+    // after switching back to a cavity style, so gate on `style === 'solid'` —
+    // otherwise dormant cutouts would block re-selecting lightweight (and you
+    // can't enable lightweight to clear them, a deadlock). Enabling lightweight
+    // clears any leftover cutouts via the reverse rule above.
+    description: 'Cutouts incompatible with lightweight floor (solid mode)',
+    source: 'cutouts',
+    when: (p) => p.style === 'solid' && p.cutouts.length > 0,
+    disables: ['base.lightweight'],
+    reason: 'binDesigner.cutoutsDisableLightweight',
+  },
+  {
+    description: 'Lightweight floor disables floor inserts (would cut through the shell)',
+    source: 'base.lightweight',
+    when: (p) => p.base.lightweight,
+    disables: ['inserts'],
+    reason: 'binDesigner.lightweightDisablesInserts',
+  },
+  {
+    description: 'Floor inserts incompatible with lightweight floor',
+    source: 'inserts',
+    when: (p) => p.inserts.length > 0,
+    disables: ['base.lightweight'],
+    reason: 'binDesigner.insertsDisableLightweight',
+  },
+  {
     description: 'Attachment holes incompatible with flat floor',
     source: 'base.magnet',
     when: (p) => p.base.style === 'magnet' || p.base.style === 'magnet_and_screw',
