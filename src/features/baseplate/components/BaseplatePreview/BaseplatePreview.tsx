@@ -8,7 +8,7 @@
  * The slab extends asymmetrically when padding differs per side.
  */
 
-import { useRef, useCallback, useMemo, useState } from 'react';
+import { useRef, useCallback, useEffect, useMemo, useState } from 'react';
 import { Canvas } from '@react-three/fiber';
 import { OrbitControls } from '@react-three/drei';
 import { useShallow } from 'zustand/react/shallow';
@@ -170,6 +170,10 @@ export function BaseplatePreview({
     (b: { widthMm: number; depthMm: number; heightMm: number }) => setStackBounds(b),
     []
   );
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- syncing opacity gate to stackEnabled toggle; stale bounds cause a dark-flash on re-entry
+    if (!stackEnabled) setStackBounds(null);
+  }, [stackEnabled]);
   const targetZ = stackEnabled && stackBounds ? stackBounds.heightMm / 2 : totalH / 2;
 
   const baseMaxOrbitDistance = useMemo(
@@ -195,7 +199,12 @@ export function BaseplatePreview({
       ? Math.max(baseMaxOrbitDistance, stackBounds.heightMm * 4, stackBounds.widthMm * 3)
       : baseMaxOrbitDistance;
 
-  const hasAnyMesh = isSplit ? hasSplitMeshes : hasMesh;
+  // In stack mode the canvas renders StackedBaseplateMeshes instead of
+  // BaseplateMesh/SplitBaseplateMeshes. Gate visibility on stackBounds so
+  // the canvas only becomes opaque once the tower preview has been built and
+  // its dimensions reported — otherwise the gradient background shows through
+  // while StackedBaseplateMeshes is still constructing or returns null.
+  const hasAnyMesh = stackEnabled ? stackBounds !== null : isSplit ? hasSplitMeshes : hasMesh;
   const hasError = wasmStatus === 'error' || generationStatus === 'error';
   const isWasmLoading = !hasError && wasmStatus !== 'ready';
   const isGenerating = generationStatus === 'generating';
@@ -289,6 +298,8 @@ export function BaseplatePreview({
                   paddingRight={paddingRight}
                   paddingFront={paddingFront}
                   paddingBack={paddingBack}
+                  stackEnabled={stackEnabled}
+                  stackBounds={stackBounds}
                 />
 
                 {stackPrint && stackEnabled ? (
