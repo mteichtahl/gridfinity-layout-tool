@@ -4,7 +4,9 @@
  */
 
 import { useEffect, useMemo } from 'react';
+import { Text } from '@react-three/drei';
 import { useShallow } from 'zustand/react/shallow';
+import { useThreeColors } from '@/shared/hooks/useThemeEffect';
 import { useLayoutStore } from '@/core/store/layout';
 import { useSettingsStore } from '@/core/store/settings';
 import { DEFAULT_BASEPLATE_PARAMS } from '@/core/constants';
@@ -51,12 +53,16 @@ function toMeshArrays(mesh: {
   };
 }
 
+const LABEL_Z_OFFSET = 8;
+const LABEL_FONT_SIZE = 6;
+
 export function StackedBaseplateMeshes({
   stack,
   color,
   separationMm,
   onBounds,
 }: StackedBaseplateMeshesProps) {
+  const colors = useThreeColors();
   const {
     drawerWidth,
     drawerDepth,
@@ -97,15 +103,22 @@ export function StackedBaseplateMeshes({
     const isSplit = tiling?.isSplit ?? false;
 
     const towers: StackPreviewTower[] = [];
+    const filteredPlan: typeof plan = [];
     for (const physical of plan) {
       const source = isSplit
         ? pieceMeshes.find((p) => p.label === physical.label)?.mesh
         : singleMesh;
       const arrays = source ? toMeshArrays(source) : null;
-      if (arrays) towers.push({ mesh: arrays, copies: physical.copies });
+      if (arrays) {
+        towers.push({ mesh: arrays, copies: physical.copies });
+        filteredPlan.push(physical);
+      }
     }
     if (towers.length === 0) return null;
-    return buildStackPreviewMeshes(towers, stack, separationMm, gridUnitMm);
+    return {
+      meshes: buildStackPreviewMeshes(towers, stack, separationMm, gridUnitMm),
+      plan: filteredPlan,
+    };
   }, [
     baseplateParams,
     drawerWidth,
@@ -122,16 +135,18 @@ export function StackedBaseplateMeshes({
     separationMm,
   ]);
 
-  const widthMm = preview?.widthMm ?? 0;
-  const depthMm = preview?.depthMm ?? 0;
-  const heightMm = preview?.heightMm ?? 0;
+  const meshResult = preview?.meshes ?? null;
+  const plan = preview?.plan ?? [];
+  const widthMm = meshResult?.widthMm ?? 0;
+  const depthMm = meshResult?.depthMm ?? 0;
+  const heightMm = meshResult?.heightMm ?? 0;
   useEffect(() => {
-    if (preview && onBounds) onBounds({ widthMm, depthMm, heightMm });
-  }, [preview, onBounds, widthMm, depthMm, heightMm]);
+    if (meshResult && onBounds) onBounds({ widthMm, depthMm, heightMm });
+  }, [meshResult, onBounds, widthMm, depthMm, heightMm]);
 
-  const plateGeo = useMeshGeometry(preview ? preview.plates : EMPTY_GEO);
+  const plateGeo = useMeshGeometry(meshResult ? meshResult.plates : EMPTY_GEO);
 
-  if (!preview || !plateGeo.geometry) return null;
+  if (!meshResult || !plateGeo.geometry) return null;
 
   return (
     <>
@@ -148,6 +163,28 @@ export function StackedBaseplateMeshes({
           <lineBasicMaterial {...EDGE_MATERIAL_PROPS} />
         </lineSegments>
       )}
+      {meshResult.towerLayouts.map((layout, idx) => {
+        const entry = plan[idx];
+        if (!entry) return null;
+        const label = `×${entry.copies}`;
+        return (
+          <Text
+            key={idx}
+            position={[layout.centerX, layout.centerY, layout.heightMm + LABEL_Z_OFFSET]}
+            fontSize={LABEL_FONT_SIZE}
+            color={colors.labelColor}
+            fillOpacity={0.7}
+            anchorX="center"
+            anchorY="bottom"
+            outlineWidth={0.3}
+            outlineColor={colors.gradientBottom}
+            renderOrder={2}
+            raycast={() => null}
+          >
+            {label}
+          </Text>
+        );
+      })}
     </>
   );
 }
