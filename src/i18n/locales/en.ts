@@ -1301,9 +1301,6 @@ const en: Record<string, string> = {
   'baseplate.export.threeDModel': '3D Model',
   'baseplate.export.threeDModelDescription': 'Export a printable baseplate model',
   'baseplate.export.dedupSuccess': 'Baseplate exported ({unique} unique pieces, {total} total)',
-  'baseplate.export.stackCopies': 'Copies per part',
-  'baseplate.export.stackCopiesDescription':
-    'Stack vertical copies of each baseplate piece in the 3MF for slicer batching.',
   'baseplate.generation.dedupProgress':
     'Refining {unique} unique pieces ({skipped} duplicates skipped)',
 
@@ -2098,10 +2095,29 @@ const en: Record<string, string> = {
   'baseplate.magnetDepthInfo': '2mm for typical 6\u00d72mm magnets',
   'baseplate.gridUnitTooltip': 'Width of one grid square (standard: 42mm)',
   'baseplate.printBedTooltip': 'Baseplates larger than this are split automatically.',
+  'baseplate.maxPrintHeight': 'Build height',
+  'baseplate.maxPrintHeightTooltip':
+    "Your printer's max Z height. Stack printing fits as many baseplates per stack as this allows.",
   'baseplate.nozzleSizeTooltip':
     'Your printer nozzle diameter. Dovetail keys and snap clips scale to it so they stay printable on wider nozzles. Geometry is unchanged at 0.4mm.',
   'baseplate.connectorNozzleNotice':
     'Sized for a {nozzle}mm nozzle — dovetail keys and snap clips are enlarged to stay printable.',
+  'baseplate.stackPrint.badge': 'Experimental',
+  'baseplate.stackPrint.enable': 'Vertical stack',
+  'baseplate.stackPrint.stacks.one': '{count} stack',
+  'baseplate.stackPrint.stacks.other': '{count} stacks',
+  'baseplate.stackPrint.plates.one': '{count} plate',
+  'baseplate.stackPrint.plates.other': '{count} plates',
+  'baseplate.stackPrint.exportBanner':
+    'Stack printing: {stacks} stacks ({plates} plates) export as a ZIP with a print guide.',
+  'baseplate.stackPrint.gap.label': 'Gap',
+  'baseplate.stackPrint.gap.info':
+    'Air gap between stacked plates — about 0.2mm (one layer). Test a small stack first to dial it in. For easy separation, fill the gap with a slicer support interface in PETG or “Support for PLA”.',
+  'baseplate.stackPrint.featuresOff':
+    'Connectors, magnet holes, and corner rounding are turned off while stacking.',
+  'baseplate.stackPrint.separate': 'Separate',
+  'baseplate.stackPrint.together': 'Together',
+  'baseplate.stackPrint.separationSlider': 'Separate the print stack to inspect it',
   'baseplate.wasmLoadFailed': 'Failed to load 3D engine',
   'baseplate.generationFailed': 'Baseplate generation failed',
   'baseplate.errorRetryHint':

@@ -150,4 +150,44 @@ describe('buildFullParams', () => {
       expect(result.fractionalEdgeY).toBe('end');
     });
   });
+
+  describe('stack-print feature stripping (connectors + magnets)', () => {
+    // storedBase has magnetHoles: true.
+    const withFeatures = {
+      ...storedBase,
+      connectorNubs: true,
+      connectorStyle: 'dovetailKey' as const,
+    };
+
+    it('passes connectors and magnets through when stacking is off', () => {
+      const result = buildFullParams(withFeatures, 10, 8, 42, 'end', 'end');
+      expect(result.connectorNubs).toBe(true);
+      expect(result.connectorStyle).toBe('dovetailKey');
+      expect(result.magnetHoles).toBe(true);
+    });
+
+    it('strips connectors and magnets when stacking is enabled (without mutating stored)', () => {
+      const stored = {
+        ...withFeatures,
+        stackPrint: { enabled: true, gapMm: 0.2 as never },
+      };
+      const result = buildFullParams(stored, 10, 8, 42, 'end', 'end');
+      expect(result.connectorNubs).toBe(false);
+      expect(result.connectorStyle).toBeUndefined();
+      expect(result.magnetHoles).toBe(false); // magnet pockets bridge when flipped
+      // Stored params are untouched, so the features return when stacking is off.
+      expect(stored.connectorNubs).toBe(true);
+      expect(stored.magnetHoles).toBe(true);
+    });
+
+    it('keeps connectors and magnets when stackPrint exists but is disabled', () => {
+      const stored = {
+        ...withFeatures,
+        stackPrint: { enabled: false, gapMm: 0.2 as never },
+      };
+      const result = buildFullParams(stored, 10, 8, 42, 'end', 'end');
+      expect(result.connectorNubs).toBe(true);
+      expect(result.magnetHoles).toBe(true);
+    });
+  });
 });

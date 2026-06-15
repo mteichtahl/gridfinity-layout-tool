@@ -32,6 +32,40 @@ export interface Layout {
  * second = horizontal (l/c/r). 'custom' means user-edited per-side, no anchor. */
 export type PaddingAnchor = 'tl' | 'tc' | 'tr' | 'ml' | 'c' | 'mr' | 'bl' | 'bc' | 'br' | 'custom';
 
+/**
+ * Vertical stack-print configuration (experimental). When enabled, each group
+ * of identical baseplate pieces is duplicated along Z so a whole drawer's worth
+ * of plates prints in one job. The bottom plate prints upright (bed adhesion,
+ * no overhang); every plate above it is flipped upside down (community practice
+ * that minimizes overhangs), separated by a thin air gap so the tower snaps
+ * apart after printing. Each physical stack is capped at how many tiles fit the
+ * printer's build height (`stackHeightCap`, from
+ * `settings.printSettings.maxPrintHeightMm`), so an over-tall group splits into
+ * several stacks.
+ *
+ * Connectors, magnet holes, and corner rounding are auto-disabled while enabled
+ * (overhangs that can't print, and per-tile differences that would break the
+ * uniform-tile assumption stacking relies on).
+ */
+export interface StackPrintParams {
+  readonly enabled: boolean;
+  /** Air gap between stacked copies (mm) — one print layer (~0.2mm) is typical. */
+  readonly gapMm: Mm;
+}
+
+/** Default air gap between stacked copies — one 0.2mm layer. */
+export const STACK_PRINT_DEFAULT_GAP_MM = 0.2;
+/**
+ * Fallback cap on copies per physical stack, used only when no build-height
+ * limit is supplied. The real per-stack cap is `stackHeightCap()`, derived from
+ * the printer build height (`settings.printSettings.maxPrintHeightMm`), and can
+ * exceed this on tall printers.
+ */
+export const STACK_PRINT_MAX_STACK_HEIGHT = 8;
+/** Inclusive bounds on the separation gap (mm). */
+export const STACK_PRINT_MIN_GAP_MM = 0.1;
+export const STACK_PRINT_MAX_GAP_MM = 1.0;
+
 /** Baseplate generation parameters stored per-layout.
  * Width/depth/gridUnitMm are derived from the layout's drawer at generation time unless
  * syncWithLayout is false, in which case baseplateWidth/baseplateDepth override drawer dims.
@@ -103,6 +137,13 @@ export interface BaseplateParams {
   readonly fractionalEdgeX?: FractionalEdge;
   /** Which edge carries the half-unit row when baseplateDepth is fractional and syncWithLayout is false. Defaults to 'end' (top). */
   readonly fractionalEdgeY?: FractionalEdge;
+  /**
+   * Vertical stack-print configuration (experimental). When enabled, each
+   * identical-piece group exports as flipped, separated vertical stacks sized
+   * to the quantity the drawer needs (× `sets`). Auto-disables connectors.
+   * Omitted/undefined = no stacking (single baseplate).
+   */
+  readonly stackPrint?: StackPrintParams;
 }
 
 /** Position of fractional edge when drawer has half-unit dimensions */

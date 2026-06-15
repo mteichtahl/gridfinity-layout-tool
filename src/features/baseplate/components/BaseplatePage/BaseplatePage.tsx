@@ -23,9 +23,12 @@ import { HeaderSupportLinks } from '@/shared/components/HeaderSupportLinks';
 import { useBaseplateRouting } from '@/shared/hooks/useBaseplateRouting';
 import { useBaseplateGeneration } from '../../hooks/useBaseplateGeneration';
 import { useBaseplateExport } from '../../hooks/useBaseplateExport';
-import { useBaseplatePageStore, MAX_STACK_COPIES } from '../../store/baseplatePageStore';
+import { useBaseplatePageStore } from '../../store/baseplatePageStore';
 import { generateBaseplateFileName, toNamingParams } from '../../utils/fileNaming';
 import { buildFullParams } from '../../utils/buildFullParams';
+import { stackGroupsFromTiling, planPhysicalStacks, stackHeightCap } from '../../utils/stackPrint';
+import { GRIDFINITY_SPEC } from '@/shared/printSettings/gridfinityGeometry';
+import { STACK_PRINT_DEFAULT_GAP_MM } from '@/core/types';
 import { BaseplatePanel } from '../BaseplatePanel/BaseplatePanel';
 import { BaseplatePreview } from '../BaseplatePreview/BaseplatePreview';
 import {
@@ -96,8 +99,6 @@ export function BaseplatePage() {
   const exportFileNameConfig = useBaseplatePageStore((s) => s.exportFileNameConfig);
   const setExportFileNameConfig = useBaseplatePageStore((s) => s.setExportFileNameConfig);
   const tiling = useBaseplatePageStore((s) => s.tiling);
-  const stackCopies = useBaseplatePageStore((s) => s.stackCopies);
-  const setStackCopies = useBaseplatePageStore((s) => s.setStackCopies);
 
   const [splitEnabled, setSplitEnabled] = useState(true);
   const [justExported, setJustExported] = useState(false);
@@ -105,6 +106,7 @@ export function BaseplatePage() {
   const activeFormat: ExportFileFormat = exportFileNameConfig.format ?? 'stl';
 
   const nozzleSizeMm = useSettingsStore((s) => s.settings.printSettings.nozzleSizeMm);
+  const maxPrintHeightMm = useSettingsStore((s) => s.settings.printSettings.maxPrintHeightMm);
 
   const fullParams = useMemo(
     () =>
@@ -133,9 +135,27 @@ export function BaseplatePage() {
     [fullParams, activeFormat, exportFileNameConfig]
   );
 
-  const showSplitBanner = tiling?.isSplit === true && activeFormat !== 'step';
-  const useSplitExport = showSplitBanner && splitEnabled;
-  const displayExtension = useSplitExport ? '.zip' : FORMAT_EXTENSIONS[activeFormat];
+  // Stacking exports one file per physical tower (dedup collapses identical
+  // tiles first), so the "exceeds bed → N pieces" framing no longer applies —
+  // describe the stacks instead. STEP never stacks.
+  const stackEnabled = baseplateParams.stackPrint?.enabled === true && activeFormat !== 'step';
+  const stackGapMm = baseplateParams.stackPrint?.gapMm ?? STACK_PRINT_DEFAULT_GAP_MM;
+  const stackPlan = useMemo(() => {
+    if (!stackEnabled || !tiling) return [];
+    const groups = stackGroupsFromTiling(tiling, fullParams);
+    const cap = stackHeightCap(maxPrintHeightMm, GRIDFINITY_SPEC.SOCKET_HEIGHT, stackGapMm);
+    return planPhysicalStacks(groups, cap);
+  }, [stackEnabled, tiling, fullParams, maxPrintHeightMm, stackGapMm]);
+  const stackFileCount = stackPlan.length;
+  const stackPlateCount = stackPlan.reduce((sum, s) => sum + s.copies, 0);
+
+  // Split-into-pieces banner only when NOT stacking (stacking has its own).
+  const showSplitBanner = !stackEnabled && tiling?.isSplit === true && activeFormat !== 'step';
+  // When stacking, a split drawer always takes the per-tower export path; the
+  // user can't opt out, so there's no split checkbox to gate it.
+  const useSplitExport = stackEnabled ? tiling?.isSplit === true : showSplitBanner && splitEnabled;
+  const isZipExport = stackEnabled ? stackFileCount > 1 : useSplitExport;
+  const displayExtension = isZipExport ? '.zip' : FORMAT_EXTENSIONS[activeFormat];
 
   const handleDownload = useCallback(() => {
     void downloadBaseplate(activeFormat, useSplitExport).then((succeeded) => {
@@ -305,15 +325,13 @@ export function BaseplatePage() {
               }
             : null
         }
-        stackOptions={
-          activeFormat === '3mf'
+        warningBanner={
+          stackEnabled && stackFileCount > 1
             ? {
-                label: t('baseplate.export.stackCopies'),
-                description: t('baseplate.export.stackCopiesDescription'),
-                value: stackCopies,
-                onChange: setStackCopies,
-                min: 1,
-                max: MAX_STACK_COPIES,
+                message: t('baseplate.stackPrint.exportBanner', {
+                  stacks: stackFileCount,
+                  plates: stackPlateCount,
+                }),
               }
             : null
         }

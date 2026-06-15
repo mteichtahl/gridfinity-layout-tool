@@ -1,0 +1,87 @@
+import { describe, it, expect } from 'vitest';
+import type { StackPrintParams } from '@/core/types';
+import { mm } from '@/core/types';
+import { buildStackPreviewMeshes } from './stackPreview';
+import { meshBounds, type StackMeshArrays } from './stackPrint';
+
+/** A 10mm-tall plate footprint 0..20 x 0..30 as an indexed mesh (2 triangles). */
+function plate(): StackMeshArrays {
+  return {
+    vertices: new Float32Array([0, 0, 0, 20, 0, 0, 0, 30, 0, 0, 0, 10, 20, 0, 10, 0, 30, 10]),
+    normals: new Float32Array([0, 0, -1, 0, 0, -1, 0, 0, -1, 0, 0, 1, 0, 0, 1, 0, 0, 1]),
+    indices: new Uint32Array([0, 1, 2, 3, 4, 5]),
+    edgeVertices: new Float32Array(0),
+  };
+}
+
+const airGap: StackPrintParams = { enabled: true, gapMm: mm(0.2) };
+
+describe('buildStackPreviewMeshes', () => {
+  it('returns empty geometry for no towers', () => {
+    const out = buildStackPreviewMeshes([], airGap, 0);
+    expect(out.plates.vertices.length).toBe(0);
+    expect(out.heightMm).toBe(0);
+  });
+
+  it('stacks a single tower of N copies', () => {
+    const out = buildStackPreviewMeshes([{ mesh: plate(), copies: 3 }], airGap, 0);
+    // 2 triangles * 3 copies = 6 triangles -> 6 indices * 3 = 18 index entries
+    expect(out.plates.indices.length).toBe(18);
+    // height = 2*(10+0.2)+10 = 30.4
+    expect(out.heightMm).toBeCloseTo(30.4, 4);
+    const b = meshBounds(out.plates.vertices);
+    expect(b.minZ).toBeCloseTo(0, 4);
+    expect(b.maxZ).toBeCloseTo(30.4, 4);
+  });
+
+  it('adds the separation slider distance to the stride', () => {
+    const base = buildStackPreviewMeshes([{ mesh: plate(), copies: 2 }], airGap, 0);
+    const exploded = buildStackPreviewMeshes([{ mesh: plate(), copies: 2 }], airGap, 20);
+    expect(exploded.heightMm).toBeGreaterThan(base.heightMm + 19);
+  });
+
+  it('lays multiple towers in a centered grid', () => {
+    const out = buildStackPreviewMeshes(
+      [
+        { mesh: plate(), copies: 1 },
+        { mesh: plate(), copies: 1 },
+      ],
+      airGap,
+      0
+    );
+    const b = meshBounds(out.plates.vertices);
+    // 2 towers -> 2 cols x 1 row. cellW = 20 + 12 = 32; centered cols at ±16,
+    // each 20mm-wide tower spans ±10 -> overall X bounds [-26, 26], width 2*32=64.
+    expect(b.minX).toBeCloseTo(-26, 4);
+    expect(b.maxX).toBeCloseTo(26, 4);
+    expect(out.widthMm).toBeCloseTo(64, 4);
+  });
+
+  // Towers tile into a roughly-square grid (cols = ceil(sqrt(n))), centered on
+  // origin — a single off-screen row was the "single line" preview bug. Plate
+  // footprint 20×30 → cellW 32, cellD 42.
+  describe('grid layout (parameterized)', () => {
+    const cases = [
+      { towers: 1, cols: 1, rows: 1 },
+      { towers: 2, cols: 2, rows: 1 },
+      { towers: 3, cols: 2, rows: 2 },
+      { towers: 4, cols: 2, rows: 2 },
+      { towers: 5, cols: 3, rows: 2 },
+      { towers: 9, cols: 3, rows: 3 },
+      { towers: 16, cols: 4, rows: 4 },
+    ];
+    it.each(cases)('$towers towers → ${cols}×${rows} grid, centered', ({ towers, cols, rows }) => {
+      const out = buildStackPreviewMeshes(
+        Array.from({ length: towers }, () => ({ mesh: plate(), copies: 1 })),
+        airGap,
+        0
+      );
+      expect(out.widthMm).toBeCloseTo(cols * 32, 4);
+      expect(out.depthMm).toBeCloseTo(rows * 42, 4);
+      // Centered on origin in X and Y.
+      const b = meshBounds(out.plates.vertices);
+      expect(b.minX).toBeCloseTo(-b.maxX, 3);
+      expect(b.minY).toBeCloseTo(-b.maxY, 3);
+    });
+  });
+});

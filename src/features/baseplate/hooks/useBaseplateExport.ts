@@ -12,8 +12,12 @@ import { useLayoutStore } from '@/core/store/layout';
 import { useSettingsStore } from '@/core/store/settings';
 import { DEFAULT_BASEPLATE_PARAMS } from '@/core/constants';
 import { getActiveBridge, workerPoolManager } from '@/shared/generation/bridge';
-import { export3MF } from '@/shared/generation/export';
+import { export3MF, buildSTLBuffer } from '@/shared/generation/export';
 import { parseSTLBinary } from '@/shared/generation/stlParser';
+import { buildStackExportSoup } from '../utils/stackExport';
+import { planPhysicalStacks, stackHeightCap } from '../utils/stackPrint';
+import { GRIDFINITY_SPEC } from '@/shared/printSettings/gridfinityGeometry';
+import type { StackPrintParams } from '@/core/types';
 import { packagePiecesAsZip } from '@/shared/generation/zipExport';
 import { isErr, getUserMessage } from '@/core/result';
 import { useToastStore } from '@/core/store/toast';
@@ -23,7 +27,7 @@ import { buildFullParams } from '../utils/buildFullParams';
 import { groupPiecesByFingerprint } from '../utils/pieceFingerprint';
 import { assignGroupNames } from '../utils/pieceNaming';
 import { countConnectorKeys } from '../utils/connectorKeys';
-import { generatePrintGuide } from '../utils/printGuide';
+import { generatePrintGuide, generateStackPrintNote } from '../utils/printGuide';
 import { generateBaseplateFileName, toNamingParams } from '../utils/fileNaming';
 import { FORMAT_MIME_TYPES, triggerDownload } from '@/shared/generation/exportUtils';
 import type { ExportFileFormat } from '@/shared/types/bin';
@@ -44,51 +48,63 @@ const FORMAT_EXTENSIONS: Record<ExportFileFormat, string> = {
   '3mf': '.3mf',
 };
 
-function convertStlTo3mf(stlData: ArrayBuffer, name: string, stackCopies: number): Blob {
+function printSettingsFor3MF() {
+  const printSettings = useSettingsStore.getState().settings.printSettings;
+  return {
+    layerHeight: printSettings.layerHeightMm,
+    infillPercent: printSettings.infillPercent,
+    material: 'PLA',
+    supportRequired: false,
+    estimatedMinutes: 0,
+    estimatedGrams: 0,
+  };
+}
+
+/** Convert a single-plate STL to a single-instance 3MF (no stacking). */
+function convertStlTo3mf(stlData: ArrayBuffer, name: string): Blob {
   const parseResult = parseSTLBinary(stlData);
   if (isErr(parseResult)) {
     throw new Error(getUserMessage(parseResult.error));
   }
   const { vertices, normals } = parseResult.value;
-  const printSettings = useSettingsStore.getState().settings.printSettings;
-
-  // Stacked instances reference the same mesh translated along Z; compute the
-  // per-instance Z stride from the source mesh's bbox so each copy sits flush
-  // on top of the one below it. A degenerate mesh (zero Z extent) would
-  // produce a stride of 0 and silently overlap every copy at Z=0, so the
-  // option is suppressed in that case and the export degrades to a single
-  // instance instead.
-  const zHeight = meshZExtent(vertices);
-  const stack =
-    stackCopies > 1 && zHeight > 0
-      ? { count: stackCopies, zHeightMm: zHeight, spacingMm: 0 }
-      : undefined;
-
-  return export3MF(vertices, normals, {
-    name,
-    printSettings: {
-      layerHeight: printSettings.layerHeightMm,
-      infillPercent: printSettings.infillPercent,
-      material: 'PLA',
-      supportRequired: false,
-      estimatedMinutes: 0,
-      estimatedGrams: 0,
-    },
-    stack,
-  });
+  return export3MF(vertices, normals, { name, printSettings: printSettingsFor3MF() });
 }
 
-function meshZExtent(vertices: Float32Array): number {
-  if (vertices.length < 3) return 0;
-  let minZ = Infinity;
-  let maxZ = -Infinity;
-  for (let i = 2; i < vertices.length; i += 3) {
-    const z = vertices[i];
-    if (z < minZ) minZ = z;
-    if (z > maxZ) maxZ = z;
+/** Parse a binary STL into a triangle soup, or throw a user-facing error. */
+function parseStlSoup(stlData: ArrayBuffer): { vertices: Float32Array; normals: Float32Array } {
+  const parseResult = parseSTLBinary(stlData);
+  if (isErr(parseResult)) {
+    throw new Error(getUserMessage(parseResult.error));
   }
-  const extent = maxZ - minZ;
-  return Number.isFinite(extent) && extent > 0 ? extent : 0;
+  return parseResult.value;
+}
+
+/**
+ * Build a stacked file from an already-parsed single-plate soup: bakes `copies`
+ * plates (bottom upright, the rest flipped, separated by an air gap) into real
+ * geometry. Single-material in both STL and 3MF. The source is parsed once by
+ * the caller so capped multi-tower exports don't re-parse the same mesh.
+ */
+function buildStackedFileBlob(
+  source: { vertices: Float32Array; normals: Float32Array },
+  name: string,
+  copies: number,
+  format: 'stl' | '3mf',
+  stack: StackPrintParams
+): Blob {
+  const { vertices, normals } = source;
+  const soup = buildStackExportSoup(vertices, normals, copies, stack);
+
+  if (format === 'stl') {
+    return new Blob([buildSTLBuffer(soup.vertices, soup.normals, name)], {
+      type: FORMAT_MIME_TYPES.stl,
+    });
+  }
+
+  return export3MF(soup.vertices, soup.normals, {
+    name,
+    printSettings: printSettingsFor3MF(),
+  });
 }
 
 export function useBaseplateExport(): UseBaseplateExportReturn {
@@ -118,7 +134,6 @@ export function useBaseplateExport(): UseBaseplateExportReturn {
   const exportFileNameConfig = useBaseplatePageStore((s) => s.exportFileNameConfig);
   const exportProgress = useBaseplatePageStore((s) => s.exportProgress);
   const setExportProgress = useBaseplatePageStore((s) => s.setExportProgress);
-  const stackCopies = useBaseplatePageStore((s) => s.stackCopies);
   const [isExporting, setIsExporting] = useState(false);
 
   const hasSingleMesh = mesh !== null && mesh.vertices !== null && mesh.error === null;
@@ -134,6 +149,16 @@ export function useBaseplateExport(): UseBaseplateExportReturn {
       }
 
       setIsExporting(true);
+
+      // Stack-printing config (persisted in baseplateParams). STEP is a CAD
+      // interchange format with no slicer stacking notion, so it never stacks.
+      const stack = baseplateParams.stackPrint;
+      const stackEnabled = stack?.enabled === true && format !== 'step';
+      const stackCap = stackHeightCap(
+        useSettingsStore.getState().settings.printSettings.maxPrintHeightMm,
+        GRIDFINITY_SPEC.SOCKET_HEIGHT,
+        stack?.gapMm ?? 0.2
+      );
 
       try {
         const fullParams = buildFullParams(
@@ -155,11 +180,11 @@ export function useBaseplateExport(): UseBaseplateExportReturn {
         const extension = FORMAT_EXTENSIONS[format];
 
         if (tiling?.isSplit && splitEnabled) {
-          // Multi-piece ZIP export with deduplication
+          // Multi-piece ZIP export: dedupe pieces by geometry fingerprint, then
+          // generate + export only the unique shapes.
           const bridgeFormat = format === '3mf' ? 'stl' : format;
           const pool = workerPoolManager.get();
 
-          // Deduplicate: group pieces by geometry fingerprint
           const groups = groupPiecesByFingerprint(tiling.pieces, fullParams);
           const groupNames = assignGroupNames(groups, tiling.pieces);
           const uniqueGroups = [...groups.entries()];
@@ -168,7 +193,6 @@ export function useBaseplateExport(): UseBaseplateExportReturn {
 
           setExportProgress({ current: 0, total: uniqueCount });
 
-          // Generate only unique shapes
           const uniqueParams = uniqueGroups.map(([, g]) => g.params);
           let uniqueExports: ArrayBuffer[];
 
@@ -189,19 +213,38 @@ export function useBaseplateExport(): UseBaseplateExportReturn {
             }
           }
 
-          // Build pieces array with role-based names (one file per unique shape)
+          // One file per unique shape. When stacking, each unique piece is baked
+          // into towers of the quantity the drawer needs (group size), split into
+          // multiple files when a stack exceeds the printable height cap.
           const pieces: { data: ArrayBuffer; label: string }[] = [];
           for (let i = 0; i < uniqueGroups.length; i++) {
-            const [fp] = uniqueGroups[i];
+            const [fp, group] = uniqueGroups[i];
             const name = groupNames.get(fp) ?? 'unknown';
-            let data = uniqueExports[i];
+            const stlData = uniqueExports[i];
 
-            if (format === '3mf') {
-              const blob = convertStlTo3mf(data, `${baseNameNoExt}_${name}`, stackCopies);
-              data = await blob.arrayBuffer();
+            if (stack && stackEnabled) {
+              const source = parseStlSoup(stlData);
+              const towers = planPhysicalStacks(
+                [{ label: name, quantity: group.indices.length }],
+                stackCap
+              );
+              for (let s = 0; s < towers.length; s++) {
+                const label = towers.length > 1 ? `${name}_${s + 1}` : name;
+                const blob = buildStackedFileBlob(
+                  source,
+                  `${baseNameNoExt}_${label}`,
+                  towers[s].copies,
+                  format,
+                  stack
+                );
+                pieces.push({ data: await blob.arrayBuffer(), label });
+              }
+            } else if (format === '3mf') {
+              const blob = convertStlTo3mf(stlData, `${baseNameNoExt}_${name}`);
+              pieces.push({ data: await blob.arrayBuffer(), label: name });
+            } else {
+              pieces.push({ data: stlData, label: name });
             }
-
-            pieces.push({ data, label: name });
           }
 
           // Dovetail key connectors ship a separate, identical key part hammered into
@@ -212,15 +255,14 @@ export function useBaseplateExport(): UseBaseplateExportReturn {
             let keyData = keyResult.data;
             if (format === '3mf') {
               // The key is a discrete part (one per seam junction, count in the
-              // guide), not a plate — the plate Z-stack count doesn't apply, so
-              // never stack it.
-              const blob = convertStlTo3mf(keyData, `${baseNameNoExt}_key`, 1);
+              // guide), not a plate — stacking never applies to it. Connectors
+              // are disabled while stacking, so this path only runs unstacked.
+              const blob = convertStlTo3mf(keyData, `${baseNameNoExt}_key`);
               keyData = await blob.arrayBuffer();
             }
             pieces.push({ data: keyData, label: 'key' });
           }
 
-          // Generate print guide
           const guideText = generatePrintGuide({
             tiling,
             groups,
@@ -232,6 +274,8 @@ export function useBaseplateExport(): UseBaseplateExportReturn {
               keyCount > 0
                 ? { fileName: `${baseNameNoExt}_key${extension}`, count: keyCount }
                 : undefined,
+            stackPrint: stackEnabled ? stack : undefined,
+            stackCap,
           });
 
           const zip = packagePiecesAsZip(pieces, baseNameNoExt, extension, [
@@ -251,17 +295,51 @@ export function useBaseplateExport(): UseBaseplateExportReturn {
               .getState()
               .addToast(t('baseplate.export.splitSuccess', { count: totalPieces }), 'success');
           }
-        } else {
-          // Single piece export
-          if (format === '3mf') {
-            const stlResult = await bridge.exportBaseplate(fullParams, 'stl');
-            const blob = convertStlTo3mf(stlResult.data, baseNameNoExt, stackCopies);
+        } else if (format === 'step') {
+          // STEP: never stacked (CAD interchange, no slicer notion).
+          const result = await bridge.exportBaseplate(fullParams, 'step');
+          triggerDownload(new Blob([result.data], { type: FORMAT_MIME_TYPES.step }), baseName);
+        } else if (stack && stackEnabled) {
+          // Single piece, stacked into one tower (split under the height cap) —
+          // a single tower downloads directly, several go in a ZIP.
+          const stlResult = await bridge.exportBaseplate(fullParams, 'stl');
+          const source = parseStlSoup(stlResult.data);
+          const towers = planPhysicalStacks([{ label: 'plate', quantity: 1 }], stackCap);
+          if (towers.length === 1) {
+            const blob = buildStackedFileBlob(
+              source,
+              baseNameNoExt,
+              towers[0].copies,
+              format,
+              stack
+            );
             triggerDownload(blob, baseName);
           } else {
-            const result = await bridge.exportBaseplate(fullParams, format);
-            const blob = new Blob([result.data], { type: FORMAT_MIME_TYPES[format] });
-            triggerDownload(blob, baseName);
+            const pieces: { data: ArrayBuffer; label: string }[] = [];
+            for (let s = 0; s < towers.length; s++) {
+              const label = `${s + 1}`;
+              const blob = buildStackedFileBlob(
+                source,
+                `${baseNameNoExt}_${label}`,
+                towers[s].copies,
+                format,
+                stack
+              );
+              pieces.push({ data: await blob.arrayBuffer(), label });
+            }
+            const zip = packagePiecesAsZip(pieces, baseNameNoExt, extension, [
+              { name: 'print-guide.txt', content: generateStackPrintNote(stack) },
+            ]);
+            triggerDownload(zip, `${baseNameNoExt}.zip`);
           }
+        } else {
+          // Single piece, unstacked, STL or 3MF.
+          const stlResult = await bridge.exportBaseplate(fullParams, 'stl');
+          const blob =
+            format === '3mf'
+              ? convertStlTo3mf(stlResult.data, baseNameNoExt)
+              : new Blob([stlResult.data], { type: FORMAT_MIME_TYPES.stl });
+          triggerDownload(blob, baseName);
           // Single-file success is conveyed by the dialog's inline success view.
         }
 
@@ -286,7 +364,6 @@ export function useBaseplateExport(): UseBaseplateExportReturn {
       tiling,
       exportFileNameConfig,
       setExportProgress,
-      stackCopies,
     ]
   );
 

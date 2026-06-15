@@ -10,6 +10,7 @@
 
 import * as z from 'zod';
 import { CONSTRAINTS } from '@/core/constants';
+import { STACK_PRINT_MIN_GAP_MM, STACK_PRINT_MAX_GAP_MM } from '@/core/types';
 import type { CommandType } from '../commands';
 import {
   libraryCreateEntrySchema,
@@ -234,6 +235,12 @@ const baseplateParamsSchema = z.object({
       tr: cornerRadiusMm,
       bl: cornerRadiusMm,
       br: cornerRadiusMm,
+    })
+    .optional(),
+  stackPrint: z
+    .object({
+      enabled: z.boolean(),
+      gapMm: z.number().min(STACK_PRINT_MIN_GAP_MM).max(STACK_PRINT_MAX_GAP_MM),
     })
     .optional(),
 });
