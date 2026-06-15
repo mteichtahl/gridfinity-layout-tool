@@ -87,15 +87,66 @@ function generateStackingSection(stack: StackPrintParams): string {
     '  right-side up (solid bed adhesion); every plate above it is flipped upside',
     '  down so the stack prints without supports. Do not lay it flat or re-orient.',
     '',
+    '  SLICER SETUP — no special settings and NO supports are needed; slice it as',
+    '  a single object and print. The air gap is built into the model, so any',
+    `  slicer reproduces it automatically. One rule: keep your layer height AT OR`,
+    `  BELOW the ${gap}mm gap. A taller layer height collapses the gap and fuses the`,
+    '  plates together.',
+    '',
     `  SEPARATION — a ${gap}mm air gap sits between every plate so they don't fuse.`,
     '  After printing, flex the stack or work a thin flat-head screwdriver into',
     '  each gap to crack the plates apart. Go gently.',
     '',
-    '  EASIER SEPARATION (multi-material printers, optional) — in your slicer,',
-    '  enable the support interface and assign it a non-stick second filament',
-    `  (PETG, or "Support for PLA"). The slicer fills the ${gap}mm gap with one`,
-    '  peel-away layer. This is a slicer setting, not part of this model.',
+    ...buildEasierSeparation(gap),
   ].join('\n');
+}
+
+/**
+ * "Easier separation" multi-material steps. The leading "widen the gap" step is
+ * only emitted when the gap is still too tight (< 0.4mm) — once the user has
+ * already exported at 0.4mm+ it would tell them to redo what they've done, so
+ * it is dropped and the remaining steps renumber accordingly.
+ */
+function buildEasierSeparation(gap: number): string[] {
+  const lines = [
+    '  EASIER SEPARATION (multi-material / AMS printers, optional)',
+    '  Fill each gap with a peel-away support interface in a non-stick filament so',
+    '  the plates lift apart with no prying. PETG against PLA (either way round)',
+    '  releases cleanly; a dedicated "Support for PLA" filament works too. This is',
+    '  all slicer setup — the model itself does not change.',
+    '',
+  ];
+  let step = 1;
+  if (gap < 0.4) {
+    lines.push(
+      `    ${step++}. Give the interface room. A ${gap}mm gap is too tight for a clean`,
+      "       interface layer, so set this tool's Gap to about 0.4mm and re-export",
+      '       before doing the steps below.'
+    );
+  }
+  lines.push(
+    `    ${step++}. Load the non-stick filament as your second material / extruder.`,
+    `    ${step++}. Turn on supports and point the support interface at that filament:`,
+    '',
+    '       PrusaSlicer (Expert mode):',
+    '         - Print Settings > Support material > Generate support material: ON',
+    '         - Uncheck "Support on build plate only" (the gaps are inside the model)',
+    '         - Top contact Z distance: 0 (interface touches, then peels)',
+    '         - Top interface layers: 1-2',
+    '         - Multiple Extruders > Support material/raft interface extruder: set',
+    '           to the non-stick filament',
+    '',
+    '       Bambu Studio / Orca Slicer:',
+    '         - Enable Support (Auto or Manual)',
+    '         - Support > Interface filament: the non-stick filament',
+    '         - Support > Top Z distance: 0',
+    '         - Support > Top interface layers: 1-2',
+    '',
+    `    ${step}. Slice and check the preview — every gap should be filled with the`,
+    '       non-stick color. Print, lift the plates apart, and peel the interface',
+    '       layer off each one.'
+  );
+  return lines;
 }
 
 function generateConnectorKeySection(
