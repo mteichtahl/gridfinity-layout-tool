@@ -10,7 +10,12 @@
 
 import type { BinParams, BaseplateParams, SplitConnectorConfig } from '@/shared/types/bin';
 import type { WorkerMessage, ExportFormat } from './types';
-import { computeBaseplateTimeoutMs, computeGenerationTimeoutMs } from './generationTimeout';
+import {
+  computeBaseplateExportTimeoutMs,
+  computeExportTimeoutMs,
+  computeGenerationTimeoutMs,
+  EXPORT_MAX_TIMEOUT_MS,
+} from './generationTimeout';
 import type {
   ExportResult,
   DividersExportResult,
@@ -70,7 +75,7 @@ export function exportBin(
   return runExport<ExportResult>(
     ctx,
     'export',
-    computeGenerationTimeoutMs(params),
+    computeExportTimeoutMs(params),
     (requestId) => ({
       type: 'EXPORT',
       payload: {
@@ -92,7 +97,7 @@ export function exportDividers(
   return runExport<DividersExportResult>(
     ctx,
     'dividers',
-    computeGenerationTimeoutMs(params),
+    computeExportTimeoutMs(params),
     (requestId) => ({ type: 'EXPORT_DIVIDERS', payload: { params, requestId } })
   );
 }
@@ -110,7 +115,7 @@ export function exportCombined(
   return runExport<CombinedExportResult>(
     ctx,
     'combined',
-    computeGenerationTimeoutMs(params),
+    computeExportTimeoutMs(params),
     (requestId) => ({
       type: 'EXPORT_COMBINED',
       payload: {
@@ -139,7 +144,7 @@ export function exportSplitBin(
   return runExport<SplitExportResult>(
     ctx,
     'split',
-    computeGenerationTimeoutMs(params),
+    computeExportTimeoutMs(params),
     (requestId) => ({
       type: 'EXPORT_SPLIT',
       payload: {
@@ -165,6 +170,9 @@ export function generateSplitPreview(
   return runExport<SplitPreviewResult>(
     ctx,
     'splitPreview',
+    // Interactive preview (re-runs as the user drags cut planes), not a
+    // user-committed export — keep the 3-minute preview clamp so a wedged
+    // worker is cancelled promptly rather than after the 15-minute export cap.
     computeGenerationTimeoutMs(params),
     (requestId) => ({
       type: 'GENERATE_SPLIT_PREVIEW',
@@ -190,6 +198,7 @@ export function generateSplitPreviewRange(
   return runExport<SplitPreviewResult>(
     ctx,
     'splitPreview',
+    // Interactive preview (see generateSplitPreview) — preview clamp, not export.
     computeGenerationTimeoutMs(params),
     (requestId) => ({
       type: 'GENERATE_SPLIT_PREVIEW_RANGE',
@@ -220,7 +229,7 @@ export function exportSplitBinRange(
   return runExport<SplitExportResult>(
     ctx,
     'split',
-    computeGenerationTimeoutMs(params),
+    computeExportTimeoutMs(params),
     (requestId) => ({
       type: 'EXPORT_SPLIT_RANGE',
       payload: {
@@ -246,7 +255,7 @@ export function exportBaseplate(
   return runExport<BaseplateExportResult>(
     ctx,
     'export',
-    computeBaseplateTimeoutMs(params),
+    computeBaseplateExportTimeoutMs(params),
     (requestId) => ({
       type: 'EXPORT_BASEPLATE',
       payload: {
@@ -273,7 +282,7 @@ export function exportConnectorKey(
   return runExport<BaseplateExportResult>(
     ctx,
     'export',
-    computeBaseplateTimeoutMs(params),
+    computeBaseplateExportTimeoutMs(params),
     (requestId) => ({
       type: 'EXPORT_CONNECTOR_KEY',
       payload: {
@@ -290,9 +299,12 @@ export function exportConnectorKey(
 /**
  * Export the connector fit-sample tray. The tray's work (≈30 coupon booleans +
  * embossed labels) is fixed regardless of the user's baseplate footprint, so it
- * uses a fixed generous timeout rather than the footprint-derived budget.
+ * uses a fixed generous timeout rather than the footprint-derived budget. Like
+ * every other export it runs on the user's (possibly slow) hardware and is
+ * cancellable, so it shares the high export ceiling — the timeout only guards
+ * against a wedged worker, not interactive wait.
  */
-const CONNECTOR_SAMPLE_TIMEOUT_MS = 180_000;
+const CONNECTOR_SAMPLE_TIMEOUT_MS = EXPORT_MAX_TIMEOUT_MS;
 
 export function exportConnectorSample(
   ctx: BridgeExportContext,
