@@ -24,6 +24,7 @@ import { LidSection } from '../panel/LidSection';
 import { PhysicalUnitsSection } from '../panel/PhysicalUnitsSection';
 import { SplitOptionsSection } from '../panel/SplitOptionsSection';
 import { StickyGroupHeader } from '../panel/StickyGroupHeader';
+import { PanelSection } from '../panel/PanelSection';
 import { ColorsSection } from '../panel/ColorsSection';
 import { FeatureGate } from '../panel/FeatureGate';
 import { SetDefaultFooter } from '../panel/SetDefaultFooter';
@@ -59,14 +60,12 @@ export function ParameterPanel() {
   // Group expansion state — controlled so help-modal deep-links can force a
   // section open before the dispatcher scrolls and pulses its target.
   const [shapeExpanded, setShapeExpanded] = useState(true);
-  const [colorsExpanded, setColorsExpanded] = useState(true);
   const [interiorExpanded, setInteriorExpanded] = useState(true);
   const [baseExpanded, setBaseExpanded] = useState(true);
 
   useEffect(() => {
     const handlers: Record<string, () => void> = {
       [helpJumpEventName('binDesigner:shape')]: () => setShapeExpanded(true),
-      [helpJumpEventName('binDesigner:colors')]: () => setColorsExpanded(true),
       [helpJumpEventName('binDesigner:interior')]: () => setInteriorExpanded(true),
       [helpJumpEventName('binDesigner:base')]: () => setBaseExpanded(true),
     };
@@ -90,53 +89,33 @@ export function ParameterPanel() {
           onExpandedChange={setShapeExpanded}
           summary={shapeSummary}
         >
-          <div
-            data-help-target="bd-dimensions"
-            className="px-4 py-4 border-b border-stroke-subtle/50"
-          >
-            <DimensionsSection />
-          </div>
-          <div
-            data-help-target="bd-overhang"
-            className="px-4 py-4 border-b border-stroke-subtle/50"
-          >
-            {/* Advanced drawer-fit control next to the dimensions; collapsed by
-                default and gated off internally for custom-shape (mask) bins. */}
-            <OverhangSection />
-          </div>
-          <div data-help-target="bd-shape" className="px-4 py-4 border-b border-stroke-subtle/50">
-            <ShapeSection />
-          </div>
-          {needsSplit && (
-            <div className="px-4 py-4 border-b border-stroke-subtle/50">
-              {/* Splits work for any footprint — axis-aligned cut planes
-                  intersect the polygon naturally. Pieces may be irregular
-                  but each has positive volume; tested in the polygon
-                  scenario suite. */}
-              <SplitOptionsSection />
-            </div>
-          )}
-          <div data-help-target="bd-walls" className="px-4 py-4 border-b border-stroke-subtle/50">
-            {/* Wall thickness works for any footprint; pattern/cutouts/handle
-                gate themselves inside WallsSection. */}
-            <WallsSection />
-          </div>
-          <div data-help-target="bd-lid" className="px-4 py-4">
-            {/* Lid is a companion piece auto-fit to the bin's lip. Internally
-                gated when params.base.stackingLip is off (lid mates with lip). */}
-            <LidSection />
-          </div>
-        </StickyGroupHeader>
-
-        {/* Multi-Color group — between Shape and Interior */}
-        <StickyGroupHeader
-          title={t('binDesigner.group.colors')}
-          expanded={colorsExpanded}
-          onExpandedChange={setColorsExpanded}
-          badge={t('binDesigner.multiColor.experimental')}
-        >
-          <div data-help-target="bd-colors" className="px-4 py-4">
-            <ColorsSection />
+          <div className="divide-y divide-stroke-subtle/50">
+            <PanelSection helpTarget="bd-dimensions">
+              <DimensionsSection />
+            </PanelSection>
+            <PanelSection helpTarget="bd-overhang">
+              {/* Advanced drawer-fit control next to the dimensions; collapsed by
+                  default and gated off internally for custom-shape (mask) bins. */}
+              <OverhangSection />
+            </PanelSection>
+            <PanelSection helpTarget="bd-shape">
+              <ShapeSection />
+            </PanelSection>
+            {needsSplit && (
+              <PanelSection>
+                {/* Splits work for any footprint — axis-aligned cut planes
+                    intersect the polygon naturally. Pieces may be irregular
+                    but each has positive volume; tested in the polygon
+                    scenario suite. */}
+                <SplitOptionsSection />
+              </PanelSection>
+            )}
+            <PanelSection helpTarget="bd-walls">
+              <WallsSection />
+              <div data-help-target="bd-lid" className="mt-4">
+                <LidSection />
+              </div>
+            </PanelSection>
           </div>
         </StickyGroupHeader>
 
@@ -147,25 +126,24 @@ export function ParameterPanel() {
           onExpandedChange={setInteriorExpanded}
           summary={interiorSummary}
         >
-          <div data-help-target="bd-interior" className="px-4 py-4">
-            {/* Per-mode gating lives inside InteriorSection: Solid (cutouts) stays
-                interactive on custom shapes; Standard/Slotted remain gated. */}
-            <InteriorSection />
-          </div>
-          {showLabelTabs && (
-            <div
-              data-help-target="bd-label-tabs"
-              className="px-4 py-4 border-t border-stroke-subtle/50"
-            >
+          <div className="divide-y divide-stroke-subtle/50">
+            <PanelSection helpTarget="bd-interior">
+              {/* Per-mode gating lives inside InteriorSection: Solid (cutouts) stays
+                  interactive on custom shapes; Standard/Slotted remain gated. */}
+              <InteriorSection />
+            </PanelSection>
+            {showLabelTabs && (
+              <PanelSection helpTarget="bd-label-tabs">
+                <FeatureGate disabled={isCustomShape} reason={customShapeReason}>
+                  <LabelTabsSection />
+                </FeatureGate>
+              </PanelSection>
+            )}
+            <PanelSection helpTarget="bd-scoop">
               <FeatureGate disabled={isCustomShape} reason={customShapeReason}>
-                <LabelTabsSection />
+                <ScoopSection />
               </FeatureGate>
-            </div>
-          )}
-          <div data-help-target="bd-scoop" className="px-4 py-4 border-t border-stroke-subtle/50">
-            <FeatureGate disabled={isCustomShape} reason={customShapeReason}>
-              <ScoopSection />
-            </FeatureGate>
+            </PanelSection>
           </div>
         </StickyGroupHeader>
 
@@ -176,16 +154,21 @@ export function ParameterPanel() {
           onExpandedChange={setBaseExpanded}
           summary={baseSummary}
         >
-          <div data-help-target="bd-base" className="px-4 py-4 border-b border-stroke-subtle/50">
-            <BaseSection />
-          </div>
-          <div data-help-target="bd-physical-units" className="px-4 py-4">
-            <PhysicalUnitsSection />
+          <div className="divide-y divide-stroke-subtle/50">
+            <PanelSection helpTarget="bd-base">
+              <BaseSection />
+            </PanelSection>
+            <PanelSection helpTarget="bd-colors">
+              <ColorsSection />
+            </PanelSection>
+            <PanelSection helpTarget="bd-physical-units">
+              <PhysicalUnitsSection />
+            </PanelSection>
           </div>
         </StickyGroupHeader>
 
         {/* Design Showcase entry — opens the bin-example gallery (below Physical Units) */}
-        <div className="px-4 py-4 border-b border-stroke-subtle">
+        <div className="px-4 py-3 border-b border-stroke-subtle">
           <button
             onClick={openExampleGallery}
             className="w-full flex items-center gap-3 text-left p-3 rounded-lg bg-gradient-to-r from-accent/10 to-info/10 hover:from-accent/20 hover:to-info/20 border border-accent/20 transition-all group"
