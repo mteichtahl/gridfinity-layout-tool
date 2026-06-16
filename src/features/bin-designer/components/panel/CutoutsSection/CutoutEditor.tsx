@@ -15,6 +15,8 @@ import { useTranslation } from '@/i18n';
 import { CutoutCanvas3D } from './renderer';
 import { CutoutShapeToolbar } from './CutoutShapeToolbar';
 import { useSvgImport } from './svgImport';
+import { ScanWithPhoneDialog } from './scanImport';
+import { useFeatureFlag } from '@/shared/hooks/useFeatureFlag';
 import { CutoutPropertyPanel } from './CutoutPropertyPanel';
 import type { FitCue } from './cutoutSectionVisibility';
 import { applyFlattenArray } from './cutoutHelpers';
@@ -159,6 +161,8 @@ export function CutoutEditor() {
 
   const t = useTranslation();
   const { triggerImport: triggerSvgImport } = useSvgImport();
+  const scanEnabled = useFeatureFlag('scan_with_phone');
+  const [scanDialogOpen, setScanDialogOpen] = useState(false);
 
   // Marquee state — in mm world coordinates
   const [marquee, setMarquee] = useState<{ x: number; y: number; w: number; h: number } | null>(
@@ -452,7 +456,12 @@ export function CutoutEditor() {
         gridSize={gridSize}
         onGridSizeChange={setGridSize}
         onImportSvg={triggerSvgImport}
+        onScanWithPhone={scanEnabled ? () => setScanDialogOpen(true) : undefined}
       />
+
+      {scanEnabled && (
+        <ScanWithPhoneDialog open={scanDialogOpen} onClose={() => setScanDialogOpen(false)} />
+      )}
 
       {/* Global top offset control */}
       <div className="rounded border border-stroke-subtle bg-surface-elevated p-3">

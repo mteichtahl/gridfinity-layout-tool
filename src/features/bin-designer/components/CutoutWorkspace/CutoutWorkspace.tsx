@@ -22,6 +22,8 @@ import { CutoutCanvas3D } from '../panel/CutoutsSection/renderer';
 import { WorkspaceHeader } from './WorkspaceHeader';
 import { CutoutShapeToolbar } from '../panel/CutoutsSection/CutoutShapeToolbar';
 import { useSvgImport } from '../panel/CutoutsSection/svgImport';
+import { ScanWithPhoneDialog } from '../panel/CutoutsSection/scanImport';
+import { useFeatureFlag } from '@/shared/hooks/useFeatureFlag';
 import { InspectorDock } from './InspectorDock';
 import type { FitCue } from '../panel/CutoutsSection/cutoutSectionVisibility';
 import { applyFlattenArray } from '../panel/CutoutsSection/cutoutHelpers';
@@ -88,6 +90,8 @@ export function CutoutWorkspace() {
 
   const t = useTranslation();
   const { triggerImport: triggerSvgImport } = useSvgImport();
+  const scanEnabled = useFeatureFlag('scan_with_phone');
+  const [scanDialogOpen, setScanDialogOpen] = useState(false);
 
   // Quickstart overlay state
   const { quickstartSeen, markQuickstartSeen } = useCutoutQuickstart();
@@ -321,9 +325,14 @@ export function CutoutWorkspace() {
               onGridSizeChange={setGridSize}
               vertical
               onImportSvg={triggerSvgImport}
+              onScanWithPhone={scanEnabled ? () => setScanDialogOpen(true) : undefined}
             />
           </div>
         </div>
+
+        {scanEnabled && (
+          <ScanWithPhoneDialog open={scanDialogOpen} onClose={() => setScanDialogOpen(false)} />
+        )}
 
         {/* Center: Rulers + Canvas */}
         <div className="flex flex-1 flex-col overflow-hidden">
