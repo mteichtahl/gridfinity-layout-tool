@@ -3,8 +3,9 @@
  *
  * When magnets are enabled, removes center floor material under each cell,
  * keeping only rectangular pads around the 4 magnet positions. The result is
- * a cross-shaped cutout whose inner concave corners are filleted with the
- * magnet hole radius for a clean transition.
+ * a cross-shaped cutout with sharp inner corners — the cut is a vertical prism
+ * so concave corners print cleanly, and dropping the former fillets roughly
+ * halves the per-cell boolean cost.
  */
 
 import { draw, drawRectangle, clone, unwrap, translate } from 'brepjs';
@@ -107,26 +108,24 @@ export function buildLightweightFloorCutters(
         let template = templates.get(cacheKey);
 
         if (!template) {
-          const r = Math.min(magnetRadius, Math.min(armW, armD));
-
-          // Cross-shaped profile (CCW), 12 segments + 4 inner corner fillets.
+          // Cross-shaped profile (CCW), 12 straight segments. The inner corners
+          // are left sharp: this is an underside material-relief pocket cut
+          // straight down (vertical walls regardless of in-plane corner shape),
+          // so sharp concave corners print fine — and the curved fillet faces
+          // they replace made the per-cell boolean disproportionately expensive.
           // Walking CCW from top-right of vertical arm:
           const profile = draw([padHalf, hd])
             .lineTo([-padHalf, hd])
             .lineTo([-padHalf, padHalf])
-            .customCorner(r)
             .lineTo([-hw, padHalf])
             .lineTo([-hw, -padHalf])
             .lineTo([-padHalf, -padHalf])
-            .customCorner(r)
             .lineTo([-padHalf, -hd])
             .lineTo([padHalf, -hd])
             .lineTo([padHalf, -padHalf])
-            .customCorner(r)
             .lineTo([hw, -padHalf])
             .lineTo([hw, padHalf])
             .lineTo([padHalf, padHalf])
-            .customCorner(r)
             .close();
 
           template = sketch(profile, 'XY', cutterZ).extrude(-cutterDepth);
