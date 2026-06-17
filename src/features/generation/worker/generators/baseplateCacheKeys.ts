@@ -21,7 +21,11 @@ import {
   effectiveClearance,
 } from './generatorConstants';
 
-export function meshCacheKey(params: BaseplateParams, forExport: boolean): string {
+export function meshCacheKey(
+  params: BaseplateParams,
+  forExport: boolean,
+  draft: boolean = false
+): string {
   // Key on the CLAMPED effective groove clearance, not the raw fit offset, so
   // offsets that collapse to identical geometry share a cache entry (e.g. any
   // tighter-than-floor value clamps to 0). Gated on connectorNubs because the
@@ -36,6 +40,11 @@ export function meshCacheKey(params: BaseplateParams, forExport: boolean): strin
   const connectorClearance = params.connectorNubs
     ? effectiveClearance(baseClearance, params.connectorFitOffset ?? 0, params.nozzleSizeMm)
     : 0;
+  // Draft only changes geometry when there's a lightweight floor cut to skip
+  // (magnets on AND lightweight not disabled). Otherwise the draft mesh is
+  // byte-identical to the full build, so folding `draft` to false keeps both
+  // sharing one LRU entry instead of fragmenting it.
+  const geometryAffectingDraft = draft && params.magnetHoles && params.lightweight !== false;
   // Nozzle scales connector feature sizes (snap-clip barb/leg) independently of
   // the clearance term, so it must key the cache or wider-nozzle geometry would
   // alias onto the 0.4mm build. Only meaningful when connectors are on; folded to
@@ -74,7 +83,10 @@ export function meshCacheKey(params: BaseplateParams, forExport: boolean): strin
     quantize(params.cornerRadii?.tr ?? -1),
     quantize(params.cornerRadii?.bl ?? -1),
     quantize(params.cornerRadii?.br ?? -1),
-    forExport
+    forExport,
+    // Draft preview skips the lightweight floor cut, so its mesh differs from
+    // the full-geometry build — but only when that cut would actually run.
+    geometryAffectingDraft
   );
 }
 
