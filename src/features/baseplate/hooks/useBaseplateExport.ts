@@ -25,6 +25,12 @@ import { useTranslation } from '@/i18n';
 import { useBaseplatePageStore } from '../store/baseplatePageStore';
 import { buildFullParams } from '../utils/buildFullParams';
 import { groupPiecesByFingerprint } from '../utils/pieceFingerprint';
+import {
+  buildExportCacheKey,
+  getCachedExports,
+  putCachedExports,
+  getOrExport,
+} from '../utils/exportCache';
 import { assignGroupNames } from '../utils/pieceNaming';
 import { countConnectorKeys } from '../utils/connectorKeys';
 import { generatePrintGuide, generateStackPrintNote } from '../utils/printGuide';
@@ -161,6 +167,7 @@ export function useBaseplateExport(): UseBaseplateExportReturn {
       );
 
       try {
+        const nozzleMm = useSettingsStore.getState().settings.printSettings.nozzleSizeMm;
         const fullParams = buildFullParams(
           baseplateParams,
           drawerWidth,
@@ -168,7 +175,7 @@ export function useBaseplateExport(): UseBaseplateExportReturn {
           gridUnitMm,
           fractionalEdgeX,
           fractionalEdgeY,
-          useSettingsStore.getState().settings.printSettings.nozzleSizeMm
+          nozzleMm
         );
 
         const baseName = generateBaseplateFileName(
@@ -194,24 +201,49 @@ export function useBaseplateExport(): UseBaseplateExportReturn {
           setExportProgress({ current: 0, total: uniqueCount });
 
           const uniqueParams = uniqueGroups.map(([, g]) => g.params);
-          let uniqueExports: ArrayBuffer[];
 
-          if (pool && !pool.isDestroyed && pool.size > 1) {
-            const results = await pool.exportBaseplates(
-              uniqueParams,
-              bridgeFormat,
-              (completed, pieceTotal) =>
-                setExportProgress({ current: completed, total: pieceTotal })
-            );
-            uniqueExports = results.map((r) => r.data);
-          } else {
-            uniqueExports = [];
-            for (let i = 0; i < uniqueGroups.length; i++) {
-              setExportProgress({ current: i + 1, total: uniqueCount });
-              const result = await bridge.exportBaseplate(uniqueGroups[i][1].params, bridgeFormat);
-              uniqueExports.push(result.data);
-            }
+          // Cross-session cache: skip rebuilding pieces whose identical bytes are
+          // already persisted. Only the misses go to the worker pool.
+          const cacheKeys = uniqueParams.map((p) => buildExportCacheKey(p, bridgeFormat, nozzleMm));
+          const cached = await getCachedExports(cacheKeys);
+          const missIndices: number[] = [];
+          for (let i = 0; i < cached.length; i++) {
+            if (cached[i] === undefined) missIndices.push(i);
           }
+          const cachedCount = uniqueCount - missIndices.length;
+          setExportProgress({ current: cachedCount, total: uniqueCount });
+
+          const freshByIndex = new Map<number, ArrayBuffer>();
+          const toPersist: { key: string; data: ArrayBuffer }[] = [];
+          if (missIndices.length > 0) {
+            const missParams = missIndices.map((i) => uniqueParams[i]);
+            if (pool && !pool.isDestroyed && pool.size > 1) {
+              const results = await pool.exportBaseplates(missParams, bridgeFormat, (completed) =>
+                setExportProgress({ current: cachedCount + completed, total: uniqueCount })
+              );
+              results.forEach((r, j) => {
+                const idx = missIndices[j];
+                freshByIndex.set(idx, r.data);
+                toPersist.push({ key: cacheKeys[idx], data: r.data });
+              });
+            } else {
+              for (let j = 0; j < missParams.length; j++) {
+                setExportProgress({ current: cachedCount + j + 1, total: uniqueCount });
+                const result = await bridge.exportBaseplate(missParams[j], bridgeFormat);
+                const idx = missIndices[j];
+                freshByIndex.set(idx, result.data);
+                toPersist.push({ key: cacheKeys[idx], data: result.data });
+              }
+            }
+            void putCachedExports(toPersist);
+          }
+
+          const uniqueExports: ArrayBuffer[] = cacheKeys.map((_, i) => {
+            const data = cached[i] ?? freshByIndex.get(i);
+            if (data === undefined)
+              throw new Error('Baseplate export piece missing after generation');
+            return data;
+          });
 
           // One file per unique shape. When stacking, each unique piece is baked
           // into towers of the quantity the drawer needs (group size), split into
@@ -251,8 +283,12 @@ export function useBaseplateExport(): UseBaseplateExportReturn {
           // every seam junction — one STL, printed N times.
           const keyCount = countConnectorKeys(tiling, fullParams);
           if (keyCount > 0) {
-            const keyResult = await bridge.exportConnectorKey(fullParams, bridgeFormat);
-            let keyData = keyResult.data;
+            // Namespaced key: the connector key is different geometry from a
+            // plate built with the same params, so it must not share a cache slot.
+            let keyData = await getOrExport(
+              `connkey|${buildExportCacheKey(fullParams, bridgeFormat, nozzleMm)}`,
+              () => bridge.exportConnectorKey(fullParams, bridgeFormat).then((r) => r.data)
+            );
             if (format === '3mf') {
               // The key is a discrete part (one per seam junction, count in the
               // guide), not a plate — stacking never applies to it. It prints
@@ -297,13 +333,17 @@ export function useBaseplateExport(): UseBaseplateExportReturn {
           }
         } else if (format === 'step') {
           // STEP: never stacked (CAD interchange, no slicer notion).
-          const result = await bridge.exportBaseplate(fullParams, 'step');
-          triggerDownload(new Blob([result.data], { type: FORMAT_MIME_TYPES.step }), baseName);
+          const data = await getOrExport(buildExportCacheKey(fullParams, 'step', nozzleMm), () =>
+            bridge.exportBaseplate(fullParams, 'step').then((r) => r.data)
+          );
+          triggerDownload(new Blob([data], { type: FORMAT_MIME_TYPES.step }), baseName);
         } else if (stack && stackEnabled) {
           // Single piece, stacked into one tower (split under the height cap) —
           // a single tower downloads directly, several go in a ZIP.
-          const stlResult = await bridge.exportBaseplate(fullParams, 'stl');
-          const source = parseStlSoup(stlResult.data);
+          const stlData = await getOrExport(buildExportCacheKey(fullParams, 'stl', nozzleMm), () =>
+            bridge.exportBaseplate(fullParams, 'stl').then((r) => r.data)
+          );
+          const source = parseStlSoup(stlData);
           const towers = planPhysicalStacks([{ label: 'plate', quantity: 1 }], stackCap);
           if (towers.length === 1) {
             const blob = buildStackedFileBlob(
@@ -334,11 +374,13 @@ export function useBaseplateExport(): UseBaseplateExportReturn {
           }
         } else {
           // Single piece, unstacked, STL or 3MF.
-          const stlResult = await bridge.exportBaseplate(fullParams, 'stl');
+          const stlData = await getOrExport(buildExportCacheKey(fullParams, 'stl', nozzleMm), () =>
+            bridge.exportBaseplate(fullParams, 'stl').then((r) => r.data)
+          );
           const blob =
             format === '3mf'
-              ? convertStlTo3mf(stlResult.data, baseNameNoExt)
-              : new Blob([stlResult.data], { type: FORMAT_MIME_TYPES.stl });
+              ? convertStlTo3mf(stlData, baseNameNoExt)
+              : new Blob([stlData], { type: FORMAT_MIME_TYPES.stl });
           triggerDownload(blob, baseName);
           // Single-file success is conveyed by the dialog's inline success view.
         }
