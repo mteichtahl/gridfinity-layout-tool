@@ -57,6 +57,7 @@ import {
 } from './cutoutScoopHelpers';
 import { sketch } from './meshUtils';
 import { buildTextSolid } from './textBuilder';
+import { offsetClosedPolygon } from './polygonOffset';
 /** Axis-aligned bounding box in XY. */
 export interface AABB {
   readonly minX: number;
@@ -225,15 +226,25 @@ function buildUnrotatedCutoutShape(cutout: {
       ? Math.max(0, Math.min(cutout.chamferWidth, cutout.cutDepth - 0.2))
       : 0;
   if (chamfer > 0.05) {
-    return buildChamferedCutoutShape({
-      shape: cutout.shape,
-      w,
-      d,
-      cornerRadius: cutout.cornerRadius,
-      sides: cutout.sides,
-      cutDepth: cutout.cutDepth,
-      chamfer,
-    });
+    if (cutout.shape === 'path') {
+      // Paths can't use the parametric profile loft; flatten + offset the outline
+      // for the flared rim. On any failure, fall through to a straight extrude.
+      try {
+        return buildChamferedPathShape(cutout, chamfer, clearance);
+      } catch {
+        /* fall through to the straight `case 'path'` below */
+      }
+    } else {
+      return buildChamferedCutoutShape({
+        shape: cutout.shape,
+        w,
+        d,
+        cornerRadius: cutout.cornerRadius,
+        sides: cutout.sides,
+        cutDepth: cutout.cutDepth,
+        chamfer,
+      });
+    }
   }
 
   switch (cutout.shape) {
@@ -269,7 +280,7 @@ function buildUnrotatedCutoutShape(cutout: {
     }
     case 'path': {
       try {
-        return buildPathCutoutShape(cutout);
+        return buildPathCutoutShape(cutout, clearance);
       } catch {
         // Self-intersecting or degenerate path — fall back to bounding box rectangle
         return box(cutout.width, cutout.depth, cutout.cutDepth, {
@@ -321,48 +332,99 @@ function buildCutoutShape(cutout: {
 
   return shape;
 }
-/**
- * Build an extruded path cutout from bezier path points.
- * Flattens curves to a polyline and extrudes the closed wire.
- * The shape is centered at origin (bounding box center).
- */
-function buildPathCutoutShape(cutout: {
+/** Centered, flattened, validated outline for a path cutout (or null if degenerate). */
+function pathOutline(cutout: {
   readonly x: number;
   readonly y: number;
   readonly width: number;
   readonly depth: number;
-  readonly cutDepth: number;
   readonly path?: readonly PathPoint[];
-}): Shape3D {
-  const fallbackRect = (): Shape3D =>
-    box(cutout.width, cutout.depth, cutout.cutDepth, { at: [0, 0, cutout.cutDepth / 2] });
-
+}): Array<{ x: number; y: number }> | null {
   const path = cutout.path;
-  if (!path || path.length < MIN_PATH_POINTS) return fallbackRect();
-
-  // Flatten bezier path to polyline, dropping coincident vertices that would
-  // collapse the wire to the bbox fallback (see dropCoincidentPoints). Need 3+
-  // distinct points for a closed wire.
+  if (!path || path.length < MIN_PATH_POINTS) return null;
   const polyline = dropCoincidentPoints(flattenPathToPolyline(path));
-  if (polyline.length < 3) return fallbackRect();
-
-  // Reject self-intersecting polylines that would produce invalid 3D geometry
-  if (polylineSelfIntersects(polyline)) return fallbackRect();
-
-  // Center the polyline at origin (buildCutoutShape expects shapes centered at origin).
-  // Use the cutout's stored bounds (from getPathBounds in the editor) so the center
-  // matches the translation applied later via cutout.x + cutout.width/2.
+  if (polyline.length < 3 || polylineSelfIntersects(polyline)) return null;
   const cx = cutout.x + cutout.width / 2;
   const cy = cutout.y + cutout.depth / 2;
+  return polyline.map((p) => ({ x: p.x - cx, y: p.y - cy }));
+}
 
-  // Build closed wire using brepjs draw API (points relative to center)
-  let pen = draw([polyline[0].x - cx, polyline[0].y - cy]);
-  for (let i = 1; i < polyline.length; i++) {
-    pen = pen.lineTo([polyline[i].x - cx, polyline[i].y - cy]);
+/**
+ * Outset a centered outline by `d` (insertion clearance / chamfer flare). Returns
+ * the input unchanged for d<=0, or null when the offset degenerates (self-cross
+ * or vertex-count change) so callers can decide how to fall back.
+ */
+function offsetPathOutline(
+  outline: readonly { x: number; y: number }[],
+  d: number
+): Array<{ x: number; y: number }> | null {
+  if (d <= 0) return outline.map((p) => ({ x: p.x, y: p.y }));
+  const out = offsetClosedPolygon(outline, d);
+  if (out.length !== outline.length || polylineSelfIntersects(out)) return null;
+  return out;
+}
+
+function pathWire(pts: readonly { x: number; y: number }[]): Drawing {
+  let pen = draw([pts[0].x, pts[0].y]);
+  for (let i = 1; i < pts.length; i++) pen = pen.lineTo([pts[i].x, pts[i].y]);
+  return pen.close();
+}
+
+/**
+ * Build an extruded path cutout from bezier path points. Flattens curves to a
+ * polyline, applies the insertion `clearance` (outward offset), and extrudes the
+ * closed wire. Falls back to a bbox rect for a degenerate outline, and to the
+ * un-offset outline if the clearance offset can't be built.
+ */
+function buildPathCutoutShape(
+  cutout: {
+    readonly x: number;
+    readonly y: number;
+    readonly width: number;
+    readonly depth: number;
+    readonly cutDepth: number;
+    readonly path?: readonly PathPoint[];
+  },
+  clearance: number
+): Shape3D {
+  const outline = pathOutline(cutout);
+  if (!outline) {
+    return box(cutout.width, cutout.depth, cutout.cutDepth, { at: [0, 0, cutout.cutDepth / 2] });
   }
-  const wire = pen.close();
+  const grown = offsetPathOutline(outline, clearance) ?? outline;
+  return sketch(pathWire(grown), 'XY').extrude(cutout.cutDepth);
+}
 
-  return sketch(wire, 'XY').extrude(cutout.cutDepth);
+/**
+ * Entry-chamfered path cutout: a 3-section ruled loft (clearance-offset base →
+ * same at `cutDepth − chamfer` → base offset outward by `chamfer` at the top
+ * rim), so a freeform outline gets the same ~45° self-centering countersink as
+ * the parametric shapes. Throws on degenerate input or a bad offset so the
+ * caller can fall back to a straight (clearance-only) extrude.
+ */
+function buildChamferedPathShape(
+  cutout: {
+    readonly x: number;
+    readonly y: number;
+    readonly width: number;
+    readonly depth: number;
+    readonly cutDepth: number;
+    readonly path?: readonly PathPoint[];
+  },
+  chamfer: number,
+  clearance: number
+): Shape3D {
+  const outline = pathOutline(cutout);
+  if (!outline) throw new Error('path: degenerate');
+  // Base carries the clearance; the flared rim is offset a further `chamfer`.
+  const base = offsetPathOutline(outline, clearance);
+  const flared = offsetPathOutline(outline, clearance + chamfer);
+  if (!base || !flared) throw new Error('path: bad offset');
+
+  const baseSketch = pathWire(base).sketchOnPlane('XY', 0) as Sketch;
+  const straightTop = pathWire(base).sketchOnPlane('XY', cutout.cutDepth - chamfer) as Sketch;
+  const flaredTop = pathWire(flared).sketchOnPlane('XY', cutout.cutDepth) as Sketch;
+  return baseSketch.loftWith([straightTop, flaredTop], { ruled: true });
 }
 
 /** Flatten a closed bezier path to an open polyline for 3D generation.
@@ -635,6 +697,15 @@ function applyAxisAwareScoop(shape: Shape3D, cutout: Cutout, scoop: ResolvedScoo
     maxY: halfD,
   });
   if (edges.length === 0) return shape;
+
+  // Freeform paths have many short, varied bottom edges; the uniform all-edges
+  // fillet fails wholesale on them (one bad edge aborts the whole call), so the
+  // scoop silently no-ops. The per-edge callback filleter skips degenerate edges
+  // and shrinks the radius on short ones, so the scoop actually lands. Paths
+  // can't classify walls as W/D, so every edge gets the uniform radius.
+  if (cutout.shape === 'path') {
+    return applyCallbackFilletWithFallback(shape, edges, () => scoop.w);
+  }
 
   // Uniform path: both axes equal AND all edges on → preserve historical
   // progressive-uniform fallback so existing geometry is unchanged.

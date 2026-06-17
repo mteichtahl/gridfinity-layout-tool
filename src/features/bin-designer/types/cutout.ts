@@ -31,8 +31,12 @@ export const DEFAULT_POLYGON_SIDES = 6;
  */
 export const DEFAULT_CUTOUT_CLEARANCE = 0.2;
 
-/** Shapes that accept an insertion {@link Cutout.clearance} offset. */
-export const CLEARANCE_SHAPES: readonly CutoutShape[] = ['circle', 'polygon', 'slot'];
+/**
+ * Shapes that accept an insertion {@link Cutout.clearance} offset. Parametric
+ * shapes grow their profile dimensions; paths offset their flattened outline
+ * outward at generation time (same polygon offset used for the path chamfer).
+ */
+export const CLEARANCE_SHAPES: readonly CutoutShape[] = ['circle', 'polygon', 'slot', 'path'];
 
 /** Largest entry-chamfer width (mm) the editor allows. */
 export const MAX_CUTOUT_CHAMFER = 5;
@@ -73,11 +77,20 @@ export function defaultEntryChamfer(holeSize: number, cutDepth: number): number 
 }
 
 /**
- * Shapes that accept an entry {@link Cutout.chamferWidth}. Freeform paths are
- * excluded — a constant-offset outset of an arbitrary bezier outline isn't
- * well-defined, so chamfers are limited to the parametric shapes.
+ * Shapes that accept an entry {@link Cutout.chamferWidth}. Paths are included:
+ * the generator flattens the outline to a polyline and offsets *that* (a
+ * well-defined polygon offset) for the flared top rim, falling back to a
+ * straight extrude if the offset/loft can't be built. (A constant-offset of an
+ * unflattened arbitrary bezier still isn't well-defined — flattening first is
+ * what makes the path case tractable.)
  */
-export const CHAMFER_SHAPES: readonly CutoutShape[] = ['rectangle', 'circle', 'polygon', 'slot'];
+export const CHAMFER_SHAPES: readonly CutoutShape[] = [
+  'rectangle',
+  'circle',
+  'polygon',
+  'slot',
+  'path',
+];
 
 /** Layout mode for a parametric cutout array. */
 export type CutoutArrayMode = 'grid' | 'staggered' | 'radial';

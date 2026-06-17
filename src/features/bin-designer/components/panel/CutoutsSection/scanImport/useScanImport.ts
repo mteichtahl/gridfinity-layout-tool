@@ -9,8 +9,12 @@
 import { useCallback } from 'react';
 import { useShallow } from 'zustand/react/shallow';
 import { useDesignerStore } from '@/features/bin-designer/store';
+import { defaultEntryChamfer } from '@/features/bin-designer/types';
 import { specToCutout, DEFAULT_CUT_DEPTH } from '../svgImport/specToCutout';
 import type { ParsedCutoutSpec } from '../svgImport/types';
+
+/** Default insertion clearance (mm) applied to a scanned tool outline. */
+const SCAN_DEFAULT_CLEARANCE_MM = 0.4;
 
 export interface UseScanImportReturn {
   /** Hydrate and add scan specs as cutouts in one undo transaction. Returns the count added. */
@@ -33,7 +37,20 @@ export function useScanImport(): UseScanImportReturn {
       startTransaction();
       try {
         for (const spec of specs) {
-          addCutout(specToCutout(spec, hydrationOptions));
+          const cutout = specToCutout(spec, hydrationOptions);
+          // Scanned outlines default to a fit clearance + self-centering entry
+          // chamfer (both applied at generation time, like parametric cutouts, and
+          // adjustable via the Fit controls). The traced outline itself stays the
+          // tool's exact silhouette.
+          if (cutout.shape === 'path') {
+            addCutout({
+              ...cutout,
+              clearance: SCAN_DEFAULT_CLEARANCE_MM,
+              chamferWidth: defaultEntryChamfer(Math.min(cutout.width, cutout.depth), cutDepth),
+            });
+          } else {
+            addCutout(cutout);
+          }
         }
       } finally {
         commitTransaction();
