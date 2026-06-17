@@ -368,8 +368,14 @@ export function SceneContent({
         );
       })()}
 
-      {/* Engraved labels mirroring the printed bin-top engraving */}
-      <CutoutLabel3D cutouts={cutouts} binWidth={binWidth} binDepth={binDepth} preview={preview} />
+      {/* Engraved/embossed labels mirroring the printed bin-top text */}
+      <CutoutLabel3D
+        cutouts={cutouts}
+        binWidth={binWidth}
+        binDepth={binDepth}
+        binColor={binColor}
+        preview={preview}
+      />
 
       {/* Lock badges on locked cutouts */}
       {cutouts
