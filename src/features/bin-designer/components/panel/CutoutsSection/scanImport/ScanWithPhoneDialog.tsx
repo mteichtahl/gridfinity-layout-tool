@@ -78,11 +78,14 @@ export function ScanWithPhoneDialog({ open, onClose }: ScanWithPhoneDialogProps)
         handleClose();
         return;
       }
+      // Start the field empty rather than pre-filling the traced pixel extent:
+      // those pixels aren't millimetres, and accepting the prefill produced a
+      // wildly oversized cutout. Forcing a measurement keeps the import to scale.
       setStage({
         kind: 'review',
         svg,
         parsed: result.value,
-        targetText: String(round1(result.value.bounds.longest)),
+        targetText: '',
       });
     },
     [addToast, t, addScanCutouts, handleClose]
@@ -200,7 +203,7 @@ export function ScanWithPhoneDialog({ open, onClose }: ScanWithPhoneDialogProps)
                 min={0}
                 step={0.5}
                 value={stage.targetText}
-                error={!targetValid}
+                error={stage.targetText !== '' && !targetValid}
                 onChange={(e) => setStage({ ...stage, targetText: e.target.value })}
               />
               <p className="text-xs text-content-tertiary">
