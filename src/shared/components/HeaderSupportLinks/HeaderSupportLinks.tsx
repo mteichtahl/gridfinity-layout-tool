@@ -4,10 +4,16 @@ import { useTranslation } from '@/i18n';
 import { useToastStore } from '@/core/store/toast';
 import { trackEvent } from '@/shared/analytics/posthog';
 import { LanguageSelector } from '@/shared/components/LanguageSelector';
-import { GITHUB_ISSUES_URL, GITHUB_REPO_URL, KOFI_URL } from '@/shared/constants/links';
+import { GITHUB_ICON_PATH, REDDIT_ICON_PATH } from '@/shared/constants/iconPaths';
+import {
+  GITHUB_ISSUES_URL,
+  GITHUB_REPO_URL,
+  KOFI_URL,
+  REDDIT_GRIDFINITY_URL,
+} from '@/shared/constants/links';
 
 /**
- * Shared header support links: Language selector, Feedback, Help, GitHub, and Ko-fi tip.
+ * Shared header support links: Language selector, Feedback, Help, GitHub, r/gridfinity, and Ko-fi tip.
  *
  * Used in the top-right of all three desktop headers (grid planner, bin designer, baseplate generator)
  * to provide a consistent set of support/engagement actions.
@@ -53,6 +59,10 @@ export function HeaderSupportLinks() {
   const handleKofiClick = () => {
     trackEvent('kofi_clicked', { source: 'header' });
     window.open(KOFI_URL, '_blank', 'noopener,noreferrer');
+  };
+
+  const handleRedditClick = () => {
+    trackEvent('reddit_link_clicked', { source: 'header' });
   };
 
   return (
@@ -107,9 +117,25 @@ export function HeaderSupportLinks() {
         aria-label={t('header.starOnGithub')}
       >
         <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 16 16">
-          <path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27s1.36.09 2 .27c1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0016 8c0-4.42-3.58-8-8-8z" />
+          <path d={GITHUB_ICON_PATH} />
         </svg>
         <span className="hidden lg:inline">{t('header.starOnGithub')}</span>
+      </a>
+
+      {/* r/gridfinity — plain community link (Reddit brand mark + sub name) */}
+      <a
+        href={REDDIT_GRIDFINITY_URL}
+        target="_blank"
+        rel="noopener noreferrer"
+        onClick={handleRedditClick}
+        className="btn btn-ghost px-2.5 py-1.5 text-sm leading-none text-content-secondary flex items-center gap-1.5"
+        title={t('common.redditCommunityAria')}
+        aria-label={t('common.redditCommunityAria')}
+      >
+        <svg className="w-4 h-4" fill="#FF4500" viewBox="0 0 24 24" aria-hidden="true">
+          <path d={REDDIT_ICON_PATH} />
+        </svg>
+        <span className="hidden lg:inline">{t('common.redditCommunity')}</span>
       </a>
 
       {/* Ko-fi support — the official Widget_2 button reproduced natively (the site's
