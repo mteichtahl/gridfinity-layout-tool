@@ -52,6 +52,7 @@ type Status =
   | { readonly kind: 'processing' }
   | ({ readonly kind: 'review' } & ReviewState)
   | { readonly kind: 'sent' }
+  | { readonly kind: 'finished' }
   | { readonly kind: 'error'; readonly messageKey: string };
 
 type Step = 'capture' | 'review' | 'done';
@@ -200,9 +201,19 @@ export function ScanPage({ token }: ScanPageProps) {
   }, [status, token]);
 
   const reset = useCallback(() => setStatus({ kind: 'capture' }), []);
+  // window.close() only works on script-opened tabs, so fall through to a
+  // terminal "you can close this tab" screen when the browser ignores it.
+  const finish = useCallback(() => {
+    window.close();
+    setStatus({ kind: 'finished' });
+  }, []);
 
   const step: Step =
-    status.kind === 'sent' ? 'done' : status.kind === 'review' ? 'review' : 'capture';
+    status.kind === 'sent' || status.kind === 'finished'
+      ? 'done'
+      : status.kind === 'review'
+        ? 'review'
+        : 'capture';
 
   const measured =
     status.kind === 'review' && status.scene.units === 'mm'
@@ -349,6 +360,13 @@ export function ScanPage({ token }: ScanPageProps) {
             </div>
           )}
 
+          {status.kind === 'finished' && (
+            <div className="flex flex-col items-center gap-3 py-16 text-center">
+              <p className="text-lg font-medium">{t('scan.finished.title')}</p>
+              <p className="max-w-xs text-sm text-content-secondary">{t('scan.finished.body')}</p>
+            </div>
+          )}
+
           {status.kind === 'error' && (
             <div className="flex flex-col items-center gap-4 py-16 text-center">
               <p className="max-w-xs text-sm text-content-secondary">{t(status.messageKey)}</p>
@@ -357,48 +375,61 @@ export function ScanPage({ token }: ScanPageProps) {
         </div>
       </main>
 
-      <footer className="shrink-0 border-t border-stroke-subtle bg-surface px-5 pb-[max(1rem,env(safe-area-inset-bottom))] pt-3">
-        {status.kind === 'capture' && (
-          <Button
-            type="button"
-            variant="primary"
-            size="lg"
-            fullWidth
-            onClick={() => fileInputRef.current?.click()}
-          >
-            {t('scan.takePhoto')}
-          </Button>
-        )}
-
-        {status.kind === 'review' && (
-          <div className="flex gap-3">
-            <Button
-              type="button"
-              variant="secondary"
-              fullWidth
-              disabled={status.sending}
-              onClick={reset}
-            >
-              {t('scan.retake')}
-            </Button>
+      {status.kind !== 'processing' && status.kind !== 'finished' && (
+        <footer className="shrink-0 border-t border-stroke-subtle bg-surface px-5 pb-[max(1rem,env(safe-area-inset-bottom))] pt-3">
+          {status.kind === 'capture' && (
             <Button
               type="button"
               variant="primary"
+              size="lg"
               fullWidth
-              disabled={status.sending || status.resegmenting}
-              onClick={() => void handleUse()}
+              onClick={() => fileInputRef.current?.click()}
             >
-              {status.sending ? t('scan.sending') : t('scan.use')}
+              {t('scan.takePhoto')}
             </Button>
-          </div>
-        )}
+          )}
 
-        {status.kind === 'error' && (
-          <Button type="button" variant="primary" size="lg" fullWidth onClick={reset}>
-            {t('scan.retake')}
-          </Button>
-        )}
-      </footer>
+          {status.kind === 'review' && (
+            <div className="flex gap-3">
+              <Button
+                type="button"
+                variant="secondary"
+                fullWidth
+                disabled={status.sending}
+                onClick={reset}
+              >
+                {t('scan.retake')}
+              </Button>
+              <Button
+                type="button"
+                variant="primary"
+                fullWidth
+                disabled={status.sending || status.resegmenting}
+                onClick={() => void handleUse()}
+              >
+                {status.sending ? t('scan.sending') : t('scan.use')}
+              </Button>
+            </div>
+          )}
+
+          {status.kind === 'sent' && (
+            <div className="flex gap-3">
+              <Button type="button" variant="secondary" fullWidth onClick={reset}>
+                {t('scan.sent.another')}
+              </Button>
+              <Button type="button" variant="primary" fullWidth onClick={finish}>
+                {t('scan.sent.done')}
+              </Button>
+            </div>
+          )}
+
+          {status.kind === 'error' && (
+            <Button type="button" variant="primary" size="lg" fullWidth onClick={reset}>
+              {t('scan.retake')}
+            </Button>
+          )}
+        </footer>
+      )}
 
       <input
         ref={fileInputRef}
@@ -563,16 +594,12 @@ function GuideTip({ text }: { readonly text: string }) {
   );
 }
 
-/** Asset lives in public/ so the lightweight scan bundle fetches it lazily. */
+// In public/ so the lightweight scan bundle isn't bloated by the asset.
 const SCAN_EXAMPLE_SRC = '/images/scan/scan-example.webp';
 
-/**
- * Real top-down example with anchored callouts. The photo is a baked asset; the
- * pills and leader lines are HTML+SVG so they localise and stay crisp at any DPI.
- */
 function ScanExamplePhoto({ t }: { readonly t: ReturnType<typeof useTranslation> }) {
   return (
-    <div className="relative w-full overflow-hidden rounded-xl border border-stroke bg-surface-elevated shadow-sm">
+    <div className="relative w-full overflow-hidden rounded-2xl border border-stroke bg-surface-elevated shadow-sm">
       <img
         src={SCAN_EXAMPLE_SRC}
         alt={t('scan.capture.exampleAlt')}
@@ -581,7 +608,8 @@ function ScanExamplePhoto({ t }: { readonly t: ReturnType<typeof useTranslation>
         decoding="async"
       />
 
-      {/* Leader lines to the tool and card, plus the straight-down camera axis. */}
+      <div className="pointer-events-none absolute inset-x-0 top-0 h-1/4 bg-gradient-to-b from-surface/55 to-transparent" />
+
       <svg
         className="pointer-events-none absolute inset-0 h-full w-full"
         viewBox="0 0 100 100"
@@ -590,112 +618,107 @@ function ScanExamplePhoto({ t }: { readonly t: ReturnType<typeof useTranslation>
         aria-hidden="true"
       >
         <line
-          x1="18"
-          y1="17"
-          x2="24"
+          x1="22"
+          y1="14"
+          x2="28"
           y2="23"
           className="stroke-accent"
-          strokeWidth={1.2}
+          strokeWidth={1.5}
+          strokeLinecap="round"
           vectorEffect="non-scaling-stroke"
         />
         <line
-          x1="82"
-          y1="17"
-          x2="81"
+          x1="80"
+          y1="14"
+          x2="80"
           y2="30"
           className="stroke-success"
-          strokeWidth={1.2}
+          strokeWidth={1.5}
+          strokeLinecap="round"
           vectorEffect="non-scaling-stroke"
         />
-        <g className="stroke-content-tertiary" strokeWidth={1.2} vectorEffect="non-scaling-stroke">
-          <line x1="56" y1="18" x2="56" y2="43" strokeDasharray="3 3" />
-          <line x1="52.5" y1="39" x2="56" y2="43" />
-          <line x1="59.5" y1="39" x2="56" y2="43" />
-        </g>
       </svg>
 
-      <AnchorDot leftPct={24} topPct={23} className="bg-accent" />
-      <AnchorDot leftPct={81} topPct={30} className="bg-success" />
+      <AnchorDot leftPct={28} topPct={23} tone="accent" />
+      <AnchorDot leftPct={80} topPct={30} tone="success" />
 
-      <CalloutPill leftPct={18} topPct={10} tone="accent" label={t('scan.capture.label.tool')} />
-      <CalloutPill
-        leftPct={56}
-        topPct={10}
-        tone="neutral"
-        downArrow
-        label={t('scan.capture.label.topDown')}
-      />
-      <CalloutPill leftPct={82} topPct={10} tone="success" label={t('scan.capture.label.card')} />
+      <OverlayChip leftPct={50} topPct={3} tone="neutral" label={t('scan.capture.label.topDown')} />
+      <OverlayChip leftPct={22} topPct={8.5} tone="accent" label={t('scan.capture.label.tool')} />
+      <OverlayChip leftPct={80} topPct={8.5} tone="success" label={t('scan.capture.label.card')} />
     </div>
   );
 }
 
+const TONE_DOT: Record<'accent' | 'success', string> = {
+  accent: 'bg-accent',
+  success: 'bg-success',
+};
+
 function AnchorDot({
   leftPct,
   topPct,
-  className,
+  tone,
 }: {
   readonly leftPct: number;
   readonly topPct: number;
-  readonly className: string;
+  readonly tone: 'accent' | 'success';
 }) {
   return (
     <span
       aria-hidden="true"
-      className={`absolute h-2 w-2 -translate-x-1/2 -translate-y-1/2 rounded-full ring-2 ring-surface ${className}`}
+      className={`absolute h-2.5 w-2.5 -translate-x-1/2 -translate-y-1/2 rounded-full shadow ring-2 ring-surface ${TONE_DOT[tone]}`}
       style={{ left: `${leftPct}%`, top: `${topPct}%` }}
     />
   );
 }
 
-function CalloutPill({
+function StraightDownGlyph() {
+  return (
+    <svg
+      width="11"
+      height="11"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2.2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+      className="text-content-tertiary"
+    >
+      <path d="M12 3v11" />
+      <path d="m7 10 5 5 5-5" />
+      <path d="M5 21h14" />
+    </svg>
+  );
+}
+
+function OverlayChip({
   leftPct,
   topPct,
   tone,
   label,
-  downArrow,
 }: {
   readonly leftPct: number;
   readonly topPct: number;
   readonly tone: 'accent' | 'success' | 'neutral';
   readonly label: string;
-  readonly downArrow?: boolean;
 }) {
-  const dotClass: Record<typeof tone, string> = {
-    accent: 'bg-accent',
-    success: 'bg-success',
-    neutral: 'bg-content-tertiary',
-  };
   return (
     <span
-      className="absolute flex -translate-x-1/2 items-center gap-1 whitespace-nowrap rounded-full border border-stroke-subtle bg-surface/90 px-2 py-0.5 text-[10px] font-medium text-content-secondary shadow-sm backdrop-blur-sm"
+      className="absolute flex -translate-x-1/2 items-center gap-1.5 whitespace-nowrap rounded-full bg-surface/95 px-2.5 py-1 text-[11px] font-medium text-content-primary shadow-md ring-1 ring-black/[0.06] backdrop-blur-sm"
       style={{ left: `${leftPct}%`, top: `${topPct}%` }}
     >
-      {downArrow ? (
-        <svg
-          width="9"
-          height="9"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="3"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          aria-hidden="true"
-          className="text-content-tertiary"
-        >
-          <path d="M12 5v14" />
-          <path d="m19 12-7 7-7-7" />
-        </svg>
+      {tone === 'neutral' ? (
+        <StraightDownGlyph />
       ) : (
-        <span className={`h-1.5 w-1.5 rounded-full ${dotClass[tone]}`} aria-hidden="true" />
+        <span className={`h-2 w-2 rounded-full ${TONE_DOT[tone]}`} aria-hidden="true" />
       )}
       {label}
     </span>
   );
 }
 
-/** Reassures the user the capture is on-device — the photo is never uploaded. */
 function PrivacyNote({ text }: { readonly text: string }) {
   return (
     <p className="flex items-center gap-1.5 text-center text-[11px] text-content-tertiary">
