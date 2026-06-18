@@ -2,24 +2,21 @@
 
 ## [4.191.0](https://github.com/andymai/gridfinity-layout-tool/compare/gridfinity-layout-tool-v4.190.0...gridfinity-layout-tool-v4.191.0) (2026-06-18)
 
-
 ### Features
 
-* **labs:** graduate vertical stack and design linking out of experimental ([#2253](https://github.com/andymai/gridfinity-layout-tool/issues/2253)) ([eca8a21](https://github.com/andymai/gridfinity-layout-tool/commit/eca8a21e61f3c2658fdabee30bddf26300d04720))
+- **labs:** graduate vertical stack and design linking out of experimental ([#2253](https://github.com/andymai/gridfinity-layout-tool/issues/2253)) ([eca8a21](https://github.com/andymai/gridfinity-layout-tool/commit/eca8a21e61f3c2658fdabee30bddf26300d04720))
 
 ## [4.190.0](https://github.com/andymai/gridfinity-layout-tool/compare/gridfinity-layout-tool-v4.189.0...gridfinity-layout-tool-v4.190.0) (2026-06-18)
 
-
 ### Features
 
-* **scan:** refine example, scan multiple tools per session, desktop cleanup ([#2251](https://github.com/andymai/gridfinity-layout-tool/issues/2251)) ([bb1dcde](https://github.com/andymai/gridfinity-layout-tool/commit/bb1dcde9e8b01bae5acc9d424009426e0980863c))
+- **scan:** refine example, scan multiple tools per session, desktop cleanup ([#2251](https://github.com/andymai/gridfinity-layout-tool/issues/2251)) ([bb1dcde](https://github.com/andymai/gridfinity-layout-tool/commit/bb1dcde9e8b01bae5acc9d424009426e0980863c))
 
 ## [4.189.0](https://github.com/andymai/gridfinity-layout-tool/compare/gridfinity-layout-tool-v4.188.0...gridfinity-layout-tool-v4.189.0) (2026-06-18)
 
-
 ### Features
 
-* **scan:** add real annotated example photo and on-device privacy note ([#2248](https://github.com/andymai/gridfinity-layout-tool/issues/2248)) ([7514ca8](https://github.com/andymai/gridfinity-layout-tool/commit/7514ca81a7787f8b98da56e5746e917aed7f3a86))
+- **scan:** add real annotated example photo and on-device privacy note ([#2248](https://github.com/andymai/gridfinity-layout-tool/issues/2248)) ([7514ca8](https://github.com/andymai/gridfinity-layout-tool/commit/7514ca81a7787f8b98da56e5746e917aed7f3a86))
 
 ## [4.188.0](https://github.com/andymai/gridfinity-layout-tool/compare/gridfinity-layout-tool-v4.187.0...gridfinity-layout-tool-v4.188.0) (2026-06-18)
 
