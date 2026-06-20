@@ -11,6 +11,9 @@ export function useDimensionsSection() {
     width,
     depth,
     height,
+    fractionalEdgeX,
+    fractionalEdgeY,
+    baseHalfSockets,
     gridUnitMm,
     heightUnitMm,
     halfGridMode,
@@ -22,6 +25,9 @@ export function useDimensionsSection() {
       width: s.params.width,
       depth: s.params.depth,
       height: s.params.height,
+      fractionalEdgeX: s.params.fractionalEdgeX,
+      fractionalEdgeY: s.params.fractionalEdgeY,
+      baseHalfSockets: s.params.base.halfSockets,
       gridUnitMm: s.params.gridUnitMm,
       heightUnitMm: s.params.heightUnitMm,
       halfGridMode: s.ui.halfGridMode,
@@ -72,8 +78,15 @@ export function useDimensionsSection() {
   );
 
   const handleSwapDimensions = useCallback(() => {
-    setParams({ width: depth, depth: width });
-  }, [width, depth, setParams]);
+    // Transpose the grid: the half-foot edge preference must travel with its
+    // axis, else swapping a 2.5×1 'left' bin would silently move the half foot.
+    setParams({
+      width: depth,
+      depth: width,
+      fractionalEdgeX: fractionalEdgeY,
+      fractionalEdgeY: fractionalEdgeX,
+    });
+  }, [width, depth, fractionalEdgeX, fractionalEdgeY, setParams]);
 
   const handleSetParam = useCallback(
     <K extends keyof BinParams>(key: K, value: BinParams[K]) => {
@@ -83,6 +96,13 @@ export function useDimensionsSection() {
       setParam(key, value);
     },
     [halfGridMode, toggleHalfGridMode, setParam]
+  );
+
+  const handleFractionalEdgeChange = useCallback(
+    (axis: 'x' | 'y', position: 'start' | 'end') => {
+      setParam(axis === 'x' ? 'fractionalEdgeX' : 'fractionalEdgeY', position);
+    },
+    [setParam]
   );
 
   return {
@@ -97,6 +117,12 @@ export function useDimensionsSection() {
       dimensionStep,
       minWidth,
       minDepth,
+      fractionalEdgeX,
+      fractionalEdgeY,
+      // Half-sockets mode decomposes every cell into uniform 0.5u feet, so there
+      // is no single half foot to reposition — hide the edge controls then.
+      hasFractionalWidth: isFractional(width) && !baseHalfSockets,
+      hasFractionalDepth: isFractional(depth) && !baseHalfSockets,
     },
     handlers: {
       setParam: handleSetParam,
@@ -105,6 +131,7 @@ export function useDimensionsSection() {
       handleHeightStep,
       handleSwapDimensions,
       toggleHalfGridMode,
+      handleFractionalEdgeChange,
     },
     t,
   };
