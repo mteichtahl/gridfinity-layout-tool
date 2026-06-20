@@ -18,7 +18,7 @@ import {
   clone,
 } from 'brepjs';
 import type { Shape3D, ValidSolid, Drawing, DisposalScope } from 'brepjs';
-import { BOX_CORNER_RADIUS } from './generatorConstants';
+import { BOX_CORNER_RADIUS, COPLANAR_OVERLAP } from './generatorConstants';
 import type { BinParams, TextStyleDefaults, TextStyleOverride } from '@/shared/types/bin';
 import {
   compartmentHasTiltedBackWall,
@@ -424,7 +424,15 @@ function buildTabsAtRow(
       if (!touchesLeft) p = p.customCorner(cornerR);
       return p.close();
     };
-    const shelf = scope.register(sketch(buildOutline(), 'XY', tabHeight - wt).extrude(wt));
+    // Extrude the shelf COPLANAR_OVERLAP proud of its nominal top. When
+    // `shelfTopZ === wallHeight` (the default) the shelf top would otherwise be
+    // coplanar with the bin wall top; OCCT's fuse merges coplanar faces into one
+    // and the merged face loses the LABEL_TAB origin, so the shelf rendered in
+    // body color in multi-color mode (GH #1654). The 0.01mm proud lip is below
+    // slicer resolution but keeps the shelf-top face distinct so its tag survives.
+    const shelf = scope.register(
+      sketch(buildOutline(), 'XY', tabHeight - wt).extrude(wt + COPLANAR_OVERLAP)
+    );
 
     // -- Gussets: 45deg triangular supports under the shelf --
     // Free ends get edge gussets for structural support.
@@ -597,11 +605,10 @@ export const labelTabsFeature: FeatureBuilder = {
     const { dimensions: dim, params } = ctx;
     return compactKey(
       buildCacheKey(
-        // `v4`: #1898 added `edges` + `inset` to LabelTabConfig. The full
-        // config is already serialized via `stableSerialize(params.label)`,
-        // so the bump is belt-and-suspenders — invalidates any older entry
-        // a returning user might have in IndexedDB.
-        'v4',
+        // `v5`: #1654 extrudes the shelf COPLANAR_OVERLAP proud (geometry +
+        // face tags changed), so older IndexedDB entries must be invalidated.
+        // `v4`: #1898 added `edges` + `inset` to LabelTabConfig.
+        'v5',
         dim.shellKey,
         stableSerialize(params.label),
         quantize(dim.innerW),
