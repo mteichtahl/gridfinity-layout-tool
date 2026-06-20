@@ -22,6 +22,7 @@ import { useMeshGeometry, useCoarseGeometry } from '@/shared/components/preview/
 import { computeActiveZones } from '@/features/bin-designer/types/featureColors';
 import type { ColorZone } from '@/features/bin-designer/types/featureColors';
 import {
+  buildHitTestZones,
   buildMultiColorGroups,
   hoveredMaterialIndices,
 } from '@/features/bin-designer/utils/multiColorGroups';
@@ -73,6 +74,8 @@ export function BinMesh({ wireframe, color, xray = false, onZoneClick }: BinMesh
     scoopEnabled,
     lidEnabled,
     cells,
+    lipCorners,
+    lipBands,
     hoveredColorZone,
     colorTool,
   } = useDesignerStore(
@@ -92,6 +95,10 @@ export function BinMesh({ wireframe, color, xray = false, onZoneClick }: BinMesh
       scoopEnabled: s.params.scoop.enabled,
       lidEnabled: s.params.lid.enabled,
       cells: s.params.compartments.cells,
+      // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- featureColors is typed required but legacy persisted configs may omit it
+      lipCorners: s.params.featureColors?.lip.corners ?? 1,
+      // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- featureColors is typed required but legacy persisted configs may omit it
+      lipBands: s.params.featureColors?.lip.bands ?? 1,
       hoveredColorZone: s.ui.hoveredColorZone,
       colorTool: s.ui.colorTool,
     }))
@@ -108,8 +115,9 @@ export function BinMesh({ wireframe, color, xray = false, onZoneClick }: BinMesh
         scoop: { enabled: scoopEnabled },
         lid: { enabled: lidEnabled },
         compartments: { cells },
+        featureColors: { lip: { corners: lipCorners, bands: lipBands } },
       }),
-    [baseStyle, stackingLip, labelEnabled, scoopEnabled, lidEnabled, cells]
+    [baseStyle, stackingLip, labelEnabled, scoopEnabled, lidEnabled, cells, lipCorners, lipBands]
   );
 
   // Build multi-color groups when feature is active
@@ -121,10 +129,15 @@ export function BinMesh({ wireframe, color, xray = false, onZoneClick }: BinMesh
     return buildMultiColorGroups(faceGroups, vertices, indices, featureColors, activeZones);
   }, [multiColorEnabled, faceGroups, featureColors, vertices, indices, activeZones]);
 
+  // A split lip grid re-tessellates the lip into a flat (non-indexed) buffer;
+  // render that instead of the worker's indexed mesh so the seam-aligned color
+  // boundaries actually show. Passing the flat normals keeps the crease path
+  // active (useMeshGeometry recomputes + creases, so the rim stays sharp).
+  const meshOverride = multiColorData?.meshOverride ?? null;
   const { geometry, edgesGeometry, hasPrecomputedNormals } = useMeshGeometry({
-    vertices,
-    normals,
-    indices,
+    vertices: meshOverride?.vertices ?? vertices,
+    normals: meshOverride?.normals ?? normals,
+    indices: meshOverride ? null : indices,
     // Drafts now ship clean dihedral crease edges from the worker (see
     // creaseEdges.ts), so render them directly instead of suppressing and
     // recomputing EdgesGeometry on the main thread every draft tick.
@@ -264,13 +277,18 @@ export function BinMesh({ wireframe, color, xray = false, onZoneClick }: BinMesh
   // the same `hoveredColorZone` glow path the panel uses.
   const toolActive = colorTool !== null && multiColorEnabled;
 
-  // Pre-compute the lip bbox once per mesh — `resolve()` runs on every
-  // pointer-move when the tool is active, and re-scanning every LIP triangle
-  // each frame is expensive on high-poly meshes.
+  // Hit-test reads per-rendered-triangle zones so a click resolves to exactly
+  // the cell shown — no second, divergent classification. When multi-color is
+  // on but every zone still shares one color, `buildMultiColorGroups` returns
+  // null (nothing to group); fall back to an in-place classification over the
+  // un-split mesh so the eyedropper/swap can still pick a zone to start editing.
   const zoneResolver = useMemo(() => {
-    if (!toolActive || !faceGroups || !vertices || !indices) return null;
-    return buildZoneResolver(faceGroups, vertices, indices);
-  }, [toolActive, faceGroups, vertices, indices]);
+    if (!toolActive) return null;
+    if (multiColorData) return buildZoneResolver(multiColorData.triZones);
+    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- featureColors is null-coalesced upstream (legacy persisted configs)
+    if (!faceGroups || !featureColors || !vertices || !indices) return null;
+    return buildZoneResolver(buildHitTestZones(faceGroups, vertices, indices, featureColors));
+  }, [toolActive, multiColorData, faceGroups, featureColors, vertices, indices]);
 
   const handlePointerMove = useCallback(
     (e: ThreeEvent<PointerEvent>) => {
