@@ -70,16 +70,17 @@ const SCARF_SLOPE = Math.tan(SCARF_ANGLE);
 const WIDTH_TAPER_SLOPE = 1.0;
 
 /** Key vertical extent as a fraction of interior wall height (lead-in tapers above it). */
-const DEFAULT_WALL_KEY_HEIGHT_FRACTION = 0.8;
+const DEFAULT_WALL_KEY_HEIGHT_FRACTION = 0.85;
 
 /**
- * Half-width of the slim wall key (mm). Doubled (1.0mm), this is the key's footprint
- * along the cut line — which, on a perimeter wall, is also its inward reach. Sized so the
- * reinforcing pilaster is basically flush (≈0.1mm bump) at the thickest selectable wall
- * (`WALL_THICKNESS_OPTIONS` max = 2.6mm); thinner walls still grow a pilaster. The tongue
- * stays a comfortable ~2.5 perimeters at a 0.4mm nozzle. See `wallKeyGeometry`.
+ * Half-width of the wall key (mm). Doubled (1.6mm), this is the key's footprint
+ * along the cut line — which, on a perimeter wall, is also its inward reach. Sized stocky
+ * enough that the tongue meaningfully resists splaying rather than just aligning; the
+ * reinforcing pilaster now adds material on every selectable wall (its inward reach,
+ * `pilasterPerpDepth` ≈ 3.3mm, exceeds the thickest `WALL_THICKNESS_OPTIONS` = 2.6mm).
+ * The tongue is ~4 perimeters at a 0.4mm nozzle. See `wallKeyGeometry`.
  */
-const WALL_KEY_HALF_WIDTH = 0.5;
+const WALL_KEY_HALF_WIDTH = 0.8;
 
 /**
  * Intact outer wall skin kept in front of the groove (mm). The key is anchored this far
@@ -89,11 +90,20 @@ const WALL_KEY_HALF_WIDTH = 0.5;
  */
 const WALL_KEY_OUTER_SKIN = 0.8;
 
-/** How far the key protrudes across the cut into the mating piece (mm). */
-const WALL_KEY_PROTRUSION = 1.2;
+/**
+ * How far the key protrudes across the cut into the mating piece (mm). This is the
+ * tongue's engagement depth — deeper means more glue surface and far more resistance
+ * to the halves pulling/splaying apart. Clamped down on short bins by `buildKey` so the
+ * self-supporting tip ramp always finishes below the lead-in notch.
+ */
+const WALL_KEY_PROTRUSION = 2.4;
 
-/** Lead-in chamfer at the top/tip of the key so the halves self-guide together (mm). */
-const WALL_KEY_LEADIN = 0.6;
+/**
+ * Lead-in drop at the top of the key (mm). The whole protruding span slopes down by this
+ * over its length, turning the tongue into a self-guiding wedge instead of a blunt block;
+ * the female groove inherits the same slope as a wider insertion mouth.
+ */
+const WALL_KEY_LEADIN = 1.2;
 
 /** Snug margin (mm, per side) between the key footprint and the pilaster edge. */
 const WALL_PILASTER_MARGIN = 0.6;
@@ -160,6 +170,37 @@ export function wallKeyGeometry(
   // walls, where the groove sits fully inward of the wall (hosted by the pilaster).
   const outerSkin = Math.min(outerSkinNom, wallThickness);
   return { perpInset, pilasterPerpDepth, pilasterProtDepth, outerSkin, keyHalfWidth, protrusion };
+}
+
+export interface WallKeyHeightFit {
+  /** False when the wall is too short to host a non-degenerate key — skip wall keys. */
+  readonly fits: boolean;
+  /** Protrusion clamped so the 45° tip ramp finishes below the lead-in notch (mm). */
+  readonly protrusion: number;
+}
+
+/**
+ * Decide whether a wall key fits the available interior height and clamp its protrusion
+ * so the self-supporting 45° tip ramp always finishes below the lead-in notch.
+ *
+ * The minimum required protrusion scales with the nozzle (≥2 perimeters via
+ * `scaleFeature`), so a wide nozzle skips a key it could only print as a sub-bead tongue
+ * rather than emitting a weak one. `keyHeight` is shared by the male tongue and female
+ * groove, so both clamp identically and stay dimensionally matched.
+ */
+export function fitWallKeyToHeight(
+  keyHeight: number,
+  nominalProtrusion: number,
+  nozzleSizeMm: number = NOZZLE_BASELINE
+): WallKeyHeightFit {
+  // The tongue needs vertical room for its lead-in notch, a self-supporting 45° tip ramp
+  // (≥ a ≥2-perimeter protrusion), and a minimum flat above the ramp.
+  const minProtrusion = scaleFeature(MIN_FEATURE_WIDTH, nozzleSizeMm);
+  if (keyHeight < WALL_KEY_LEADIN + minProtrusion + MIN_FEATURE_HEIGHT) {
+    return { fits: false, protrusion: 0 };
+  }
+  const protrusion = Math.min(nominalProtrusion, keyHeight - WALL_KEY_LEADIN - MIN_FEATURE_HEIGHT);
+  return { fits: true, protrusion };
 }
 
 type Extent = [number, number, number];
@@ -579,11 +620,15 @@ function addKeyConnectors(
   const wallHeight = context.wallTopZ - context.floorZ;
   const heightFraction = config.ridgeHeightFraction ?? DEFAULT_WALL_KEY_HEIGHT_FRACTION;
   const keyHeight = wallHeight * heightFraction;
-  if (keyHeight < MIN_FEATURE_HEIGHT) return;
 
   const nozzle = context.nozzleSizeMm ?? NOZZLE_BASELINE;
   const effClearance = scaleClearance(config.clearance, nozzle);
   const geom = wallKeyGeometry(context.wallThickness, effClearance, nozzle);
+
+  // Skip wall keys on bins too short to host a non-degenerate key; otherwise clamp the
+  // protrusion so the self-supporting tip ramp finishes below the lead-in notch.
+  const fit = fitWallKeyToHeight(keyHeight, geom.protrusion, nozzle);
+  if (!fit.fits) return;
 
   // The pilaster only adds material where it reaches past the existing wall. Once the
   // wall is thick enough to enclose the groove (+margin) it hosts the key on its own,
@@ -606,6 +651,7 @@ function addKeyConnectors(
           bodySign,
           context.floorZ,
           context.wallTopZ,
+          context.floorZ + keyHeight,
           geom
         )
       );
@@ -619,6 +665,7 @@ function addKeyConnectors(
       context.floorZ,
       keyHeight,
       face.isMale ? 0 : effClearance,
+      fit.protrusion,
       geom
     );
     (face.isMale ? fuseTargets : cutTargets).push(key);
@@ -651,6 +698,7 @@ function buildPilaster(
   bodySign: -1 | 1,
   floorZ: number,
   wallTopZ: number,
+  keyTop: number,
   geom: WallKeyGeometry
 ): Shape3D {
   const depth = geom.pilasterPerpDepth;
@@ -660,7 +708,12 @@ function buildPilaster(
   const vTopMin = perimeter + inward * WALL_PILASTER_TOP_MIN;
   const vFloor = perimeter + inward * Math.max(0, depth - WALL_PILASTER_FLOOR_CHAMFER);
   const cham = Math.min(WALL_PILASTER_FLOOR_CHAMFER, (wallTopZ - floorZ) * 0.25);
-  const topStart = Math.max(floorZ + cham + 0.5, wallTopZ - WALL_PILASTER_TOP_TAPER);
+  // Keep the buttress at full depth through the key (the groove needs the material), then
+  // melt into the wall over the whole span above it — a longer, more graceful taper than a
+  // fixed stub, and it never starts below the groove (which would breach the seal). Falls
+  // back to the legacy `wallTopZ − TOP_TAPER` window when the key is short.
+  const taperStart = Math.max(keyTop, wallTopZ - WALL_PILASTER_TOP_TAPER);
+  const topStart = Math.min(Math.max(floorZ + cham + 0.5, taperStart), wallTopZ - 0.5);
 
   // Silhouette in (perpendicular, Z); extruded along the cut-normal (prot) axis.
   const plane = axis === 'x' ? 'YZ' : 'XZ';
@@ -691,24 +744,29 @@ function buildKey(
   floorZ: number,
   keyHeight: number,
   inflate: number,
+  protrusion: number,
   geom: WallKeyGeometry
 ): Shape3D {
+  // `protrusion` is pre-clamped by `fitWallKeyToHeight` so the 45° tip ramp finishes
+  // below the lead-in notch; both male tongue and female groove receive the same value.
   const halfW = geom.keyHalfWidth + inflate;
-  const protTip = cutPos + geom.protrusion + inflate;
+  const protTip = cutPos + protrusion + inflate;
   const keyTop = floorZ + keyHeight + inflate;
-  const lead = Math.min(WALL_KEY_LEADIN, geom.protrusion - 0.2, keyHeight / 2);
+  const lead = Math.min(WALL_KEY_LEADIN, protrusion - 0.2, keyHeight / 2);
   const perpC = perimeter + inward * geom.perpInset;
   const perpAxis = axis === 'x' ? 'y' : 'x';
 
-  // Profile in (cut-normal, Z): 45° underside ramp (self-supporting) + a lead-in
-  // chamfer on the top/tip so the halves guide together as they press in. The key
-  // extrudes along the cut line (perpAxis), so its profile lives in the cut plane.
+  // Profile in (cut-normal, Z): the protruding span is a wedge — a 45° self-supporting
+  // underside ramp and a top that slopes down by `lead` from the seam to the tip, so the
+  // tongue reads as a sculpted point and self-guides as the halves press in. The body
+  // portion keeps a flat top (it's buried in the wall/pilaster). The key extrudes along
+  // the cut line (perpAxis), so its profile lives in the cut plane.
   const plane = axis === 'x' ? 'XZ' : 'YZ';
   const profile = draw([cutPos - OVERLAP, floorZ])
     .lineTo([cutPos - OVERLAP, keyTop])
-    .lineTo([protTip - lead, keyTop])
+    .lineTo([cutPos, keyTop])
     .lineTo([protTip, keyTop - lead])
-    .lineTo([protTip, floorZ + geom.protrusion])
+    .lineTo([protTip, floorZ + protrusion])
     .lineTo([cutPos, floorZ])
     .close();
   const raw = sketch(profile, plane, 0).extrude(2 * halfW);
