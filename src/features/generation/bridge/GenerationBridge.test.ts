@@ -285,6 +285,65 @@ describe('GenerationBridge', () => {
     });
   });
 
+  describe('generation timeout recovery', () => {
+    /** Drive a generation that never responds until its timeout fires. */
+    async function timeOutAGeneration(): Promise<MockWorker> {
+      const initPromise = bridge.init();
+      await vi.advanceTimersByTimeAsync(10);
+      await initPromise;
+      const wedged = getWorker();
+
+      const genPromise = bridge.generate(DEFAULT_BIN_PARAMS);
+      // Attach the rejection handler before advancing time so the timeout
+      // rejection (which fires mid-advance) is never momentarily unhandled.
+      const rejection = expect(genPromise).rejects.toThrow('timed out');
+      await vi.advanceTimersByTimeAsync(200); // past debounce -> GENERATE posted
+      // Worker never answers — advance past the generation timeout budget.
+      await vi.advanceTimersByTimeAsync(31_000);
+      await rejection;
+      return wedged;
+    }
+
+    it('terminates the wedged worker and starts a fresh one on timeout', async () => {
+      const wedged = await timeOutAGeneration();
+
+      expect(wedged.terminated).toBe(true);
+      // A replacement worker was created eagerly (different instance).
+      expect(mockWorkerInstance).not.toBe(wedged);
+    });
+
+    it('lets the next generation succeed on the fresh worker after a timeout', async () => {
+      const wedged = await timeOutAGeneration();
+
+      // Let the replacement worker finish its INIT handshake.
+      await vi.advanceTimersByTimeAsync(10);
+      const fresh = getWorker();
+      expect(fresh).not.toBe(wedged);
+
+      const genPromise = bridge.generate({ ...DEFAULT_BIN_PARAMS, width: 3 });
+      await vi.advanceTimersByTimeAsync(200);
+
+      const generateMessages = fresh.messages.filter(
+        (m) => (m as { type: string }).type === 'GENERATE'
+      );
+      expect(generateMessages.length).toBe(1); // routed to the fresh worker
+
+      const msg = generateMessages[0] as { payload: { requestId: string } };
+      fresh.simulateResponse({
+        type: 'MESH_RESULT',
+        requestId: msg.payload.requestId,
+        vertices: new Float32Array([1, 2, 3]),
+        normals: new Float32Array([0, 0, 1]),
+        indices: new Uint32Array([0]),
+        triangleCount: 1,
+        timingMs: 7,
+      });
+
+      const result = await genPromise;
+      expect(result.mesh.triangleCount).toBe(1);
+    });
+  });
+
   describe('generateImmediate', () => {
     it('sends GENERATE message without debounce', async () => {
       const initPromise = bridge.init();
@@ -293,7 +352,8 @@ describe('GenerationBridge', () => {
 
       const genPromise = bridge.generateImmediate(DEFAULT_BIN_PARAMS);
 
-      // Should be sent immediately (no debounce wait)
+      // Dispatched after the worker-ready microtask, but with no debounce wait.
+      await vi.advanceTimersByTimeAsync(0);
       const generateMessages = getWorker().messages.filter(
         (m) => (m as { type: string }).type === 'GENERATE'
       );
@@ -439,6 +499,7 @@ describe('GenerationBridge', () => {
         (m) => (m as { type: string }).type === 'EXPORT'
       ) as { payload: { requestId: string } };
       expect(exportMsg).toBeDefined();
+      const wedged = getWorker();
 
       // Export timeout is the complexity budget (BASE 30s for a default bin)
       // scaled by EXPORT_TIMEOUT_MULTIPLIER (×4 = 120s); advance well past it.
@@ -448,11 +509,48 @@ describe('GenerationBridge', () => {
       expect(result).toBeInstanceOf(Error);
       expect((result as Error).message).toMatch(/timed out/i);
 
-      // Bridge should have sent a CANCEL with the original requestId.
-      const cancelMessages = getWorker().messages.filter(
+      // A worker wedged in a synchronous export can't process a CANCEL, so the
+      // bridge terminates it instead of posting one.
+      expect(wedged.terminated).toBe(true);
+      const cancelMessages = wedged.messages.filter(
         (m) => (m as { type: string }).type === 'CANCEL'
-      ) as { type: string; requestId: string }[];
-      expect(cancelMessages.some((m) => m.requestId === exportMsg.payload.requestId)).toBe(true);
+      );
+      expect(cancelMessages.length).toBe(0);
+    });
+
+    it('recovers the worker so generation works after an export timeout', async () => {
+      const initPromise = bridge.init();
+      await vi.advanceTimersByTimeAsync(10);
+      await initPromise;
+      const wedged = getWorker();
+
+      const settled = bridge.exportBin(DEFAULT_BIN_PARAMS, 'stl').catch((e: unknown) => e);
+      await vi.advanceTimersByTimeAsync(0);
+      await vi.advanceTimersByTimeAsync(180_000); // never answered -> timeout
+      expect(await settled).toBeInstanceOf(Error);
+      expect(wedged.terminated).toBe(true);
+
+      // Replacement worker finishes its INIT handshake, then a generation runs.
+      await vi.advanceTimersByTimeAsync(10);
+      const fresh = getWorker();
+      expect(fresh).not.toBe(wedged);
+
+      const genPromise = bridge.generate(DEFAULT_BIN_PARAMS);
+      await vi.advanceTimersByTimeAsync(200);
+      const genMsg = fresh.messages.find((m) => (m as { type: string }).type === 'GENERATE') as {
+        payload: { requestId: string };
+      };
+      expect(genMsg).toBeDefined();
+      fresh.simulateResponse({
+        type: 'MESH_RESULT',
+        requestId: genMsg.payload.requestId,
+        vertices: new Float32Array([1, 2, 3]),
+        normals: new Float32Array([0, 0, 1]),
+        indices: new Uint32Array([0]),
+        triangleCount: 1,
+        timingMs: 4,
+      });
+      expect((await genPromise).mesh.triangleCount).toBe(1);
     });
 
     it('clears the timeout when the export resolves', async () => {
@@ -818,30 +916,26 @@ describe('GenerationBridge', () => {
       await vi.advanceTimersByTimeAsync(30_000);
     });
 
-    it('sends CANCEL message to worker on timeout', async () => {
+    it('terminates the worker on timeout (CANCEL is useless to a blocked worker)', async () => {
       const initPromise = bridge.init();
       await vi.advanceTimersByTimeAsync(10);
       await initPromise;
 
-      const _genPromise = bridge.generate(DEFAULT_BIN_PARAMS).catch(() => {});
+      const genPromise = bridge.generate(DEFAULT_BIN_PARAMS);
+      const rejection = expect(genPromise).rejects.toThrow('timed out');
       await vi.advanceTimersByTimeAsync(300);
 
       const worker = getWorker();
-      const generateMsg = worker.messages.find(
-        (m) => (m as { type: string }).type === 'GENERATE'
-      ) as { type: string; payload: { requestId: string } };
-      const requestId = generateMsg.payload.requestId;
 
       // Trigger timeout
       await vi.advanceTimersByTimeAsync(30_000);
+      await rejection;
 
-      // Should have sent CANCEL to the worker
-      const cancelMsg = worker.messages.find(
-        (m) =>
-          (m as { type: string }).type === 'CANCEL' &&
-          (m as { requestId: string }).requestId === requestId
-      );
-      expect(cancelMsg).toBeDefined();
+      // A single-threaded worker blocked in a synchronous op can't process a
+      // CANCEL message, so the bridge terminates it instead of posting one.
+      expect(worker.terminated).toBe(true);
+      const cancelMsg = worker.messages.find((m) => (m as { type: string }).type === 'CANCEL');
+      expect(cancelMsg).toBeUndefined();
     });
   });
 });
