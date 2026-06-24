@@ -15,6 +15,7 @@
 import { bench, describe, beforeAll } from 'vitest';
 import type { BaseplateParams } from '@/shared/types/bin';
 import { initBrepjs, getGenerateBaseplate } from './__kernel-tests__/wasmInit';
+import { clearBaseplateCaches } from './baseplateCaches';
 
 const noop = (): void => {};
 
@@ -101,4 +102,23 @@ describe('baseplate generation', () => {
     },
     { iterations: 3, warmupIterations: 1 }
   );
+
+  // Large-plate cold builds. The unique-paddingLeft cache-defeat above
+  // quantizes away for these, so clear the baseplate caches each iteration to
+  // time the real cold pocket cut across grid sizes; no magnets ⇒ through-cut.
+  // The clear must live INSIDE the timed fn — vitest's bench() ignores
+  // tinybench's per-iteration beforeEach and runs setup once per phase, so a
+  // hook would leave every iteration after the first warm.
+  const coldPlate = (w: number, d: number, forExport: boolean) => () => {
+    clearBaseplateCaches();
+    getGenerateBaseplate()(defaults({ width: w, depth: d }), noop, forExport);
+  };
+
+  bench('6×6 no magnets (cold)', coldPlate(6, 6, false), { iterations: 4, warmupIterations: 1 });
+  bench('8×8 no magnets (cold)', coldPlate(8, 8, false), { iterations: 3, warmupIterations: 1 });
+  bench('12×12 no magnets (cold)', coldPlate(12, 12, false), {
+    iterations: 2,
+    warmupIterations: 1,
+  });
+  bench('8×8 export (cold)', coldPlate(8, 8, true), { iterations: 2, warmupIterations: 1 });
 });
