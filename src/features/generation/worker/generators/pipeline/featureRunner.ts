@@ -26,6 +26,23 @@ export interface FeatureTargets {
   fuseTargets: Shape3D[];
   cutTargets: Shape3D[];
   patternCutTargets: Shape3D[];
+  /**
+   * Composite key over every built feature's own cache key, in builder order.
+   * Identifies the exact set of feature geometry produced this run so the
+   * post-boolean body can be cached/resumed (see booleanStage).
+   */
+  featuresKey: string;
+}
+
+/**
+ * Serialize the per-builder `[name, target, key]` triples into one composite
+ * key. Uses JSON so the result is injective: a builder key may embed user text
+ * (e.g. a label) containing `|` or `:`, and a flat delimiter join could collide
+ * two distinct feature sets into the same string — a false resume-cache hit
+ * that returns stale geometry. JSON's quoting/escaping makes that impossible.
+ */
+export function composeFeaturesKey(parts: ReadonlyArray<readonly string[]>): string {
+  return JSON.stringify(parts);
 }
 
 /**
@@ -42,6 +59,7 @@ export function runFeatureBuilders(
     fuseTargets: [],
     cutTargets: [],
     patternCutTargets: [],
+    featuresKey: '',
   };
   const bucketMap: Record<string, Shape3D[]> = {
     fuse: targets.fuseTargets,
@@ -50,6 +68,11 @@ export function runFeatureBuilders(
   };
 
   const perf = ctx.perfCollector;
+  // Each entry is a [name, target, key] triple. Kept structured (not a
+  // delimiter-joined string) so the JSON serialization below is injective —
+  // a builder key may embed user text (e.g. a label) containing `|` or `:`,
+  // which a flat join could collide across builders into a false cache hit.
+  const keyParts: string[][] = [];
 
   for (const builder of builders) {
     if (!builder.shouldBuild(ctx)) continue;
@@ -57,6 +80,11 @@ export function runFeatureBuilders(
 
     const builderStart = perf ? performance.now() : 0;
     const key = builder.cacheKey(ctx);
+    // Record the key for every builder that runs, whether or not it yields a
+    // shape — the post-boolean resume key must change if any input geometry
+    // does. `target` distinguishes fuse vs cut so a builder that flips bucket
+    // (same key, different op) still re-keys.
+    keyParts.push([builder.name, builder.target, key]);
 
     // getFeatureCache returns a clone (caller owns it), or null on miss.
     let shape = getFeatureCache(builder.name, key);
@@ -93,5 +121,6 @@ export function runFeatureBuilders(
     if (perf) perf.recordFeatureBuilder(builder.name, performance.now() - builderStart);
   }
 
+  targets.featuresKey = composeFeaturesKey(keyParts);
   return targets;
 }
