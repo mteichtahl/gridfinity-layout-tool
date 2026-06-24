@@ -332,8 +332,20 @@ export function generateBinDirect(
 }
 
 /**
+ * Base styles the direct path renders faithfully. magnet/screw/magnet_and_screw
+ * only differ from standard by holes on the (camera-invisible) foot underside,
+ * so they share the solid-foot draft; flat/weighted change the visible base.
+ */
+const DIRECT_MESH_BASE_STYLES: ReadonlySet<BinParams['base']['style']> = new Set([
+  'standard',
+  'magnet',
+  'screw',
+  'magnet_and_screw',
+]);
+
+/**
  * Whether `generateBinDirect` can faithfully render `params`. This is an
- * allowlist: it returns true only for the rectangular bins the first slice
+ * allowlist: it returns true only for the rectangular bins the direct path
  * covers (hollow body, optional lip, plain feet) and falls back for every
  * feature the procedural path does not yet emit. Erring toward fallback keeps a
  * dropped feature from ever reaching the screen — a fallback only costs the
@@ -342,10 +354,15 @@ export function generateBinDirect(
 export function canBinUseDirectMesh(params: BinParams): boolean {
   const { base } = params;
 
-  // Base: only the plain standard foot is emitted. Magnet/screw holes,
-  // weighted/flat bases, solid bodies and lightweight shells all change the
-  // base topology and are deferred to a follow-up slice.
-  if (base.style !== 'standard') return false;
+  // Base style: magnet/screw/magnet_and_screw share the same body + feet as
+  // standard — they only add holes to the foot UNDERSIDE, which the preview
+  // camera never sees (and which the exact mesh fills in on the swap, exactly
+  // as the baseplate draft leaves its own magnet holes for the exact pass). So
+  // they ride the direct path with solid feet. `flat` (no socket — different Z
+  // model) and `weighted` (internal weight cavity) genuinely differ.
+  // Explicit ALLOWLIST so a future base style defaults to fallback, not to a
+  // silently-wrong draft.
+  if (!DIRECT_MESH_BASE_STYLES.has(base.style)) return false;
   if (base.solid || base.lightweight) return false;
 
   // Body style: slotted/solid change the walls and floor.
