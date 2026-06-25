@@ -256,9 +256,13 @@ export function useBaseplateExport(): UseBaseplateExportReturn {
             return data;
           });
 
-          // One file per unique shape. When stacking, each unique piece is baked
-          // into towers of the quantity the drawer needs (group size), split into
-          // multiple files when a stack exceeds the printable height cap.
+          // Unstacked: one file per physical drawer slot, named by its grid
+          // label (A1, B2, …), so importing the whole ZIP into a slicer drops in
+          // every piece with nothing to duplicate by hand. Identical shapes are
+          // generated once (above) and the single mesh is reused for each slot.
+          // When stacking, each unique piece is instead baked into towers of the
+          // quantity the drawer needs (group size), split into multiple files
+          // when a stack exceeds the printable height cap.
           const pieces: { data: ArrayBuffer; label: string }[] = [];
           for (let i = 0; i < uniqueGroups.length; i++) {
             const [fp, group] = uniqueGroups[i];
@@ -284,11 +288,29 @@ export function useBaseplateExport(): UseBaseplateExportReturn {
                 );
                 pieces.push({ data: await blob.arrayBuffer(), label });
               }
-            } else if (format === '3mf') {
-              const blob = convertStlTo3mf(stlData, `${baseNameNoExt}_${name}`);
-              pieces.push({ data: await blob.arrayBuffer(), label: name });
+              continue;
+            }
+
+            // STL bytes are identical across slots, so reuse the single
+            // generated buffer. For 3MF, parse the shape once but emit a
+            // per-slot file so each imported object carries its own grid label —
+            // slicers surface the embedded name, so a shared one would defeat the
+            // per-piece identification the grid-labelled files exist for. Only
+            // the lightweight XML+zip step repeats; the STL parse is done once.
+            if (format === '3mf') {
+              const soup = parseStlSoup(stlData);
+              for (const idx of group.indices) {
+                const label = tiling.pieces[idx].label;
+                const blob = export3MF(soup.vertices, soup.normals, {
+                  name: `${baseNameNoExt}_${label}`,
+                  printSettings: printSettingsFor3MF(),
+                });
+                pieces.push({ data: await blob.arrayBuffer(), label });
+              }
             } else {
-              pieces.push({ data: stlData, label: name });
+              for (const idx of group.indices) {
+                pieces.push({ data: stlData, label: tiling.pieces[idx].label });
+              }
             }
           }
 
@@ -333,7 +355,10 @@ export function useBaseplateExport(): UseBaseplateExportReturn {
           ]);
           triggerDownload(zip, `${baseNameNoExt}.zip`);
 
-          if (uniqueCount < totalPieces) {
+          // The unstacked ZIP now holds one file per slot (full set), so report
+          // the piece count plainly. Stacking still collapses identical slots
+          // into shared towers, where the unique-vs-total split is informative.
+          if (stackEnabled && uniqueCount < totalPieces) {
             useToastStore
               .getState()
               .addToast(
