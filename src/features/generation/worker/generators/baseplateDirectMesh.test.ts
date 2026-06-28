@@ -619,4 +619,22 @@ describe('direct mesh — over-tile margin pockets', () => {
     // 3mm margins are below the printable threshold → no frame pockets either way.
     expect(generateDirect(on, noop).triangleCount).toBe(generateDirect(off, noop).triangleCount);
   });
+
+  it('half-grid keeps half-sockets open when a margin leaves a sub-threshold sliver (#2380)', () => {
+    // 25mm margin = a 21mm half-socket + a 4mm sub-printable sliver. The solid
+    // ring must fill only the sliver, not cap the half-socket: the open socket
+    // removes top-face area that the (old) full-margin ring would have capped.
+    const solid = generateDirect(defaults({ paddingLeft: 25 }), noop);
+    const halfGrid = generateDirect(
+      defaults({ paddingLeft: 25, overTile: true, overTileHalfGrid: true }),
+      noop
+    );
+    // Top face sits at the slab height; derive it from the mesh so the assertion
+    // doesn't depend on the generator's socket-height constant.
+    const topZ = computeBounds(solid.vertices).maxZ;
+    const solidTop = horizontalFaceArea(solid, 1, topZ);
+    const halfGridTop = horizontalFaceArea(halfGrid, 1, topZ);
+    // Two nominal rows each expose a ~21×42mm half-socket; well over 500mm² total.
+    expect(halfGridTop).toBeLessThan(solidTop - 500);
+  });
 });
