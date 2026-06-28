@@ -2218,6 +2218,11 @@ const en: Record<string, string> = {
   'baseplate.overTileTooSmall': 'Padding is too small on every edge to fit a grid tile.',
   'baseplate.overTileFills': 'Grid fills: {sides}',
   'baseplate.overTileKeptSolid': 'Too small, kept solid: {sides}',
+  'baseplate.marginFillSolid': 'Padding',
+  'baseplate.marginFillTile': 'Grid',
+  'baseplate.marginFillHalfGrid': 'Half-grid',
+  'baseplate.halfGridHint':
+    'Pack each margin with true 21mm half-grid cells first, then fill any leftover under 21mm the same as Grid mode.',
   'baseplate.sectionBase': 'Base',
   'baseplate.sectionView': 'View',
   'baseplate.splitInfo': '{count} pieces',
