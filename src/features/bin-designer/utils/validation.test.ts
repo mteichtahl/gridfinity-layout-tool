@@ -65,11 +65,21 @@ describe('validateBinParams', () => {
       expect(error.code).toBe('INVALID_STEP');
     });
 
-    it('should reject non-integer height', () => {
-      const result = validateBinParams(makeParams({ height: 3.5 }));
+    it('should accept fractional heights on the 0.01u grid', () => {
+      expectOk(validateBinParams(makeParams({ height: 3.5 })));
+      expectOk(validateBinParams(makeParams({ height: 4.37 })));
+    });
+
+    it('should reject heights finer than the 0.01u step', () => {
+      const result = validateBinParams(makeParams({ height: 4.375 }));
       const error = expectErr(result);
       expect(error.code).toBe('INVALID_STEP');
       expect(error.field).toBe('height');
+    });
+
+    it('should reject non-finite heights', () => {
+      expect(expectErr(validateBinParams(makeParams({ height: NaN }))).field).toBe('height');
+      expect(expectErr(validateBinParams(makeParams({ height: Infinity }))).field).toBe('height');
     });
 
     it('should accept boundary values', () => {
