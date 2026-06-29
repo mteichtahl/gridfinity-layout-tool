@@ -20,14 +20,14 @@ import { PRINT_SETTINGS_CONSTRAINTS } from '@/shared/printSettings';
 import { NOZZLE_BASELINE } from '@/shared/printSettings/connectorScaling';
 import { useHalfGridModeStore } from '@/core/store/halfGridMode';
 import { Checkbox } from '@/design-system/Checkbox/Checkbox';
-import { RulerIcon, LayoutGridIcon, RotateCcwIcon } from '@/design-system/Icon';
+import { RulerIcon, RotateCcwIcon } from '@/design-system/Icon';
 import { useTranslation } from '@/i18n';
 import { StickyGroupHeader } from '@/shared/components/StickyGroupHeader';
 import { SettingsRow } from '@/shared/components/SettingsRow';
 import { DeferredNumberInput } from '@/shared/components/DeferredNumberInput';
 import { PrintBedInput } from '@/shared/components/PrintBedInput';
 import { FeatureToggle } from '@/shared/components/FeatureToggle';
-import { SliderInput, Button, ConfirmDialog, SegmentedControl } from '@/design-system';
+import { SliderInput, Button, ConfirmDialog, CheckboxRow } from '@/design-system';
 import { UserDock } from '@/shared/components/UserDock';
 import { AttributionFooter } from '@/shared/components/AttributionFooter';
 import { useFeatureFlag } from '@/shared/hooks/useFeatureFlag';
@@ -213,12 +213,12 @@ export function BaseplatePanel() {
     baseplateParams.paddingFront > 0 ||
     baseplateParams.paddingBack > 0;
   const overTileStatus = resolveOverTileStatus(baseplateParams);
-  const marginFillMode: MarginFillMode =
-    baseplateParams.overTile === true && overTileStatus.canOverTile
-      ? baseplateParams.overTileHalfGrid === true
-        ? 'halfGrid'
-        : 'tile'
-      : 'solid';
+  // Derive the toggle from the STORED flags, not a canOverTile-clamped mode, so
+  // the user can still turn fill OFF when padding temporarily shrinks below the
+  // tile threshold — disabling the whole switch there would strand an enabled
+  // flag that silently re-applies once padding grows again.
+  const fillOn = baseplateParams.overTile === true;
+  const halfGridOn = fillOn && baseplateParams.overTileHalfGrid === true;
   const setMarginFillMode = useCallback(
     (mode: MarginFillMode) => {
       updateParams({
@@ -384,62 +384,64 @@ export function BaseplatePanel() {
                 updateParams={updateParams}
               />
               {hasPadding && (
-                <div className="space-y-2 border-t border-stroke-subtle pt-3">
-                  <div className="flex items-center gap-1.5 text-[11px] font-medium uppercase tracking-wide text-content-tertiary">
-                    <LayoutGridIcon size="xs" />
-                    {t('baseplate.overTile')}
-                  </div>
-                  <SegmentedControl
-                    aria-label={t('baseplate.overTile')}
-                    size="sm"
-                    fullWidth
-                    value={marginFillMode}
-                    onChange={setMarginFillMode}
-                    options={[
-                      { value: 'solid', label: t('baseplate.marginFillSolid') },
-                      {
-                        value: 'tile',
-                        label: t('baseplate.marginFillTile'),
-                        disabled: !overTileStatus.canOverTile,
-                        title: overTileStatus.canOverTile
-                          ? undefined
-                          : t('baseplate.overTileTooSmall'),
-                      },
-                      {
-                        value: 'halfGrid',
-                        label: t('baseplate.marginFillHalfGrid'),
-                        disabled: !overTileStatus.canOverTile,
-                        title: overTileStatus.canOverTile
-                          ? undefined
-                          : t('baseplate.overTileTooSmall'),
-                      },
-                    ]}
-                  />
-                  {marginFillMode !== 'solid' && (
-                    <div className="space-y-1 text-[11px] leading-relaxed">
-                      <p className="text-content-tertiary">
-                        {t(
-                          marginFillMode === 'halfGrid'
-                            ? 'baseplate.halfGridHint'
-                            : 'baseplate.overTileHint'
+                <div className="border-t border-stroke-subtle pt-3">
+                  <FeatureToggle
+                    label={t('baseplate.overTile')}
+                    checked={fillOn}
+                    onChange={() => setMarginFillMode(fillOn ? 'solid' : 'tile')}
+                    disabledReason={
+                      !fillOn && !overTileStatus.canOverTile
+                        ? t('baseplate.overTileTooSmall')
+                        : undefined
+                    }
+                    primaryControls={
+                      <div className="space-y-1.5">
+                        {overTileStatus.canOverTile ? (
+                          <>
+                            <CheckboxRow
+                              label={t('baseplate.useHalfGrid')}
+                              checked={halfGridOn}
+                              onChange={(checked) =>
+                                setMarginFillMode(checked ? 'halfGrid' : 'tile')
+                              }
+                              indent
+                            />
+                            <div className="space-y-1 text-[11px] leading-relaxed">
+                              <p className="text-content-tertiary">
+                                {t(
+                                  halfGridOn ? 'baseplate.halfGridHint' : 'baseplate.overTileHint'
+                                )}
+                              </p>
+                              {overTileStatus.tiled.length > 0 && (
+                                <p className="text-content-secondary">
+                                  {t('baseplate.overTileFills', {
+                                    sides: overTileStatus.tiled
+                                      .map((e) => t(e.labelKey))
+                                      .join(', '),
+                                  })}
+                                </p>
+                              )}
+                              {overTileStatus.tooSmall.length > 0 && (
+                                <p className="text-content-tertiary">
+                                  {t('baseplate.overTileKeptSolid', {
+                                    sides: overTileStatus.tooSmall
+                                      .map((e) => t(e.labelKey))
+                                      .join(', '),
+                                  })}
+                                </p>
+                              )}
+                            </div>
+                          </>
+                        ) : (
+                          // Fill is on but no edge can fit a tile right now — keep the
+                          // toggle enabled (so it can be turned off) and explain why.
+                          <p className="text-[11px] leading-relaxed text-content-tertiary">
+                            {t('baseplate.overTileTooSmall')}
+                          </p>
                         )}
-                      </p>
-                      {overTileStatus.tiled.length > 0 && (
-                        <p className="text-content-secondary">
-                          {t('baseplate.overTileFills', {
-                            sides: overTileStatus.tiled.map((e) => t(e.labelKey)).join(', '),
-                          })}
-                        </p>
-                      )}
-                      {overTileStatus.tooSmall.length > 0 && (
-                        <p className="text-content-tertiary">
-                          {t('baseplate.overTileKeptSolid', {
-                            sides: overTileStatus.tooSmall.map((e) => t(e.labelKey)).join(', '),
-                          })}
-                        </p>
-                      )}
-                    </div>
-                  )}
+                      </div>
+                    }
+                  />
                 </div>
               )}
             </div>
