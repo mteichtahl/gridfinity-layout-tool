@@ -22,6 +22,7 @@ import { STACK_PRINT_DEFAULT_COPIES } from '@/core/types';
 import { packagePiecesAsZip } from '@/shared/generation/zipExport';
 import { isErr, getUserMessage } from '@/core/result';
 import { useToastStore } from '@/core/store/toast';
+import { getErrorMessage } from '@/shared/utils/errors';
 import { useTranslation } from '@/i18n';
 import { useBaseplatePageStore } from '../store/baseplatePageStore';
 import { buildFullParams } from '../utils/buildFullParams';
@@ -499,8 +500,7 @@ export function useBaseplateExport(): UseBaseplateExportReturn {
 
         return true;
       } catch (error: unknown) {
-        const message = error instanceof Error ? error.message : 'Export failed';
-        useToastStore.getState().addToast(message, 'error');
+        useToastStore.getState().addToast(getErrorMessage(error, 'Export failed'), 'error');
         return false;
       } finally {
         setIsExporting(false);
