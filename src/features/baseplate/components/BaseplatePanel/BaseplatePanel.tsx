@@ -15,7 +15,7 @@ import { useLayoutStore } from '@/core/store/layout';
 import { useSettingsStore } from '@/core/store/settings';
 import { useToastStore } from '@/core/store/toast';
 import { FractionalEdgeToggle } from '@/shared/components/FractionalEdgeToggle';
-import { DEFAULT_BASEPLATE_PARAMS, CONSTRAINTS } from '@/core/constants';
+import { DEFAULT_BASEPLATE_PARAMS, CONSTRAINTS, MARGIN_MIN_DETACH_MM } from '@/core/constants';
 import { PRINT_SETTINGS_CONSTRAINTS } from '@/shared/printSettings';
 import { NOZZLE_BASELINE } from '@/shared/printSettings/connectorScaling';
 import { useHalfGridModeStore } from '@/core/store/halfGridMode';
@@ -229,6 +229,20 @@ export function BaseplatePanel() {
     [updateParams]
   );
 
+  // Detach margins: each side with padding ≥ threshold prints as its own rail.
+  // Mutually exclusive with stack-print (stacking wins) — keyed on the stored
+  // flag, not the export-format-aware `stackEnabled` above.
+  const stackPrintOn = baseplateParams.stackPrint?.enabled === true;
+  const canDetach =
+    baseplateParams.paddingLeft >= MARGIN_MIN_DETACH_MM ||
+    baseplateParams.paddingRight >= MARGIN_MIN_DETACH_MM ||
+    baseplateParams.paddingFront >= MARGIN_MIN_DETACH_MM ||
+    baseplateParams.paddingBack >= MARGIN_MIN_DETACH_MM;
+  // Reflect the STORED opt-in in the toggle (it's preserved across stack-print),
+  // so when stack-print suppresses detach the switch reads as on-but-disabled
+  // rather than silently off.
+  const detachStored = baseplateParams.detachMargins === true;
+
   const hasFractionalWidth = effectiveWidth % 1 !== 0;
   const hasFractionalDepth = effectiveDepth % 1 !== 0;
   const fractionalEdgeX = synced
@@ -440,6 +454,32 @@ export function BaseplatePanel() {
                           </p>
                         )}
                       </div>
+                    }
+                  />
+                </div>
+              )}
+              {hasPadding && (
+                <div className="border-t border-stroke-subtle pt-3">
+                  <FeatureToggle
+                    label={t('baseplate.detachMargins')}
+                    checked={detachStored}
+                    onChange={() => updateParam('detachMargins', !detachStored)}
+                    disabledReason={
+                      stackPrintOn
+                        ? t('baseplate.detachMarginsStackConflict')
+                        : !detachStored && !canDetach
+                          ? t('baseplate.detachMarginsTooSmall')
+                          : undefined
+                    }
+                    primaryControls={
+                      // On but nothing meets the threshold → no rails are emitted,
+                      // so say so rather than imply they will. Otherwise no help
+                      // text — the label is self-explanatory.
+                      canDetach ? undefined : (
+                        <p className="text-[11px] leading-relaxed text-content-tertiary">
+                          {t('baseplate.detachMarginsTooSmall')}
+                        </p>
+                      )
                     }
                   />
                 </div>

@@ -21,9 +21,13 @@ import type { BaseplateParams } from '@/shared/types/bin';
 // join edges — otherwise pieces that compute to exactly the bed width on paper
 // exceed it as STLs (#1498).
 import { TONGUE_PROTRUSION } from '@/shared/constants/connectors';
+import { MARGIN_MIN_DETACH_MM } from '@/core/constants';
+import { GRIDFINITY } from '@/shared/constants/bin';
 import type {
   BaseplatePiece,
   BaseplateTiling,
+  MarginCorner,
+  MarginPiece,
   PaddingReductionHint,
   PieceEdges,
 } from '../types/tiling';
@@ -450,6 +454,234 @@ function computePaddingReductionHint(
   return candidates[0];
 }
 
+/** Which sides detach into rails: padding ≥ threshold and the flag is on. */
+function detachedSides(params: BaseplateParams): {
+  left: boolean;
+  right: boolean;
+  front: boolean;
+  back: boolean;
+} {
+  const on = !!params.detachMargins;
+  return {
+    left: on && params.paddingLeft >= MARGIN_MIN_DETACH_MM,
+    right: on && params.paddingRight >= MARGIN_MIN_DETACH_MM,
+    front: on && params.paddingFront >= MARGIN_MIN_DETACH_MM,
+    back: on && params.paddingBack >= MARGIN_MIN_DETACH_MM,
+  };
+}
+
+type CornerRadii = { tl: number; tr: number; bl: number; br: number };
+
+/**
+ * Per-corner radii with the body's detached-side corners squared off — the rail
+ * carries the rounded outer corner, so the body must butt flat against it rather
+ * than rounding the same corner itself (which would double-round / leave the body
+ * curving away from the rail). A corner squares when either adjacent side detaches.
+ */
+function squaredBodyCornerRadii(
+  params: BaseplateParams,
+  det: { left: boolean; right: boolean; front: boolean; back: boolean }
+): CornerRadii {
+  const base = (corner: keyof CornerRadii): number =>
+    params.cornerRadii?.[corner] ?? params.cornerRadius ?? GRIDFINITY.SOCKET_CORNER_RADIUS;
+  return {
+    tl: det.left || det.back ? 0 : base('tl'),
+    tr: det.right || det.back ? 0 : base('tr'),
+    bl: det.left || det.front ? 0 : base('bl'),
+    br: det.right || det.front ? 0 : base('br'),
+  };
+}
+
+/**
+ * Body generation params with detached sides' padding zeroed — the body prints
+ * padding-free wherever a rail carries that margin. Sub-threshold sides keep
+ * their padding (they stay integral). Detached-side corners are squared so the
+ * body butts flat against the rail's rounded corner. Must be applied to the BODY
+ * mesh only, AFTER `computeBaseplateTiling`/`emitMargins` (which need the true
+ * padding).
+ */
+export function bodyParamsForDetach(params: BaseplateParams): BaseplateParams {
+  if (!params.detachMargins) return params;
+  const det = detachedSides(params);
+  if (!det.left && !det.right && !det.front && !det.back) return params;
+  return {
+    ...params,
+    paddingLeft: det.left ? 0 : params.paddingLeft,
+    paddingRight: det.right ? 0 : params.paddingRight,
+    paddingFront: det.front ? 0 : params.paddingFront,
+    paddingBack: det.back ? 0 : params.paddingBack,
+    cornerRadii: squaredBodyCornerRadii(params, det),
+  };
+}
+
+interface MarginLayout {
+  readonly colSizes: readonly number[];
+  readonly rowSizes: readonly number[];
+  readonly colOffsets: readonly number[];
+  readonly rowOffsets: readonly number[];
+}
+
+/**
+ * Decompose the drawer-fit padding into detached printable rail segments — one
+ * per outer body piece per detached side.
+ *
+ * Splitting per body piece means each segment is no longer than its piece (so it
+ * fits the bed, since the planner already reserved padding budget when sizing
+ * pieces), and lets the preview explode each segment in lockstep with its piece
+ * instead of leaving a single long rail overlapping the spread-apart plate.
+ *
+ * Butt-joint frame: one axis pair runs `long` (its end segments own the plate
+ * corners, extending over any perpendicular padding so they reach the true outer
+ * corner); the perpendicular pair runs `short`, fitting between — and a short
+ * end segment claims a corner only when its perpendicular long side is absent.
+ * A side detaches only when its padding ≥ {@link MARGIN_MIN_DETACH_MM}.
+ *
+ * World positions are in the plate-centered, padding-free body frame (mm) so they
+ * line up with how the preview/export place the body pieces.
+ */
+function emitMargins(params: BaseplateParams, layout: MarginLayout): MarginPiece[] {
+  if (!params.detachMargins) return [];
+  const det = detachedSides(params);
+  if (!det.left && !det.right && !det.front && !det.back) return [];
+
+  const {
+    paddingLeft: pl,
+    paddingRight: pr,
+    paddingFront: pf,
+    paddingBack: pb,
+    gridUnitMm,
+  } = params;
+  const { colSizes, rowSizes, colOffsets, rowOffsets } = layout;
+  const halfW = (params.width * gridUnitMm) / 2;
+  const halfD = (params.depth * gridUnitMm) / 2;
+  const colLast = colSizes.length - 1;
+  const rowLast = rowSizes.length - 1;
+  const fill = { overTile: !!params.overTile, overTileHalfGrid: !!params.overTileHalfGrid };
+  // Piece-center in the padding-free body frame (matches SplitBaseplateMeshes).
+  const colCenter = (c: number): number =>
+    colOffsets[c] * gridUnitMm + (colSizes[c] * gridUnitMm) / 2 - halfW;
+  const rowCenter = (r: number): number =>
+    rowOffsets[r] * gridUnitMm + (rowSizes[r] * gridUnitMm) / 2 - halfD;
+
+  const margins: MarginPiece[] = [];
+  const push = (
+    id: string,
+    side: MarginPiece['side'],
+    role: MarginPiece['role'],
+    col: number,
+    row: number,
+    lengthMm: number,
+    bandThicknessMm: number,
+    ownedCorners: MarginCorner[],
+    worldOffsetMm: { x: number; y: number }
+  ): void => {
+    margins.push({
+      id,
+      side,
+      role,
+      col,
+      row,
+      lengthMm,
+      bandThicknessMm,
+      ownedCorners,
+      worldOffsetMm,
+      ...fill,
+    });
+  };
+
+  // Prefer front/back as the long (corner-owning) axis; fall back to left/right
+  // when neither front nor back detaches.
+  const longAxisX = det.front || det.back;
+
+  if (longAxisX) {
+    // Front/back run long, segmented per column. End columns extend over the
+    // left/right padding to reach the true outer corners (the long rail sits
+    // outside the grid in Y while the body's left/right padding sits inside it,
+    // so they abut without overlap).
+    for (let c = 0; c <= colLast; c++) {
+      const extL = c === 0 ? pl : 0;
+      const extR = c === colLast ? pr : 0;
+      const len = colSizes[c] * gridUnitMm + extL + extR;
+      const cx = colCenter(c) - extL / 2 + extR / 2;
+      if (det.front) {
+        const owned: MarginCorner[] = [];
+        if (c === 0) owned.push('bl');
+        if (c === colLast) owned.push('br');
+        push(`margin-front-${colToLetter(c)}`, 'front', 'long', c, 0, len, pf, owned, {
+          x: cx,
+          y: -halfD - pf / 2,
+        });
+      }
+      if (det.back) {
+        const owned: MarginCorner[] = [];
+        if (c === 0) owned.push('tl');
+        if (c === colLast) owned.push('tr');
+        push(`margin-back-${colToLetter(c)}`, 'back', 'long', c, rowLast, len, pb, owned, {
+          x: cx,
+          y: halfD + pb / 2,
+        });
+      }
+    }
+    // Short left/right rails, segmented per row, fit between the long rails but
+    // extend over a perpendicular side's padding when that side is NOT a long
+    // rail (integral or zero), claiming the corner there.
+    for (let r = 0; r <= rowLast; r++) {
+      const extF = !det.front && r === 0 ? pf : 0;
+      const extB = !det.back && r === rowLast ? pb : 0;
+      const len = rowSizes[r] * gridUnitMm + extF + extB;
+      const cy = rowCenter(r) - extF / 2 + extB / 2;
+      if (det.left) {
+        const owned: MarginCorner[] = [];
+        if (!det.front && r === 0) owned.push('bl');
+        if (!det.back && r === rowLast) owned.push('tl');
+        push(`margin-left-${r + 1}`, 'left', 'short', 0, r, len, pl, owned, {
+          x: -halfW - pl / 2,
+          y: cy,
+        });
+      }
+      if (det.right) {
+        const owned: MarginCorner[] = [];
+        if (!det.front && r === 0) owned.push('br');
+        if (!det.back && r === rowLast) owned.push('tr');
+        push(`margin-right-${r + 1}`, 'right', 'short', colLast, r, len, pr, owned, {
+          x: halfW + pr / 2,
+          y: cy,
+        });
+      }
+    }
+  } else {
+    // Only left/right detach: they run long, segmented per row, over the full
+    // outer depth (front/back padding is integral or zero here), owning all
+    // corners on their side.
+    for (let r = 0; r <= rowLast; r++) {
+      const extF = r === 0 ? pf : 0;
+      const extB = r === rowLast ? pb : 0;
+      const len = rowSizes[r] * gridUnitMm + extF + extB;
+      const cy = rowCenter(r) - extF / 2 + extB / 2;
+      if (det.left) {
+        const owned: MarginCorner[] = [];
+        if (r === 0) owned.push('bl');
+        if (r === rowLast) owned.push('tl');
+        push(`margin-left-${r + 1}`, 'left', 'long', 0, r, len, pl, owned, {
+          x: -halfW - pl / 2,
+          y: cy,
+        });
+      }
+      if (det.right) {
+        const owned: MarginCorner[] = [];
+        if (r === 0) owned.push('br');
+        if (r === rowLast) owned.push('tr');
+        push(`margin-right-${r + 1}`, 'right', 'long', colLast, r, len, pr, owned, {
+          x: halfW + pr / 2,
+          y: cy,
+        });
+      }
+    }
+  }
+
+  return margins;
+}
+
 /**
  * Compute the full 2D tiling for a baseplate.
  *
@@ -537,6 +769,10 @@ export function computeBaseplateTiling(
   const lastCol = colSizes.length - 1;
   const lastRow = rowSizes.length - 1;
 
+  // Detached sides print padding-free on the body pieces too — the rail carries
+  // that margin. Sub-threshold sides stay integral.
+  const det = detachedSides(params);
+
   const pieces: BaseplatePiece[] = [];
 
   for (let r = 0; r < rowSizes.length; r++) {
@@ -566,10 +802,10 @@ export function computeBaseplateTiling(
         depthUnits: rowSizes[r],
         gridOffsetX: colOffsets[c],
         gridOffsetY: rowOffsets[r],
-        paddingLeft: isLeftEdge ? paddingLeft : 0,
-        paddingRight: isRightEdge ? paddingRight : 0,
-        paddingFront: isFrontEdge ? paddingFront : 0,
-        paddingBack: isBackEdge ? paddingBack : 0,
+        paddingLeft: isLeftEdge && !det.left ? paddingLeft : 0,
+        paddingRight: isRightEdge && !det.right ? paddingRight : 0,
+        paddingFront: isFrontEdge && !det.front ? paddingFront : 0,
+        paddingBack: isBackEdge && !det.back ? paddingBack : 0,
         fractionalEdgeX: isFractional(colSizes[c]) ? fractionalEdgeX : 'none',
         fractionalEdgeY: isFractional(rowSizes[r]) ? fractionalEdgeY : 'none',
         edges: actualEdges,
@@ -591,6 +827,7 @@ export function computeBaseplateTiling(
   return {
     isSplit,
     pieces,
+    margins: emitMargins(params, { colSizes, rowSizes, colOffsets, rowOffsets }),
     cols: colSizes.length,
     rows: rowSizes.length,
     totalWidthUnits: width,
@@ -630,6 +867,37 @@ export function pieceToBaseplateParams(
   const flipX = rot && piece.fractionalEdgeX !== 'none';
   const flipY = rot && piece.fractionalEdgeY !== 'none';
   const pr = parentParams.cornerRadii;
+  // When detaching, square this piece's corners that sit on a detached exterior
+  // edge — the rail carries that rounded outer corner, so the body butts flat.
+  // Built in the actual orientation, then rotated alongside `edges` under rot.
+  let cornerRadii: CornerRadii | undefined;
+  if (parentParams.detachMargins) {
+    const det = detachedSides(parentParams);
+    const e = piece.edges;
+    const baseR = (corner: keyof CornerRadii): number =>
+      pr?.[corner] ?? parentParams.cornerRadius ?? GRIDFINITY.SOCKET_CORNER_RADIUS;
+    const actual: CornerRadii = {
+      tl:
+        (e.left === 'exterior' && det.left) || (e.back === 'exterior' && det.back)
+          ? 0
+          : baseR('tl'),
+      tr:
+        (e.right === 'exterior' && det.right) || (e.back === 'exterior' && det.back)
+          ? 0
+          : baseR('tr'),
+      bl:
+        (e.left === 'exterior' && det.left) || (e.front === 'exterior' && det.front)
+          ? 0
+          : baseR('bl'),
+      br:
+        (e.right === 'exterior' && det.right) || (e.front === 'exterior' && det.front)
+          ? 0
+          : baseR('br'),
+    };
+    cornerRadii = rot ? { tl: actual.br, tr: actual.bl, bl: actual.tr, br: actual.tl } : actual;
+  } else {
+    cornerRadii = rot && pr ? { tl: pr.br, tr: pr.bl, bl: pr.tr, br: pr.tl } : pr;
+  }
   return {
     width: piece.widthUnits,
     depth: piece.depthUnits,
@@ -659,7 +927,7 @@ export function pieceToBaseplateParams(
     preferIdenticalPieces: parentParams.preferIdenticalPieces,
     lightweight: parentParams.lightweight,
     cornerRadius: parentParams.cornerRadius,
-    cornerRadii: rot && pr ? { tl: pr.br, tr: pr.bl, bl: pr.tr, br: pr.tl } : pr,
+    cornerRadii,
   };
 }
 
