@@ -58,7 +58,7 @@ import {
   sketch,
 } from './generatorTypes';
 import type { SnapClipLevels } from '@/shared/constants/connectors';
-import { computeCellBoundariesMm, decomposeCells } from './cellDecomposition';
+import { computeCellBoundariesMm, computeCellCentersMm, decomposeCells } from './cellDecomposition';
 import { buildSingleCellSocket } from './socketBuilder';
 import { getPocketTemplate } from './baseplatePockets';
 
@@ -232,6 +232,11 @@ export function buildConnectors(
   const yBoundaries = computeCellBoundariesMm(params.depth, gridUnit, params.fractionalEdgeY);
   const xBoundaries = computeCellBoundariesMm(params.width, gridUnit, params.fractionalEdgeX);
 
+  // Cell centers along each axis — where the margin-seam connector places one
+  // tongue per cell (unlike the split-piece dovetails, which sit on boundaries).
+  const yCenters = computeCellCentersMm(params.depth, gridUnit, params.fractionalEdgeY);
+  const xCenters = computeCellCentersMm(params.width, gridUnit, params.fractionalEdgeX);
+
   // Cell layout along each edge's boundary axis — used to subtract the
   // neighbouring piece's sockets from each tongue (the grid is continuous across
   // the seam, so the neighbour column shares this piece's boundary-axis cells).
@@ -260,6 +265,7 @@ export function buildConnectors(
     maleOffsetSign: -1 | 1;
     wallPos: number;
     boundaries: readonly number[];
+    centers: readonly number[];
     boundaryCells: readonly CellSpan[];
     protrudeAxis: 'x' | 'y';
     protrudeDir: -1 | 1;
@@ -270,6 +276,7 @@ export function buildConnectors(
       maleOffsetSign: 1,
       wallPos: -halfW + slabOffsetX,
       boundaries: yBoundaries,
+      centers: yCenters,
       boundaryCells: yCellSpans,
       protrudeAxis: 'x',
       protrudeDir: -1,
@@ -280,6 +287,7 @@ export function buildConnectors(
       maleOffsetSign: -1,
       wallPos: halfW + slabOffsetX,
       boundaries: yBoundaries,
+      centers: yCenters,
       boundaryCells: yCellSpans,
       protrudeAxis: 'x',
       protrudeDir: 1,
@@ -290,6 +298,7 @@ export function buildConnectors(
       maleOffsetSign: -1,
       wallPos: -halfD + slabOffsetY,
       boundaries: xBoundaries,
+      centers: xCenters,
       boundaryCells: xCellSpans,
       protrudeAxis: 'y',
       protrudeDir: -1,
@@ -300,6 +309,7 @@ export function buildConnectors(
       maleOffsetSign: 1,
       wallPos: halfD + slabOffsetY,
       boundaries: xBoundaries,
+      centers: xCenters,
       boundaryCells: xCellSpans,
       protrudeAxis: 'y',
       protrudeDir: 1,
@@ -385,18 +395,19 @@ export function buildConnectors(
     }
   }
 
-  // Opt-in body↔long-rail connector (#2414): one male tongue centered on the
-  // detached exterior wall, protruding into the rail. The rail carries the
-  // matching groove (`buildMarginSeamGroove`). Rails are solid (no sockets), so
-  // no relief is needed; a centered tongue is 180°-rotation-safe under paired
-  // mode. `hasMarginSeam` already requires a dovetail/puzzle style, so a stray
-  // snapClip/dovetailKey `marginSeam` edge produces no mismatched tongue.
+  // Opt-in body↔long-rail connector (#2414): one male tongue per mating grid
+  // cell along the detached exterior wall, protruding into the rail — so a long
+  // rail is anchored evenly along its length rather than at a single point
+  // (#2428). The rail carries the matching grooves
+  // (`buildMarginSeamGroove` at the same cell centers). Rails are solid (no
+  // sockets), so no relief is needed. `hasMarginSeam` already requires a
+  // dovetail/puzzle style, so a stray snapClip/dovetailKey edge emits no tongue.
   if (hasMarginSeam) {
     for (const def of edgeDefs) {
       if (edges[def.side] !== 'marginSeam') continue;
       const pt = ptFor(def);
-      const center = def.protrudeAxis === 'x' ? slabOffsetY : slabOffsetX;
-      tongues.push(mkTongue(pt, def.wallPos, center, def.protrudeDir));
+      const positions = def.centers.length > 0 ? def.centers : [0];
+      for (const bp of positions) tongues.push(mkTongue(pt, def.wallPos, bp, def.protrudeDir));
     }
   }
 
@@ -451,14 +462,14 @@ export function makeGroove(
 }
 
 /**
- * Groove carved into a detached long rail's seam face to receive the body's
- * margin-seam tongue (#2414). Mirrors the single centered tongue that
- * {@link buildConnectors} fuses onto the body's `marginSeam` wall, using the
- * same profile/clearance so they mate. Built in the rail's own origin-centered
- * frame (see `baseplateMargin.buildMarginSolid`): the seam face is the rail's
- * inner long edge (+railD/2 front, −railD/2 back, +railW/2 left, −railW/2
- * right), and the groove cuts inward from it — `d` equals that face's sign.
- * Only `dovetail`/`puzzle` styles reach here.
+ * Groove carved into a detached long rail's seam face to receive one of the
+ * body's margin-seam tongues (#2414). Uses the same profile/clearance the tongue
+ * does so they mate, positioned along the seam by `tongueOffsetMm` (the caller
+ * cuts one per cell). Built in the rail's own origin-centered frame (see
+ * `baseplateMargin.buildMarginSolid`): the seam face is the rail's inner long
+ * edge (+railD/2 front, −railD/2 back, +railW/2 left, −railW/2 right), and the
+ * groove cuts inward from it — `d` equals that face's sign. Only `dovetail`/
+ * `puzzle` styles reach here.
  */
 export function buildMarginSeamGroove(
   side: 'left' | 'right' | 'front' | 'back',
@@ -477,17 +488,16 @@ export function buildMarginSeamGroove(
   // for left/right rails (wall coord on X). `tongueOffsetMm` slides the groove
   // along that axis onto the mating body tongue — nonzero on a corner-owning end
   // segment whose rail center no longer sits on the body wall it joins (#2427).
-  const bp = tongueOffsetMm;
-  const pt: (wall: number, b: number) => [number, number] = horizontal
-    ? (wall, b) => [b, wall]
-    : (wall, b) => [wall, b];
+  const pt: (wall: number, bp: number) => [number, number] = horizontal
+    ? (wall, bp) => [bp, wall]
+    : (wall, bp) => [wall, bp];
   const cl = effectiveClearance(TONGUE_CLEARANCE, fitOffset, nozzleSizeMm);
   return connectorStyle === 'puzzle'
-    ? makePuzzleGroove(pt, seamPos, bp, seamSign, cl, COPLANAR_MARGIN, totalHeight)
+    ? makePuzzleGroove(pt, seamPos, tongueOffsetMm, seamSign, cl, COPLANAR_MARGIN, totalHeight)
     : makeGroove(
         pt,
         seamPos,
-        bp,
+        tongueOffsetMm,
         seamSign,
         TONGUE_PROTRUSION,
         TONGUE_BASE_HALF,
