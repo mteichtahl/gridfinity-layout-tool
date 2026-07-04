@@ -71,6 +71,7 @@ const VALID_WALL_CUTOUT_SHAPES = ['u-shape', 'scoop', 'funnel'] as const;
 const VALID_ROTATIONS = [0, 90, 180, 270] as const;
 const VALID_TEXT_FONTS = ['atkinson', 'jetbrains-mono', 'allerta-stencil'] as const;
 const VALID_TEXT_MODES = ['engrave', 'emboss', 'through-cut'] as const;
+const VALID_CUTOUT_COLOR_SCOPES = ['floor', 'floorAndWalls'] as const;
 
 /**
  * Top-level keys allowed inside `params` after validation.
@@ -471,6 +472,33 @@ function validateInsert(insert: unknown, index: number): string | null {
 }
 
 /**
+ * Cutouts are otherwise passed through untyped (their geometry is regenerated
+ * client-side), but the shadow-board color fields flow into exported 3MF
+ * material colors, so an untrusted `color` / `colorScope` must be rejected here.
+ */
+function validateCutouts(value: unknown): string | null {
+  if (!Array.isArray(value)) return 'cutouts must be an array';
+  for (let i = 0; i < value.length; i++) {
+    const c: unknown = value[i];
+    if (!isObject(c)) return `cutouts[${i}] must be an object`;
+    // Hex-only (no legacy slot IDs): this is a new field with no migration path,
+    // and the color flows straight into 3MF material colors.
+    if (c.color !== undefined && !(typeof c.color === 'string' && HEX_COLOR_REGEX.test(c.color))) {
+      return `cutouts[${i}].color must be a hex color`;
+    }
+    if (
+      c.colorScope !== undefined &&
+      !VALID_CUTOUT_COLOR_SCOPES.includes(
+        c.colorScope as (typeof VALID_CUTOUT_COLOR_SCOPES)[number]
+      )
+    ) {
+      return `cutouts[${i}].colorScope must be one of: ${VALID_CUTOUT_COLOR_SCOPES.join(', ')}`;
+    }
+  }
+  return null;
+}
+
+/**
  * Validate and normalize a designer share payload according to server-side constraints.
  *
  * @param body - The parsed request payload to validate; expected shape: `{ type: 'designer', version: 1, params: { ... } }`.
@@ -569,6 +597,11 @@ export function validateDesignerShare(body: unknown, sizeBytes: number): Designe
   if (params.featureColors !== undefined) {
     const fcErr = validateFeatureColors(params.featureColors);
     if (fcErr) return validationError('INVALID_PARAMS', fcErr);
+  }
+
+  if (params.cutouts !== undefined) {
+    const cutoutsErr = validateCutouts(params.cutouts);
+    if (cutoutsErr) return validationError('INVALID_PARAMS', cutoutsErr);
   }
 
   if (params.textDefaults !== undefined) {
