@@ -28,6 +28,7 @@ import {
 import { isPartialMask, type CellMask } from '@/shared/utils/cellMask';
 import { hasOverhang, overhangExpansion, type ResolvedOverhang } from './overhang';
 import { buildMaskDrawing, buildMaskDrawingInset } from './maskPolygon';
+import { resolvePitch, type GridUnitInput } from './gridPitch';
 
 function translateDrawing(d: Drawing, offX: number, offY: number): Drawing {
   return offX !== 0 || offY !== 0 ? d.translate(offX, offY) : d;
@@ -56,16 +57,17 @@ export function buildBinBoxWithLip(
   gridD: number,
   wallHeight: number,
   wallThickness: number,
-  gridUnitMm: number = SIZE,
+  gridUnitMm: GridUnitInput = SIZE,
   cellMask?: CellMask,
   overhang?: ResolvedOverhang
 ): Shape3D {
   const polygon = isPartialMask(cellMask);
   const ov = polygon ? undefined : overhang;
   const exp = ov && hasOverhang(ov) ? overhangExpansion(ov) : null;
+  const { x: unitX, y: unitY } = resolvePitch(gridUnitMm);
 
-  const outerW = gridW * gridUnitMm - CLEARANCE + (exp?.addW ?? 0);
-  const outerD = gridD * gridUnitMm - CLEARANCE + (exp?.addD ?? 0);
+  const outerW = gridW * unitX - CLEARANCE + (exp?.addW ?? 0);
+  const outerD = gridD * unitY - CLEARANCE + (exp?.addD ?? 0);
   const offX = exp?.offsetX ?? 0;
   const offY = exp?.offsetY ?? 0;
   const wt = wallThickness;
@@ -93,6 +95,20 @@ export function buildBinBoxWithLip(
   const clampedInset = (z: number, inset: number): number =>
     z <= wallHeight + 1e-6 ? Math.max(wt, inset) : inset;
 
+  // A rounded-rectangle radius that exceeds half of either side makes many
+  // geometry kernels reject the sketch or emit unstable geometry. Non-square
+  // pitches can shrink outerW/outerD below 2·BOX_CORNER_RADIUS, so cap the
+  // radius to half the smaller side (matching `pocketCornerRadius`) before it
+  // reaches `drawRoundedRectangle`. The half-side cap is authoritative: for a
+  // degenerate (near-zero) side there is no valid positive radius, so the result
+  // collapses toward 0 (square corners) rather than a 0.1 floor that would
+  // exceed the side. Non-degenerate dims are unchanged (the 0.1 floor still
+  // applies, so a full 42mm bin keeps BOX_CORNER_RADIUS).
+  const cappedRadius = (w: number, d: number, desired: number): number => {
+    const maxRadius = Math.max(Math.min(w, d) / 2 - 0.1, 0);
+    return Math.min(Math.max(desired, Math.min(0.1, maxRadius)), maxRadius);
+  };
+
   const insetDrawing = (inset: number): Drawing => {
     if (polygon) {
       return inset === 0
@@ -101,7 +117,7 @@ export function buildBinBoxWithLip(
     }
     const w = outerW - 2 * inset;
     const d = outerD - 2 * inset;
-    const r = Math.max(BOX_CORNER_RADIUS - inset, 0.1);
+    const r = cappedRadius(w, d, BOX_CORNER_RADIUS - inset);
     return translateDrawing(drawRoundedRectangle(w, d, r), offX, offY);
   };
 
@@ -111,7 +127,11 @@ export function buildBinBoxWithLip(
   const makeOuterFootprint = (): Drawing =>
     polygon
       ? buildMaskDrawing(cellMask, gridUnitMm)
-      : translateDrawing(drawRoundedRectangle(outerW, outerD, BOX_CORNER_RADIUS), offX, offY);
+      : translateDrawing(
+          drawRoundedRectangle(outerW, outerD, cappedRadius(outerW, outerD, BOX_CORNER_RADIUS)),
+          offX,
+          offY
+        );
 
   // The lip taper overshoots the peak so the cut tool exits cleanly THROUGH the
   // prism top instead of capping flush with it (a flush cap would itself leave a

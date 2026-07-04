@@ -246,6 +246,29 @@ describe('SplitBinMeshes', () => {
     expect(() => render(<SplitBinMeshes color="#ff0000" wireframe={false} />)).not.toThrow();
   });
 
+  it('renders with a non-square grid (gridUnitMmY) without throwing', () => {
+    // Depth-axis positioning uses gridUnitMmY. Piece positions live on Three.js
+    // <group position> nodes, which the r3f mock doesn't expose as DOM, so this
+    // only guards that the 42×22 non-square path mounts without crashing. The
+    // Y-pitch positioning math itself is covered by SplitBinMeshes source review
+    // and the generator scenario tests, not asserted here.
+    const pieces: SplitPieceMeshEntry[] = [
+      makePieceEntry({ label: 'p-0-0', col: 0, row: 0, offsetX: 0, offsetY: 0 }),
+      makePieceEntry({ label: 'p-0-1', col: 0, row: 1, offsetX: 0, offsetY: 3 }),
+    ];
+
+    useDesignerStore.setState({
+      params: { ...DEFAULT_BIN_PARAMS, width: 4, depth: 6, gridUnitMm: 42, gridUnitMmY: 22 },
+      ui: {
+        ...DEFAULT_UI_STATE,
+        splitPieceMeshes: pieces,
+        splitViewMode: 'assembled',
+      },
+    });
+
+    expect(() => render(<SplitBinMeshes color="#00ff00" wireframe={false} />)).not.toThrow();
+  });
+
   it('renders without error when TOLERANCE is subtracted from total dimensions', () => {
     const pieces: SplitPieceMeshEntry[] = [
       makePieceEntry({

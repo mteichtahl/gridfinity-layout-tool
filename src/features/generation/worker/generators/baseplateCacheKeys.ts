@@ -53,7 +53,8 @@ export function meshCacheKey(
     ? quantize(params.nozzleSizeMm ?? NOZZLE_BASELINE)
     : 0;
   return buildCacheKey(
-    'v1',
+    // v2: support for non-square grids
+    'v2',
     quantize(params.width),
     quantize(params.depth),
     quantize(params.gridUnitMm),

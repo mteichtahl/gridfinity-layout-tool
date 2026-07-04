@@ -99,11 +99,66 @@ describe('baseplate over-tile geometry', () => {
     expect(tiled.triangleCount).toBe(gen(off, NO_OP, true).triangleCount);
   });
 
-  it('over-tiles with magnets without putting magnet holes in the clipped tile', () => {
+  it('places magnets in the clipped over-tile margin tiles', () => {
     const gen = getGenerateBaseplate();
-    const result = gen(defaults({ overTile: true, magnetHoles: true }), NO_OP, true);
-    assertStructurallyValid(result, 'over-tile + magnets');
-    const bb = boundingBox(result.vertices);
-    expect(Number.isFinite(bb.maxX - bb.minX)).toBe(true);
+    // Lightweight off so the only magnet-diameter-dependent geometry is the
+    // magnet holes themselves. The 12mm margin tiles fit a centered 6.5mm magnet
+    // but not a 13mm one (reach 6.5/2 + clearance > the 6mm half-tile). A
+    // cylinder's triangle count is radius-independent, and nominal full-cell
+    // magnets are placed in BOTH cases, so the triangle delta is exactly the
+    // margin-tile magnets that fit only in the smaller-magnet build.
+    const base = {
+      overTile: true,
+      magnetHoles: true,
+      lightweight: false,
+      paddingLeft: 12,
+      paddingRight: 12,
+      paddingFront: 12,
+      paddingBack: 12,
+    } as const;
+    const fits = gen(defaults({ ...base, magnetDiameter: 6.5 }), NO_OP, true);
+    const tooBig = gen(defaults({ ...base, magnetDiameter: 13 }), NO_OP, true);
+
+    // Both builds must be watertight/manifold — a raw triangleCount comparison
+    // would silently pass even if cutting the oversized magnet produced a torn
+    // mesh, so validate the tooBig result too (not just fits).
+    assertStructurallyValid(fits, 'over-tile + margin magnets (fit)');
+    assertStructurallyValid(tooBig, 'over-tile + margin magnets (too big)');
+    expect(fits.triangleCount).toBeGreaterThan(tooBig.triangleCount);
+  });
+
+  it('over-tile half-grid keeps a solid leftover consistent across pockets and magnets', () => {
+    // Regression for the frameCells duplication: magnets/floor cutters must use
+    // the SAME over-tile decomposition as the pockets, including the
+    // overTileHalfGridSolidLeftover flag. Otherwise magnets get cut where no
+    // pocket exists, producing a torn mesh. Exercise the half-grid +
+    // solid-leftover + magnets path end-to-end and require a valid solid.
+    const gen = getGenerateBaseplate();
+    const base = {
+      overTile: true,
+      overTileHalfGrid: true,
+      magnetHoles: true,
+      paddingLeft: 30,
+      paddingRight: 30,
+      paddingFront: 30,
+      paddingBack: 30,
+    } as const;
+
+    const solidLeftover = gen(
+      defaults({ ...base, overTileHalfGridSolidLeftover: true }),
+      NO_OP,
+      true
+    );
+    const tiledLeftover = gen(
+      defaults({ ...base, overTileHalfGridSolidLeftover: false }),
+      NO_OP,
+      true
+    );
+
+    assertStructurallyValid(solidLeftover, 'over-tile half-grid solid leftover + magnets');
+    assertStructurallyValid(tiledLeftover, 'over-tile half-grid tiled leftover + magnets');
+    // Keeping the leftover solid removes its pocket + magnets, so it must not
+    // add geometry beyond the fully-tiled variant.
+    expect(solidLeftover.triangleCount).toBeLessThanOrEqual(tiledLeftover.triangleCount);
   });
 });

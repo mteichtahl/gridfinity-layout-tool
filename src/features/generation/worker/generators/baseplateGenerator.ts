@@ -54,13 +54,16 @@ import {
   resolveCornerRadii,
 } from './generatorTypes';
 import type { ProgressFn, CellInfo, SideMargins } from './generatorTypes';
-import { buildLightweightFloorCutters } from './lightweightFloorCutter';
+import {
+  buildLightweightFloorCutters,
+  buildPartialCellFloorCutters,
+} from './lightweightFloorCutter';
 import { meshResultCache, slabWithPocketsCache } from './baseplateCaches';
 import { meshCacheKey, slabPocketsCacheKey } from './baseplateCacheKeys';
 import { sanitizeParams, tagOp, buildSlabProfile } from './baseplateSlab';
 import { cutInBatches } from './baseplateBatchOps';
 import { getPocketTemplate } from './baseplatePockets';
-import { buildMagnetHoles } from './baseplateMagnets';
+import { buildMagnetHoles, buildPartialCellMagnetHoles } from './baseplateMagnets';
 import {
   buildConnectors,
   buildDovetailKey,
@@ -239,6 +242,29 @@ export function buildBaseplateSolid(
   const slabOffsetY = (paddingBack - paddingFront) / 2;
   const cellOpts = { fractionalEdgeX, fractionalEdgeY, gridUnitMm };
 
+  // Over-tile margin tiles (clipped padding tiles) are decomposed ONCE here and
+  // reused everywhere they must agree: the pocket cuts (cache-miss branch below)
+  // and the magnet holes + lightweight floor cutters further down. A second
+  // frameCells() call risked silent drift — e.g. omitting overTileHalfGridSolidLeftover
+  // would place magnets/floor cutters on cells that were never pocketed.
+  const overTileMargins: SideMargins = {
+    left: paddingLeft,
+    right: paddingRight,
+    front: paddingFront,
+    back: paddingBack,
+  };
+  const overTileFrame: CellInfo[] = overTile
+    ? frameCells(
+        width,
+        depth,
+        overTileMargins,
+        gridUnitMm,
+        MIN_PRINTABLE_TILE_MM,
+        overTileHalfGrid,
+        overTileHalfGridSolidLeftover
+      )
+    : [];
+
   // Cached separately so that toggling magnets or connectors doesn't redo the
   // pocket boolean cuts.
   const spKey = slabPocketsCacheKey(params, forExport);
@@ -281,25 +307,10 @@ export function buildBaseplateSolid(
     // Over-tile: fill the drawer-fit padding margins with grid-aligned clipped
     // pockets (per-side; a margin below the printable threshold stays solid
     // padding). Additive — the slab, full pockets, magnets, and offset are
-    // unchanged, so this composes cleanly with split pieces.
-    if (overTile) {
-      const margins: SideMargins = {
-        left: paddingLeft,
-        right: paddingRight,
-        front: paddingFront,
-        back: paddingBack,
-      };
-      for (const cell of frameCells(
-        width,
-        depth,
-        margins,
-        gridUnitMm,
-        MIN_PRINTABLE_TILE_MM,
-        overTileHalfGrid,
-        overTileHalfGridSolidLeftover
-      )) {
-        addPocket(cell);
-      }
+    // unchanged, so this composes cleanly with split pieces. Uses the shared
+    // overTileFrame so the magnets/floor cutters below cut exactly these cells.
+    for (const cell of overTileFrame) {
+      addPocket(cell);
     }
 
     if (pockets.length > 0) {
@@ -349,16 +360,23 @@ export function buildBaseplateSolid(
   // A 16x16 grid produces 1024 magnet holes; holding all simultaneously can OOM.
   if (magnetHoles) {
     const holes = buildMagnetHoles(width, depth, magnetDiameter / 2, magnetDepth, cellOpts);
+    // Over-tile margin tiles get magnets too — the corner magnets that fit, or a
+    // spread/centered magnet for tiles too small for any corner — so the clipped
+    // padding tiles aren't left as solid plastic. Mirrors the pocket frame above.
+    if (overTileFrame.length > 0) {
+      holes.push(
+        ...buildPartialCellMagnetHoles(overTileFrame, magnetDiameter / 2, magnetDepth, gridUnitMm)
+      );
+    }
     baseplate = cutInBatches(baseplate, holes);
     probe?.('magnetHolesCut', baseplate);
   }
 
-  // Lightweight floor cutters (cross-shaped material removal). Skipped for the
-  // live preview (`draft`): they remove material only from the underside floor
-  // — invisible when orbiting from above — yet the filleted cross prisms are
-  // ~⅓ of build time on magnet grids. The procedural direct-mesh draft already
-  // renders a solid underside, so skipping them here also removes the
-  // direct→BREP underside pop. Export (`draft === false`) keeps them.
+  // Lightweight floor cutters (cross-shaped material removal on the underside).
+  // Run for both the live preview and the export so they match; only the
+  // explicit `draft` fast-path skips them (they're ~⅓ of build time on magnet
+  // grids and invisible from above). Over-tile margin tiles get their own
+  // partial-cell hollowing so the clipped padding tiles aren't left solid.
   if (!draft && magnetHoles && params.lightweight !== false) {
     const floorCutters = buildLightweightFloorCutters(
       width,
@@ -367,6 +385,17 @@ export function buildBaseplateSolid(
       magnetDepth,
       cellOpts
     );
+    if (overTileFrame.length > 0) {
+      floorCutters.push(
+        ...buildPartialCellFloorCutters(
+          overTileFrame,
+          magnetDiameter / 2,
+          magnetDepth,
+          gridUnitMm,
+          params.lightweight
+        )
+      );
+    }
     baseplate = cutInBatches(baseplate, floorCutters);
     probe?.('lightweightFloorCut', baseplate);
   }
