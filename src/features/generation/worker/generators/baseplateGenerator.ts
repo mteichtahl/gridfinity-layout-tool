@@ -6,7 +6,10 @@
  * the bin socket profile at full grid size (no clearance reduction), so that
  * bin sockets (which are reduced by CLEARANCE) fit with the intended gap.
  *
- * Without magnets: slab height = SOCKET_HEIGHT (5mm). Pockets are through-cut.
+ * Without magnets: slab height = SOCKET_HEIGHT (5mm). Pockets are through-cut,
+ * unless the standalone `solidFloor` option is on — then the slab grows by the
+ * chosen floor thickness and pockets stop at SOCKET_HEIGHT, leaving a plain
+ * continuous floor (no magnet holes). See `baseplateFloorDepth`.
  *
  * With magnets (matching Gridfinity spec): slab height = SOCKET_HEIGHT +
  * MAGNET_FLOOR + magnetDepth. Pockets cut to SOCKET_HEIGHT depth only,
@@ -33,8 +36,6 @@ import {
   fuseAll,
   cutAll,
   mesh,
-  meshEdges,
-  getKernelCapabilities,
   exportSTEP,
   booleanPipeline,
   isOk,
@@ -49,7 +50,7 @@ import {
   frameCells,
   toIndexedMeshData,
   checkCancelled,
-  MAGNET_FLOOR,
+  baseplateFloorDepth,
   MIN_PRINTABLE_TILE_MM,
   resolveCornerRadii,
 } from './generatorTypes';
@@ -73,7 +74,6 @@ import {
 import { snapClipLevels } from '@/shared/constants/connectors';
 import { creaseEdges } from './utils';
 import { buildBaseplateSTL } from './baseplateSTL';
-import { EDGE_ANGULAR_TOLERANCE_RAD } from '@/shared/constants/tessellation';
 
 export {
   clearBaseplateCaches,
@@ -153,12 +153,24 @@ export function generateBaseplate(
 
   try {
     const meshResult = mesh(baseplate, { tolerance, angularTolerance });
-    // Edge extraction mirrors tessellateStage.ts: analytic B-rep edges on
-    // extract-time kernels, dihedral creases on build-time (manifold) kernels.
-    const edgeVerts: ArrayLike<number> =
-      getKernelCapabilities().tessellationModel === 'build-time'
-        ? creaseEdges(meshResult)
-        : meshEdges(baseplate, { tolerance, angularTolerance: EDGE_ANGULAR_TOLERANCE_RAD }).lines;
+    // Edge overlay via dihedral creases for ALL kernels — a deliberate exception
+    // to the "extract-time kernels use analytic meshEdges" pattern the other
+    // generators follow (tessellateStage, splitBinBuilder, lidOrchestrator, …).
+    //
+    // Why baseplate is special-cased: a plate is dominated by large planar faces
+    // pierced by many holes (the waffle top; the solid floor when present), and
+    // for those meshEdges returns the face's internal triangulation — measured
+    // ~3.5x more edge segments than the true feature set, and on the open solid
+    // floor it renders as concentric "wireframe" rings fanning out from every
+    // magnet hole (the reported artifact). creaseEdges welds the tessellation and
+    // keeps only sharp folds + naked boundaries, so hole rims and pocket outlines
+    // stay crisp while the coplanar triangulation (and analytic tangent seams) are
+    // dropped — verified to preserve every sharp feature on grid/corner/magnet/
+    // solid-floor plates. It also makes the refined preview match the instant
+    // direct-mesh draft, which already uses creaseEdges, so there's no edge-overlay
+    // pop on refine. Safe because this overlay is preview-only: STL/STEP export
+    // carries no edge lines, so exact analytic edges are never needed here.
+    const edgeVerts: ArrayLike<number> = creaseEdges(meshResult);
 
     onProgress('base', 1);
 
@@ -188,7 +200,7 @@ function buildConnectorKeyMeshIfNeeded(
   const hasJoinEdge = params.edges ? Object.values(params.edges).some((e) => e === 'join') : false;
   if (!hasJoinEdge) return undefined;
 
-  const totalHeight = SOCKET_HEIGHT + (params.magnetHoles ? MAGNET_FLOOR + params.magnetDepth : 0);
+  const totalHeight = SOCKET_HEIGHT + baseplateFloorDepth(params);
   if (!snapClipLevels(totalHeight, params.connectorFitOffset ?? 0, params.nozzleSizeMm).viable)
     return undefined;
 
@@ -234,7 +246,7 @@ export function buildBaseplateSolid(
     overTileHalfGridSolidLeftover,
   } = params;
 
-  const floorDepth = magnetHoles ? MAGNET_FLOOR + magnetDepth : 0;
+  const floorDepth = baseplateFloorDepth(params);
   const totalW = width * gridUnitMm + paddingLeft + paddingRight;
   const totalD = depth * gridUnitMm + paddingFront + paddingBack;
   const totalHeight = SOCKET_HEIGHT + floorDepth;
@@ -289,8 +301,9 @@ export function buildBaseplateSolid(
 
     onProgress?.(0.2);
 
-    // Cut pockets — through-cut when no magnets, partial when magnets leave a floor
-    const throughCut = !magnetHoles;
+    // Cut pockets — through-cut only when nothing leaves a floor; magnets and the
+    // standalone solidFloor option both stop the pocket at SOCKET_HEIGHT depth.
+    const throughCut = floorDepth === 0;
     const pockets: Shape3D[] = [];
     const addPocket = (cell: CellInfo): void => {
       const cellW_mm = cell.widthUnits * gridUnitMm;
@@ -377,7 +390,9 @@ export function buildBaseplateSolid(
   // explicit `draft` fast-path skips them (they're ~⅓ of build time on magnet
   // grids and invisible from above). Over-tile margin tiles get their own
   // partial-cell hollowing so the clipped padding tiles aren't left solid.
-  if (!draft && magnetHoles && params.lightweight !== false) {
+  // The solidFloor option explicitly wants a continuous floor, so it overrides
+  // the hollowing here (magnet holes are still cut above).
+  if (!draft && magnetHoles && params.lightweight !== false && !params.solidFloor) {
     const floorCutters = buildLightweightFloorCutters(
       width,
       depth,
@@ -513,8 +528,7 @@ export async function exportConnectorKey(
   angularTolerance?: number
 ): Promise<{ data: ArrayBuffer; fileName: string }> {
   const params = sanitizeParams(rawParams);
-  const floorDepth = params.magnetHoles ? MAGNET_FLOOR + params.magnetDepth : 0;
-  const totalHeight = SOCKET_HEIGHT + floorDepth;
+  const totalHeight = SOCKET_HEIGHT + baseplateFloorDepth(params);
   // Snap clip ships its own bed-flat part; dovetail key is the legacy default.
   const key =
     params.connectorStyle === 'snapClip'
