@@ -13,7 +13,7 @@ import type {
 import { generateBin } from '../generators/binGenerator';
 import { generateBaseplate } from '../generators/baseplateGenerator';
 import { generateMargin } from '../generators/baseplateMargin';
-import { generateLid } from '../generators/lidOrchestrator';
+import { generateLid, generateStackPlate } from '../generators/lidOrchestrator';
 import { isAbortError } from '../generators/utils/abort';
 import { runGeneration, runWarm, reportProgress, getActiveRequestId } from './workerContext';
 
@@ -50,7 +50,25 @@ export function handleGenerate(message: GenerateMessage): void {
 
         console.warn('[BinGen] Lid generation failed; falling back to bin-only:', e);
       }
-      return lidMesh ? { ...binMesh, lidMesh } : binMesh;
+      if (!lidMesh) {
+        // Lid generation failed (or is disabled) → bin-only. The baseplate is a
+        // companion to the lid, so emitting it here would leave a lone
+        // baseplate with no lid; skip it and degrade cleanly to bin-only.
+        return binMesh;
+      }
+      let result: MeshData = { ...binMesh, lidMesh };
+      // Separate stack-grid baseplate (glue-on companion). Same secondary-
+      // feature contract as the lid: a build failure degrades to lid+bin, but
+      // a cancellation still aborts the whole request.
+      try {
+        const stackPlateMesh = generateStackPlate(params, signal);
+        if (stackPlateMesh) result = { ...result, stackPlateMesh };
+      } catch (e) {
+        if (isAbortError(e)) throw e;
+
+        console.warn('[BinGen] Stack-plate generation failed; skipping baseplate:', e);
+      }
+      return result;
     },
     requestId,
     'BinGen',
