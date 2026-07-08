@@ -90,17 +90,20 @@ describe('connectorSample — fit-sample tray', () => {
   it(
     'builds only the selected style row of valid, positive-volume pieces',
     () => {
-      // Default integral dovetail: 5 offsets × 2 coupons, no loose part = 10.
-      const pieces = buildConnectorSampleTray(defaults());
-      try {
-        expect(pieces).toHaveLength(10);
-        for (const piece of pieces) {
-          const v = vol(piece);
-          expect(Number.isFinite(v)).toBe(true);
-          expect(v).toBeGreaterThan(0);
+      // Integral tongue/groove styles: 5 offsets × 2 coupons, no loose part = 10.
+      // `undefined` is the default integral dovetail.
+      for (const style of [undefined, 'dovetail', 'puzzle'] as const) {
+        const pieces = buildConnectorSampleTray(defaults({ connectorStyle: style }));
+        try {
+          expect(pieces, String(style)).toHaveLength(10);
+          for (const piece of pieces) {
+            const v = vol(piece);
+            expect(Number.isFinite(v)).toBe(true);
+            expect(v).toBeGreaterThan(0);
+          }
+        } finally {
+          for (const p of pieces) p.delete();
         }
-      } finally {
-        for (const p of pieces) p.delete();
       }
     },
     TEST_TIMEOUT_MS
@@ -123,10 +126,13 @@ describe('connectorSample — fit-sample tray', () => {
     TEST_TIMEOUT_MS
   );
 
-  it(
-    'exports a watertight, bed-resting STL tray',
-    async () => {
-      const { data, fileName } = await exportConnectorSample(defaults(), 'stl');
+  it.each([undefined, 'puzzle'] as const)(
+    'exports a watertight, bed-resting STL tray (%s)',
+    async (style) => {
+      const { data, fileName } = await exportConnectorSample(
+        defaults({ connectorStyle: style }),
+        'stl'
+      );
       const stats = analyze(data);
       expect(fileName).toBe('connector_fit_sample.stl');
       expect(stats.hasNaN, 'no NaN vertices').toBe(false);
@@ -135,6 +141,27 @@ describe('connectorSample — fit-sample tray', () => {
       expect(stats.boundaryEdges, 'boundary edges').toBe(0);
       // Whole tray rests on the bed.
       expect(stats.minZ, 'rests on bed').toBeCloseTo(0, 1);
+    },
+    TEST_TIMEOUT_MS
+  );
+
+  it(
+    'exports a watertight puzzle tray at max nozzle (near-collapsed neck)',
+    async () => {
+      // Worst case for the puzzle groove: the 1.0mm nozzle grows the base
+      // clearance and the +0.10 column of the offset ladder rides on top, driving
+      // the neck→head transition (PUZZLE_NECK_PROTRUSION) toward the wall plane
+      // while the armpit fillets stay applied. The clamp in `puzzleOutline` must
+      // keep the groove a valid, watertight solid rather than degenerate.
+      const { data } = await exportConnectorSample(
+        defaults({ connectorStyle: 'puzzle', nozzleSizeMm: 1.0 }),
+        'stl'
+      );
+      const stats = analyze(data);
+      expect(stats.hasNaN, 'no NaN vertices').toBe(false);
+      expect(stats.triangleCount, 'non-empty mesh').toBeGreaterThan(0);
+      expect(stats.nonManifoldEdges, 'non-manifold edges').toBe(0);
+      expect(stats.boundaryEdges, 'boundary edges').toBe(0);
     },
     TEST_TIMEOUT_MS
   );
