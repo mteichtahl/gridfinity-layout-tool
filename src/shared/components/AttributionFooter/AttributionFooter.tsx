@@ -1,8 +1,10 @@
 import { ICON_PATHS } from '@/shared/constants/iconPaths';
 import { useTranslation } from '@/i18n';
+import { useSupportersRouting } from '@/shared/hooks/useSupportersRouting';
 
 export function AttributionFooter() {
   const t = useTranslation();
+  const { navigateToSupporters } = useSupportersRouting();
   return (
     <div className="px-4 py-4 border-t border-stroke-subtle text-content-disabled text-[10px] leading-relaxed">
       <div className="text-content-secondary text-[11px] font-semibold mb-1 flex items-baseline gap-1.5">
@@ -52,6 +54,20 @@ export function AttributionFooter() {
           ))}
         </svg>
         {t('sidebar.tip')}
+      </a>{' '}
+      ·{' '}
+      <a
+        href="/supporters"
+        onClick={(e) => {
+          // Preserve Cmd/Ctrl/Shift-click (open in new tab/window); only
+          // intercept a plain left-click for in-app SPA navigation.
+          if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || e.button !== 0) return;
+          e.preventDefault();
+          navigateToSupporters();
+        }}
+        className="text-content-tertiary hover:underline"
+      >
+        {t('sidebar.supporters')}
       </a>{' '}
       ·{' '}
       <a
