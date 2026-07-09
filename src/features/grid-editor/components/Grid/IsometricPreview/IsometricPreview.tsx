@@ -18,6 +18,7 @@ import { useExplodedLayerView } from '@/shared/hooks/useExplodedLayerView';
 import { useTranslation } from '@/i18n';
 import { useSettingsStore } from '@/core/store/settings';
 import { useBinsToRender } from './useBinsToRender';
+import { getPreviewSummary } from './previewSummary';
 import { usePreviewSize } from './usePreviewSize';
 import { IsometricPreviewControls } from './IsometricPreviewControls';
 import { BinOverlayGroup } from './BinOverlayGroup';
@@ -115,6 +116,19 @@ export function IsometricPreview({ inline = false }: IsometricPreviewProps) {
   // Calculate height-to-grid scale from user settings
   const heightToGridScale = heightUnitMm / gridUnitMm;
   const activeLayerId = useSelectionStore((state) => state.activeLayerId);
+
+  // Text alternative for the WebGL canvas, which is opaque to assistive tech.
+  const previewSummaryText = useMemo(() => {
+    const summary = getPreviewSummary({ bins, layers, drawer });
+    return summary.isEmpty
+      ? t('grid.preview.summaryEmpty')
+      : t('grid.preview.summary', {
+          binCount: summary.binCount,
+          layerCount: summary.layerCount,
+          drawerWidth: summary.drawerWidth,
+          drawerDepth: summary.drawerDepth,
+        });
+  }, [bins, layers, drawer, t]);
 
   // Keyboard shortcuts for 3D preview navigation (after layout store so `layers` is available)
   use3DPreviewKeyboard({
@@ -271,7 +285,14 @@ export function IsometricPreview({ inline = false }: IsometricPreviewProps) {
         zIndex: isPreviewExpanded ? undefined : inline ? undefined : 20,
       }}
     >
+      {/* Label the canvas region itself (react-three-fiber spreads these onto its
+          container element) so a screen reader that lands on the otherwise
+          content-less canvas hears the layout description. role="img" keeps it a
+          single labeled node rather than exposing an empty canvas. Not aria-live
+          — read on demand, not announced on every edit. */}
       <Canvas
+        role="img"
+        aria-label={previewSummaryText}
         orthographic
         camera={{
           position: [10, 10, 10],
