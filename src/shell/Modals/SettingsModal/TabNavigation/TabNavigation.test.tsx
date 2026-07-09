@@ -1,6 +1,7 @@
 import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { TabNavigation } from './TabNavigation';
+import { TAB_DEFINITIONS } from '../tabDefinitions';
 
 // Mock useResponsive to control mobile/desktop rendering
 const mockUseResponsive = vi.fn();
@@ -13,7 +14,9 @@ vi.mock('@/i18n', () => ({
   useTranslation: () => (key: string) => key,
 }));
 
-const TAB_COUNT = 10;
+// Derive from the source of truth so adding/removing a tab doesn't require a
+// manual bump here (tabDefinitions.test.ts asserts the exact expected set).
+const TAB_COUNT = TAB_DEFINITIONS.length;
 
 describe('TabNavigation', () => {
   const onTabChange = vi.fn();
@@ -27,7 +30,7 @@ describe('TabNavigation', () => {
       mockUseResponsive.mockReturnValue({ isMobile: false });
     });
 
-    it('renders all 10 tabs with vertical orientation', () => {
+    it('renders every tab with vertical orientation', () => {
       render(<TabNavigation activeTab="general" onTabChange={onTabChange} />);
       const tablist = screen.getByRole('tablist');
       expect(tablist).toHaveAttribute('aria-orientation', 'vertical');
