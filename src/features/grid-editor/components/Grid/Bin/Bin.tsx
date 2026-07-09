@@ -1,10 +1,11 @@
 import { memo, useState, useMemo } from 'react';
 import { useShallow } from 'zustand/react/shallow';
-import { useLayoutStore, useInteractionStore } from '@/core/store';
+import { useLayoutStore, useInteractionStore, useSettingsStore } from '@/core/store';
 import { useResponsive } from '@/shared/hooks';
 import { useTranslation } from '@/i18n';
 import { calcMaxGridUnits, DEFAULT_CATEGORY_COLOR } from '@/core/constants';
-import { getBinTextColors } from '@/shared/utils';
+import { getBinTextColors, getBinPatternColor } from '@/shared/utils';
+import { getCategoryPatternIndex, getCategoryPatternStyle } from './categoryPatterns';
 import { ResizeHandles } from '../ResizeHandles';
 import { calculateBinLayout } from './calculateBinLayout';
 import { calculateBinText } from './calculateBinText';
@@ -187,6 +188,20 @@ function BinComponent({
   const bgColor = category?.color || DEFAULT_CATEGORY_COLOR;
   const textColors = getBinTextColors(bgColor);
 
+  // Accessibility: distinguish categories by a per-category texture, not color
+  // alone. Applied as a background-image layer on the fill so labels stay above.
+  const distinguishByPattern = useSettingsStore(
+    (state) => state.settings.distinguishCategoriesByPattern
+  );
+  const categoryId = category?.id;
+  const categoryPattern = useMemo(() => {
+    if (!distinguishByPattern || isGhost || categoryId === undefined) return null;
+    return getCategoryPatternStyle(
+      getCategoryPatternIndex(categoryId),
+      getBinPatternColor(bgColor)
+    );
+  }, [distinguishByPattern, isGhost, categoryId, bgColor]);
+
   const visualStyles = useMemo(() => {
     let boxShadow = 'var(--shadow-sm)';
     if (isGhost) {
@@ -256,6 +271,7 @@ function BinComponent({
             }
           : {}),
         backgroundColor: bgColor,
+        ...(categoryPattern ?? {}),
         borderRadius: 'var(--radius-sm)',
         border: isSelected ? 'none' : '1px solid var(--border-on-color)',
         cursor: isGhost ? 'default' : 'grab',
@@ -313,6 +329,7 @@ function BinComponent({
           cellSize={cellSize}
           gap={gap}
           color={bgColor}
+          patternStyle={categoryPattern}
         />
       )}
 
