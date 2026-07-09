@@ -128,6 +128,34 @@ export function DimensionsSection() {
         />
       </div>
 
+      {/* Extra wall height (collar): raises the exterior walls + stacking lip
+          above the nominal height while the interior stays put — extra headroom
+          that encloses tall contents and keeps a stacked bin off them (#2500). */}
+      <div>
+        <div className="mb-1 flex items-center justify-between">
+          <span
+            className="text-xs text-content-tertiary"
+            title={t('binDesigner.extraWallHeightTooltip')}
+          >
+            {t('binDesigner.extraWallHeight')}
+          </span>
+          <span className="text-[11px] tabular-nums text-content-tertiary">
+            {state.extraWallHeightMm} mm
+          </span>
+        </div>
+        <Stepper
+          value={state.extraWallHeightMm}
+          onChange={(v) => handlers.setParam('extraWallHeightMm', v)}
+          onStep={handlers.handleExtraWallHeightStep}
+          min={DESIGNER_CONSTRAINTS.MIN_EXTRA_WALL_HEIGHT}
+          max={DESIGNER_CONSTRAINTS.MAX_EXTRA_WALL_HEIGHT}
+          step={DESIGNER_CONSTRAINTS.EXTRA_WALL_HEIGHT_STEP}
+          size={stepperSize}
+          fullWidth
+          aria-label={t('binDesigner.extraWallHeight')}
+        />
+      </div>
+
       {/* Half-bin mode toggle */}
       <div
         className="group flex items-center justify-between cursor-pointer rounded-md px-1 -mx-1 py-1 focus-visible:ring-2 focus-visible:ring-accent focus-visible:outline-none"

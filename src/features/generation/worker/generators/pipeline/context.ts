@@ -45,6 +45,14 @@ function deriveDimensions(params: BinParams, _forExport: boolean): BinDimensions
   // flag is inert there. migrateParams backfills the field on legacy designs.
   const lightweight = params.base.lightweight && !isFlat;
   const wallHeight = isFlat ? totalHeight : totalHeight - SOCKET_HEIGHT;
+  // Exterior-wall collar (issue #2500): raises the outer box + lip above the
+  // nominal wall height without touching the interior. Kept separate from
+  // `wallHeight` so every feature stage anchors to the original top plane.
+  // Floored at >= 0 and guarded against non-finite values here so a stray NaN
+  // can't poison `boxWallHeight` into degenerate geometry; the full range clamp
+  // (<= MAX_EXTRA_WALL_HEIGHT) lives in `migrateParams`.
+  const rawCollar = params.extraWallHeightMm ?? 0;
+  const collarHeight = Number.isFinite(rawCollar) ? Math.max(0, rawCollar) : 0;
 
   // Per-axis grid pitch. gridUnitMmX scales width/columns, gridUnitMmY scales
   // depth/rows. They're equal for a standard square grid (gridUnitMmY omitted),
@@ -117,7 +125,12 @@ function deriveDimensions(params: BinParams, _forExport: boolean): BinDimensions
     compartmentCavitiesAreViable(params, innerW, innerD) &&
     compartmentCornersRoundCleanly(params, innerW, innerD) &&
     overridesAllowCutPath &&
-    dividerHeightIsFull;
+    dividerHeightIsFull &&
+    // A collar builds the shell taller than the interior; the multi-cavity cut
+    // path would cut pockets to the raised rim, making dividers full-height to
+    // the new top. Route to the additive path (short divider boxes from the
+    // floor) so dividers stay at the nominal interior height.
+    collarHeight === 0;
 
   // Shell cache key — versioned + quantized for deterministic matching.
   // Mask hash is included only when the mask triggers the polygon path so
@@ -156,7 +169,11 @@ function deriveDimensions(params: BinParams, _forExport: boolean): BinDimensions
       lightweight,
       maskKeySegment,
       compartmentsKey,
-      overhangKey(overhang)
+      overhangKey(overhang),
+      // Collar segment — appended only when present so collarless bins keep
+      // byte-identical v7 keys (no cache churn), mirroring the non-square pitch
+      // segment above.
+      ...(collarHeight > 0 ? [`collar${quantize(collarHeight)}`] : [])
     )
   );
 
@@ -169,6 +186,7 @@ function deriveDimensions(params: BinParams, _forExport: boolean): BinDimensions
     gridUnitMmY: gridUnitY,
     wallHeight,
     totalHeight,
+    collarHeight,
     isFlat,
     halfSockets,
     lightweight,
