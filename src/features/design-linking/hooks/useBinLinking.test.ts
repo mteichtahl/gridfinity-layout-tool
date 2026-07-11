@@ -20,10 +20,13 @@ import type { BinParams } from '@/features/bin-designer';
 vi.mock('@/features/bin-designer/storage/DesignerStorage', () => ({
   loadDesign: vi.fn(),
   deleteDesign: vi.fn(),
+  updateDesignParams: vi.fn(),
 }));
 
 vi.mock('@/features/bin-designer/store/customBinRegistry', () => ({
   removeRegistryEntry: vi.fn(),
+  upsertRegistryEntry: vi.fn(),
+  registryEdgeFields: vi.fn(() => ({})),
 }));
 
 vi.mock('@/shared/contexts/MutationsContext', () => ({
@@ -601,6 +604,38 @@ describe('useBinLinking', () => {
 
       expect(dispatchEventSpy).toHaveBeenCalledWith(expect.any(PopStateEvent));
     });
+
+    it('threads the drawer edge into the URL for a fractional dimension', () => {
+      setupStores([]);
+      const layout = useLayoutStore.getState().layout;
+      useLayoutStore.setState({
+        layout: { ...layout, drawer: { ...layout.drawer, fractionalEdgeX: 'start' } },
+      });
+
+      const { result } = renderHook(() => useBinLinking());
+
+      act(() => {
+        result.current.navigateToCreateDesign('bin-1', 'Half', 1.5, 3, 4);
+      });
+
+      expect(pushStateSpy.mock.calls[0][2]).toContain('fractionalEdgeX=start');
+    });
+
+    it('omits the drawer edge for an integer dimension', () => {
+      setupStores([]);
+      const layout = useLayoutStore.getState().layout;
+      useLayoutStore.setState({
+        layout: { ...layout, drawer: { ...layout.drawer, fractionalEdgeX: 'start' } },
+      });
+
+      const { result } = renderHook(() => useBinLinking());
+
+      act(() => {
+        result.current.navigateToCreateDesign('bin-1', 'Whole', 2, 3, 4);
+      });
+
+      expect(pushStateSpy.mock.calls[0][2]).not.toContain('fractionalEdgeX');
+    });
   });
 
   describe('deleteLinkedDesign', () => {
@@ -657,6 +692,72 @@ describe('useBinLinking', () => {
       });
 
       expect(mockUpdateBin).toHaveBeenCalledWith('bin-1', { linkedDesignId: undefined });
+    });
+  });
+
+  describe('matchDesignEdgesToDrawer', () => {
+    function withDrawerEdge() {
+      const stores = setupStores([]);
+      const layout = useLayoutStore.getState().layout;
+      useLayoutStore.setState({
+        layout: { ...layout, drawer: { ...layout.drawer, fractionalEdgeX: 'start' } },
+      });
+      return stores;
+    }
+
+    it('realigns fractional edges to the drawer and clears that axis manual flag', async () => {
+      const { mockAddToast } = withDrawerEdge();
+      const mockParams = {
+        width: 1.5,
+        depth: 2,
+        height: 3,
+        fractionalEdgeX: 'end',
+        fractionalEdgeManualX: true,
+      };
+      vi.mocked(DesignerStorage.loadDesign).mockResolvedValue(ok({ params: mockParams } as never));
+      vi.mocked(DesignerStorage.updateDesignParams).mockResolvedValue(
+        ok({ id: 'design-1', name: 'Design', updatedAt: '2026-01-01T00:00:00.000Z' } as never)
+      );
+
+      const { result } = renderHook(() => useBinLinking());
+      await act(async () => {
+        await result.current.matchDesignEdgesToDrawer('design-1');
+      });
+
+      expect(DesignerStorage.updateDesignParams).toHaveBeenCalledWith(
+        'design-1',
+        expect.objectContaining({ fractionalEdgeX: 'start', fractionalEdgeManualX: false })
+      );
+      expect(mockAddToast).toHaveBeenCalledWith(expect.objectContaining({ type: 'success' }));
+    });
+
+    it('shows an error toast when the design fails to load', async () => {
+      const { mockAddToast } = withDrawerEdge();
+      vi.mocked(DesignerStorage.loadDesign).mockResolvedValue(err({ type: 'not_found' } as never));
+
+      const { result } = renderHook(() => useBinLinking());
+      await act(async () => {
+        await result.current.matchDesignEdgesToDrawer('design-1');
+      });
+
+      expect(DesignerStorage.updateDesignParams).not.toHaveBeenCalled();
+      expect(mockAddToast).toHaveBeenCalledWith(expect.objectContaining({ type: 'error' }));
+    });
+
+    it('shows an error toast when the update fails', async () => {
+      const { mockAddToast } = withDrawerEdge();
+      const mockParams = { width: 1.5, depth: 2, height: 3, fractionalEdgeX: 'end' };
+      vi.mocked(DesignerStorage.loadDesign).mockResolvedValue(ok({ params: mockParams } as never));
+      vi.mocked(DesignerStorage.updateDesignParams).mockResolvedValue(
+        err({ type: 'unknown' } as never)
+      );
+
+      const { result } = renderHook(() => useBinLinking());
+      await act(async () => {
+        await result.current.matchDesignEdgesToDrawer('design-1');
+      });
+
+      expect(mockAddToast).toHaveBeenCalledWith(expect.objectContaining({ type: 'error' }));
     });
   });
 });

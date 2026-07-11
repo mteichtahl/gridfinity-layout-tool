@@ -93,6 +93,8 @@ const ALLOWED_PARAM_KEYS = new Set<string>([
   'height',
   'fractionalEdgeX',
   'fractionalEdgeY',
+  'fractionalEdgeManualX',
+  'fractionalEdgeManualY',
   'gridUnitMm',
   'heightUnitMm',
   'wallThickness',

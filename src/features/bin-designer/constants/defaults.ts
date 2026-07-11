@@ -380,6 +380,8 @@ export const DEFAULT_BIN_PARAMS: BinParams = {
   height: 3,
   fractionalEdgeX: 'end',
   fractionalEdgeY: 'end',
+  fractionalEdgeManualX: false,
+  fractionalEdgeManualY: false,
   gridUnitMm: 42,
   heightUnitMm: 7,
   wallThickness: 1.2,
@@ -737,6 +739,10 @@ export const STYLE_DEFAULT_OMIT_KEYS = [
   'handles',
   'walls',
   'overhang',
+  // Per-design UI bookkeeping, not a reusable style: a manual edge choice on
+  // one design must not carry into every new design and mute mismatch warnings.
+  'fractionalEdgeManualX',
+  'fractionalEdgeManualY',
 ] as const satisfies readonly (keyof BinParams)[];
 
 /**

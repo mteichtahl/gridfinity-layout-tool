@@ -39,8 +39,39 @@ export interface CustomBinRef {
   readonly depth: number;
   /** Height units */
   readonly height: number;
+  /**
+   * Fractional-edge orientation carried so the layout planner / bin inspector
+   * can flag a drawer mismatch without loading the full design (issue #2518).
+   * Optional: pre-#2518 registry entries omit them until the design is re-saved.
+   */
+  readonly fractionalEdgeX?: 'start' | 'end';
+  readonly fractionalEdgeY?: 'start' | 'end';
+  readonly fractionalEdgeManualX?: boolean;
+  readonly fractionalEdgeManualY?: boolean;
   /** ISO timestamp of last update */
   readonly updatedAt: string;
+}
+
+/**
+ * Project the fractional-edge fields a registry entry carries out of a full
+ * `BinParams`. Every `upsertRegistryEntry` call site spreads this so the
+ * lightweight ref never drifts from the design's real edge orientation.
+ */
+export function registryEdgeFields(params: {
+  readonly fractionalEdgeX?: 'start' | 'end';
+  readonly fractionalEdgeY?: 'start' | 'end';
+  readonly fractionalEdgeManualX?: boolean;
+  readonly fractionalEdgeManualY?: boolean;
+}): Pick<
+  CustomBinRef,
+  'fractionalEdgeX' | 'fractionalEdgeY' | 'fractionalEdgeManualX' | 'fractionalEdgeManualY'
+> {
+  return {
+    fractionalEdgeX: params.fractionalEdgeX,
+    fractionalEdgeY: params.fractionalEdgeY,
+    fractionalEdgeManualX: params.fractionalEdgeManualX,
+    fractionalEdgeManualY: params.fractionalEdgeManualY,
+  };
 }
 
 /**
@@ -52,7 +83,18 @@ export interface CustomBinRef {
  */
 function parseEntry(raw: unknown): CustomBinRef | null {
   if (typeof raw !== 'object' || raw === null) return null;
-  const { id, name, width, depth, height, updatedAt } = raw as Record<string, unknown>;
+  const {
+    id,
+    name,
+    width,
+    depth,
+    height,
+    updatedAt,
+    fractionalEdgeX,
+    fractionalEdgeY,
+    fractionalEdgeManualX,
+    fractionalEdgeManualY,
+  } = raw as Record<string, unknown>;
   if (
     typeof id !== 'string' ||
     typeof name !== 'string' ||
@@ -63,7 +105,22 @@ function parseEntry(raw: unknown): CustomBinRef | null {
   ) {
     return null;
   }
-  return { id: id as DesignId, name, width, depth, height, updatedAt };
+  const edge = (v: unknown): 'start' | 'end' | undefined =>
+    v === 'start' || v === 'end' ? v : undefined;
+  const edgeX = edge(fractionalEdgeX);
+  const edgeY = edge(fractionalEdgeY);
+  return {
+    id: id as DesignId,
+    name,
+    width,
+    depth,
+    height,
+    ...(edgeX ? { fractionalEdgeX: edgeX } : {}),
+    ...(edgeY ? { fractionalEdgeY: edgeY } : {}),
+    ...(typeof fractionalEdgeManualX === 'boolean' ? { fractionalEdgeManualX } : {}),
+    ...(typeof fractionalEdgeManualY === 'boolean' ? { fractionalEdgeManualY } : {}),
+    updatedAt,
+  };
 }
 
 /**
