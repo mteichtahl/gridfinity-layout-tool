@@ -49,6 +49,23 @@ describe('buildLightweightFloorCutters', () => {
     const result = buildLightweightFloorCutters(1, 1, 19, 2, cellOpts());
     expect(result).toEqual([]);
   });
+
+  it('emits one valid 4-arm cross cutter for a full cell at pitch 50 (no stranded magnet)', async () => {
+    const { buildLightweightFloorCutters } = await import('./lightweightFloorCutter');
+    const { mesh } = await import('brepjs');
+    // Outer-arm guard (hw − padHalf ≥ MIN_ARM_WIDTH) still passes on the larger
+    // cell, so the single full cell yields one cross cutter with real geometry —
+    // pads land on the ±17 magnets rather than carving through them.
+    const opts = {
+      gridUnitMm: 50,
+      fractionalEdgeX: 'end' as const,
+      fractionalEdgeY: 'end' as const,
+    };
+    const result = buildLightweightFloorCutters(1, 1, MAGNET_R, 2, opts);
+    expect(result).toHaveLength(1);
+    const tessellated = mesh(result[0], { tolerance: 0.5, angularTolerance: 15 });
+    expect(tessellated.vertices.length).toBeGreaterThan(0);
+  });
 });
 
 const GRID = 42;
