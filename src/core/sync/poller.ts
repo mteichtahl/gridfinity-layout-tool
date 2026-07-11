@@ -12,11 +12,19 @@ interface IndexEntry {
 interface ManifestResponse {
   layouts: Record<string, IndexEntry>;
   designs: Record<string, IndexEntry>;
+  // Optional: a manifest from a server predating this key omits it.
+  baseplates?: Record<string, IndexEntry>;
   indexUpdatedAt: number;
 }
 
 interface ItemFetchResponse {
-  envelope: { layout?: unknown; design?: unknown; modifiedAt: number; schemaVersion: number };
+  envelope: {
+    layout?: unknown;
+    design?: unknown;
+    baseplate?: unknown;
+    modifiedAt: number;
+    schemaVersion: number;
+  };
   indexEntry: IndexEntry;
 }
 
@@ -103,9 +111,17 @@ async function run(adapters: SyncAdapters, capturedGeneration: number): Promise<
 
   const manifest = (await manifestRes.json()) as ManifestResponse;
 
+  // Baseplates first: a layout references a baseplate design by id, and the
+  // init hook orphans that pointer (NOT_FOUND) if the design isn't local yet.
+  // On a fresh device the referenced design must land before its layout.
+  const baseplateChanges = await diffKind(
+    adapters.baseplates,
+    'baseplates',
+    manifest.baseplates ?? {}
+  );
   const layoutChanges = await diffKind(adapters.layouts, 'layouts', manifest.layouts);
   const designChanges = await diffKind(adapters.designs, 'designs', manifest.designs);
-  const applied = layoutChanges + designChanges;
+  const applied = layoutChanges + designChanges + baseplateChanges;
 
   // Reset happened mid-flight — drop our results to avoid re-installing the
   // prior user's high-water mark or applying writes that belong to a session
@@ -149,7 +165,12 @@ async function diffKind(
     if (localMtime === undefined || localMtime < entry.modifiedAt) {
       const fetched = await fetchEnvelope(kind, id);
       if (!fetched) continue;
-      const payload = kind === 'layouts' ? fetched.envelope.layout : fetched.envelope.design;
+      const payload =
+        kind === 'layouts'
+          ? fetched.envelope.layout
+          : kind === 'baseplates'
+            ? fetched.envelope.baseplate
+            : fetched.envelope.design;
       if (payload === undefined) continue;
       await adapter.applyRemote({
         id,

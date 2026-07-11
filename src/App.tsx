@@ -91,6 +91,11 @@ const DesignerPage = lazyWithRetry(() =>
 const BaseplatePage = lazyWithRetry(() =>
   import('@/features/baseplate').then(namedExport('BaseplatePage'))
 );
+const BaseplateLibraryInitMount = lazyWithRetry(() =>
+  import('@/features/baseplate/components/BaseplateLibraryInitMount').then(
+    namedExport('BaseplateLibraryInitMount')
+  )
+);
 const SupportersPage = lazyWithRetry(() =>
   import('@/features/supporters').then(namedExport('SupportersPage'))
 );
@@ -313,9 +318,16 @@ export default function App() {
 
   const wrapWithMutations = (content: React.ReactNode) => {
     const dialogs = (
-      <Suspense fallback={null}>
-        <DesignLinkingDialogs />
-      </Suspense>
+      <>
+        <Suspense fallback={null}>
+          <DesignLinkingDialogs />
+        </Suspense>
+        {/* Own boundary so planner baseplate resolution isn't gated on the
+            unrelated design-linking chunk loading. */}
+        <Suspense fallback={null}>
+          <BaseplateLibraryInitMount />
+        </Suspense>
+      </>
     );
     if (isCollaborative && shareId) {
       return (

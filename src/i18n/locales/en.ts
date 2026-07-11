@@ -200,7 +200,7 @@ const en: Record<string, string> = {
   // Sign-out + account-mismatch dialogs
   'syncDialog.signOut.title': 'Sign out',
   'syncDialog.signOut.message':
-    'Keep your {count} local layouts and designs on this device? You can also wipe them.',
+    'Keep your {count} local layouts, designs, and baseplates on this device? You can also wipe them.',
   'syncDialog.signOut.keep': 'Keep & sign out',
   'syncDialog.signOut.wipe': 'Wipe & sign out',
   'syncDialog.deleteAccount.title': 'Delete your account?',
@@ -2508,6 +2508,31 @@ const en: Record<string, string> = {
   'baseplate.toggleProjectionKeyboardShortcut':
     'Toggle perspective / orthographic projection, keyboard shortcut P',
 
+  // Baseplate library
+  'baseplate.library.title': 'Baseplate Library',
+  'baseplate.library.closeDialog': 'Close baseplate library',
+  'baseplate.library.activeLabel': 'Active baseplate',
+  'baseplate.library.selectLabel': 'Active baseplate design',
+  'baseplate.library.draftName': 'Unsaved draft',
+  'baseplate.library.new': 'New',
+  'baseplate.library.saveAs': 'Save As',
+  'baseplate.library.manage': 'Manage…',
+  'baseplate.library.namePrompt': 'Name this baseplate',
+  'baseplate.library.namePlaceholder': 'Baseplate name',
+  'baseplate.library.designName': 'Baseplate name',
+  'baseplate.library.moreActions': 'More actions for {name}',
+  'baseplate.library.thumbnailPlaceholder': 'No preview',
+  'baseplate.library.active': 'Active',
+  'baseplate.library.currentlyActive': 'Currently active baseplate',
+  'baseplate.library.empty': 'No saved baseplates yet',
+  'baseplate.library.emptyHint': 'Save a baseplate from the editor to start your library',
+  'baseplate.library.count': '{count} baseplate(s)',
+  'baseplate.library.deleteWarning.title': 'Delete baseplate design?',
+  'baseplate.library.deleteWarning.description':
+    'Deleting this baseplate removes it from your library. Layouts linked to it keep their current baseplate but lose the link.',
+  'baseplate.library.deleteWarning.usedByCurrent': 'Used by the current layout',
+  'baseplate.library.deleteWarning.confirm': 'Delete Anyway',
+
   // Collaboration
   'collab.connected': 'Connected',
   'collab.reconnecting': 'Reconnecting',
@@ -2604,6 +2629,7 @@ const en: Record<string, string> = {
 
   // Navigation commands
   'commandPalette.openLayoutManager': 'Open Layout Manager',
+  'commandPalette.openBaseplateLibrary': 'Open Baseplate Library',
   'commandPalette.openSettings': 'Open Settings',
   'commandPalette.openHelp': 'Open Help',
   'commandPalette.openPrint': 'Open Print Preview',
@@ -2898,6 +2924,7 @@ const en: Record<string, string> = {
   'undo.gridUnitChanged': 'Changed grid unit',
   'undo.heightUnitChanged': 'Changed height unit',
   'undo.baseplateParamsChanged': 'Changed baseplate params',
+  'undo.activeBaseplateChanged': 'Changed active baseplate',
   'undo.unknownAction': 'Action',
   'undo.undid': '\u21a9 Undid: {action}',
   'undo.redid': '\u21aa Redid: {action}',

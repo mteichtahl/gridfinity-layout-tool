@@ -40,6 +40,13 @@ function makeAdapters(layoutPayload: Record<string, unknown> | null = { v: 1 }):
       applyRemoteDelete: vi.fn(),
       subscribe: vi.fn(() => () => {}),
     },
+    baseplates: {
+      list: vi.fn(),
+      get: vi.fn(async (id: string) => ({ id, payload: { b: 1 }, modifiedAt: 3000 })),
+      applyRemote: vi.fn(),
+      applyRemoteDelete: vi.fn(),
+      subscribe: vi.fn(() => () => {}),
+    },
   };
 }
 
@@ -71,6 +78,22 @@ describe('useBeaconFlush', () => {
     expect(sendBeaconMock).toHaveBeenCalledTimes(2);
     expect(sendBeaconMock).toHaveBeenCalledWith('/api/sync/layouts/lay-1', expect.any(Blob));
     expect(sendBeaconMock).toHaveBeenCalledWith('/api/sync/designs/des-1', expect.any(Blob));
+  });
+
+  it('wraps a baseplate payload in { baseplate } (not { design })', async () => {
+    getPendingEntriesMock.mockResolvedValueOnce([
+      { kind: 'baseplates', id: 'bp-1', op: 'put', modifiedAt: 3000 },
+    ]);
+    renderHook(() => useBeaconFlush(makeAdapters()));
+    fireVisibilityHidden();
+    await settlePrep();
+    firePageHide();
+
+    expect(sendBeaconMock).toHaveBeenCalledTimes(1);
+    const [url, blob] = sendBeaconMock.mock.calls[0] as [string, Blob];
+    expect(url).toBe('/api/sync/baseplates/bp-1');
+    const body = JSON.parse(await blob.text()) as Record<string, unknown>;
+    expect(body).toEqual({ baseplate: { b: 1 }, modifiedAt: 3000 });
   });
 
   it('fires sendBeacon synchronously on pagehide — no awaits between the event and the call', async () => {
