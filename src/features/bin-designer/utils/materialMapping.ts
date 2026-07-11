@@ -13,8 +13,11 @@ import {
   getZoneColor,
   isSingleColor,
   lipCellsUniform,
+  maxZOfVertices,
   normalizeHex,
   resolveColorMapping,
+  topAccentActive,
+  topAccentCutZ,
 } from '../types/featureColors';
 import type { ColorZone, FeatureColorConfig } from '../types/featureColors';
 import { computeLipGeom } from './lipCornerClassifier';
@@ -60,7 +63,18 @@ export function buildTriangleMaterialIndices(
   cutoutUnits: readonly CutoutColorUnit[] = []
 ): BinColorMapping | null {
   const coloredUnits = cutoutUnits.filter((u) => u.color !== undefined);
-  if (isSingleColor(featureColors, activeZones) && coloredUnits.length === 0) return null;
+  // Derive the top-accent cut from featureColors directly (see the matching note
+  // in multiColorGroups.ts) so it's honored even if a caller's activeZones omits
+  // it; union it in so isSingleColor accounts for the accent color. Gate the maxZ
+  // scan on `topAccentActive` to skip the traversal when the band is off.
+  const cutZ = topAccentActive(featureColors.topAccent)
+    ? topAccentCutZ(featureColors.topAccent, maxZOfVertices(vertices))
+    : null;
+  const zones =
+    cutZ !== null && !activeZones.has('topAccent')
+      ? new Set(activeZones).add('topAccent')
+      : activeZones;
+  if (isSingleColor(featureColors, zones) && coloredUnits.length === 0) return null;
 
   const base = resolveColorMapping(featureColors);
   const defaultIndex = base.defaultIndex;
@@ -109,6 +123,7 @@ export function buildTriangleMaterialIndices(
     geom,
     counts,
     lipUniform: lipCellsUniform(featureColors.lip),
+    topAccentCutZ: cutZ,
   });
 
   const materialIndexForZone = (zone: ColorZone): number =>

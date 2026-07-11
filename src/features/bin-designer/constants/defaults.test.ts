@@ -474,7 +474,93 @@ describe('migrateParams', () => {
       dividers: '#d4d8dc',
       text: '#d4d8dc',
       lid: '#d4d8dc',
+      topAccent: { enabled: false, heightMm: 2, color: '#d4d8dc' },
     });
+  });
+
+  it('backfills a disabled topAccent (body color) for designs predating it', () => {
+    const legacy = {
+      enabled: true,
+      body: '#112233',
+    } as unknown as (typeof DEFAULT_BIN_PARAMS)['featureColors'];
+    const result = migrateParams({ featureColors: legacy });
+    expect(result.featureColors.topAccent).toEqual({
+      enabled: false,
+      heightMm: 2,
+      color: '#112233',
+    });
+  });
+
+  it('preserves a persisted topAccent and clamps a bad height to the default', () => {
+    const withAccent = {
+      enabled: true,
+      topAccent: { enabled: true, heightMm: 3.5, color: '#ff0000' },
+    } as unknown as (typeof DEFAULT_BIN_PARAMS)['featureColors'];
+    expect(migrateParams({ featureColors: withAccent }).featureColors.topAccent).toEqual({
+      enabled: true,
+      heightMm: 3.5,
+      color: '#ff0000',
+    });
+    const badHeight = {
+      topAccent: { enabled: true, heightMm: -4, color: '#ff0000' },
+    } as unknown as (typeof DEFAULT_BIN_PARAMS)['featureColors'];
+    expect(migrateParams({ featureColors: badHeight }).featureColors.topAccent.heightMm).toBe(2);
+  });
+
+  it('clamps a persisted band taller than the wall height to the bin bound', () => {
+    // 1 unit × 7mm/unit = 7mm wall; a stored 50mm band clamps to 7mm so it can't
+    // recolor the whole bin on load.
+    const tall = {
+      topAccent: { enabled: true, heightMm: 50, color: '#ff0000' },
+    } as unknown as (typeof DEFAULT_BIN_PARAMS)['featureColors'];
+    const result = migrateParams({ height: 1, heightUnitMm: 7, featureColors: tall });
+    expect(result.featureColors.topAccent.heightMm).toBe(7);
+  });
+
+  it('includes the exterior-wall collar in the top-accent clamp bound', () => {
+    // 1 unit × 7mm + 10mm collar = 17mm wall top; a 15mm band stays unclamped.
+    const banded = {
+      topAccent: { enabled: true, heightMm: 15, color: '#ff0000' },
+    } as unknown as (typeof DEFAULT_BIN_PARAMS)['featureColors'];
+    const result = migrateParams({
+      height: 1,
+      heightUnitMm: 7,
+      extraWallHeightMm: 10,
+      featureColors: banded,
+    });
+    expect(result.featureColors.topAccent.heightMm).toBe(15);
+  });
+
+  it('uses the clamped (not raw) collar for the top-accent bound', () => {
+    // A persisted collar above MAX is normalized to MAX everywhere; the accent
+    // bound must use that clamped value so the band can't exceed the bin's real
+    // post-migration wall top.
+    const banded = {
+      topAccent: { enabled: true, heightMm: 5000, color: '#ff0000' },
+    } as unknown as (typeof DEFAULT_BIN_PARAMS)['featureColors'];
+    const result = migrateParams({
+      height: 1,
+      heightUnitMm: 7,
+      extraWallHeightMm: 99999,
+      featureColors: banded,
+    });
+    expect(result.featureColors.topAccent.heightMm).toBe(
+      7 + DESIGNER_CONSTRAINTS.MAX_EXTRA_WALL_HEIGHT
+    );
+  });
+
+  it('rejects NaN height/heightUnitMm when computing the clamp bound', () => {
+    const banded = {
+      topAccent: { enabled: true, heightMm: 3, color: '#ff0000' },
+    } as unknown as (typeof DEFAULT_BIN_PARAMS)['featureColors'];
+    // NaN height would poison Math.max(1, NaN)=NaN and yield a NaN band; the
+    // finite guard falls back to the default height so the clamp stays valid.
+    const result = migrateParams({
+      height: NaN,
+      featureColors: banded,
+    });
+    expect(Number.isFinite(result.featureColors.topAccent.heightMm)).toBe(true);
+    expect(result.featureColors.topAccent.heightMm).toBe(3);
   });
 
   it('should migrate legacy slot IDs to hex colors', () => {

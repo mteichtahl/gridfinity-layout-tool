@@ -25,6 +25,9 @@ import {
   getZoneColor,
   isSingleColor,
   lipCellsUniform,
+  maxZOfVertices,
+  topAccentActive,
+  topAccentCutZ,
   zoneIndex,
 } from '../types/featureColors';
 import type { ColorZone, FeatureColorConfig, HoverableZone } from '../types/featureColors';
@@ -130,6 +133,9 @@ export function buildHitTestZones(
 ): ColorZone[] {
   const counts = { corners: featureColors.lip.corners, bands: featureColors.lip.bands };
   const { triangleCount, geom, getTriangle } = meshAccessors(faceGroups, vertices, indices);
+  // allowSplit:false keeps triZones 1:1 with the input triangles so a clicked
+  // original-triangle index resolves to a zone. The top-accent cut is applied
+  // in place (centroid-quantized), which is precise enough for hit-testing.
   return computeLipColoredMesh({
     triangleCount,
     faceGroups,
@@ -137,6 +143,10 @@ export function buildHitTestZones(
     geom,
     counts,
     lipUniform: true,
+    allowSplit: false,
+    topAccentCutZ: topAccentActive(featureColors.topAccent)
+      ? topAccentCutZ(featureColors.topAccent, maxZOfVertices(vertices))
+      : null,
   }).triZones;
 }
 
@@ -157,7 +167,21 @@ export function buildMultiColorGroups(
   const coloredOrdinals = cutoutUnits
     .map((u, i) => (u.color !== undefined ? i : -1))
     .filter((i) => i >= 0);
-  if (isSingleColor(featureColors, activeZones) && coloredOrdinals.length === 0) return null;
+
+  // Derive the top-accent cut from featureColors directly rather than trusting
+  // the caller's activeZones — some callers (e.g. the 3D preview) build their
+  // zone set without it, which would otherwise make the accent silently vanish
+  // there. Union it in so isSingleColor sees the accent color too. Gate the
+  // maxZ scan on `topAccentActive` so a disabled band (the common case) doesn't
+  // pay an O(vertexCount) traversal on every preview update.
+  const cutZ = topAccentActive(featureColors.topAccent)
+    ? topAccentCutZ(featureColors.topAccent, maxZOfVertices(vertices))
+    : null;
+  const zones =
+    cutZ !== null && !activeZones.has('topAccent')
+      ? new Set(activeZones).add('topAccent')
+      : activeZones;
+  if (isSingleColor(featureColors, zones) && coloredOrdinals.length === 0) return null;
 
   const counts = { corners: featureColors.lip.corners, bands: featureColors.lip.bands };
   const { triangleCount, geom, getTriangle } = meshAccessors(faceGroups, vertices, indices);
@@ -169,6 +193,7 @@ export function buildMultiColorGroups(
     geom,
     counts,
     lipUniform: lipCellsUniform(featureColors.lip),
+    topAccentCutZ: cutZ,
   });
   const meshOverride: MultiColorGroupsResult['meshOverride'] =
     positions && normals ? { vertices: positions, normals, indices: null } : null;
