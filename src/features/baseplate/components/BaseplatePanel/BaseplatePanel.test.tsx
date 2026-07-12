@@ -942,3 +942,73 @@ describe('BaseplatePanel', () => {
     });
   });
 });
+
+describe('shaped drawer (outline present)', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockLayoutState = {
+      layout: {
+        drawer: { width: 4, depth: 6 },
+        gridUnitMm: 42,
+        printBedSize: 256,
+        baseplateParams: { ...DEFAULT_BASEPLATE_PARAMS },
+      },
+      setBaseplateParams: mockSetBaseplateParams,
+      setPrintBedSize: mockSetPrintBedSize,
+    };
+    mockExportFormat = 'stl';
+  });
+
+  const U = 42;
+  const L_OUTLINE = {
+    vertices: [
+      { x: 0, y: 0 },
+      { x: 4 * U, y: 0 },
+      { x: 4 * U, y: 3 * U },
+      { x: 2 * U, y: 3 * U },
+      { x: 2 * U, y: 6 * U },
+      { x: 0, y: 6 * U },
+    ],
+  };
+
+  it('hides padding controls and shows the shaped notice', () => {
+    mockLayoutState.layout.drawer = { width: 4, depth: 6, outline: L_OUTLINE } as never;
+    render(<BaseplatePanel />);
+    expect(screen.getByText('baseplate.shapedDrawerNotice')).toBeInTheDocument();
+    expect(screen.queryByText('baseplate.padding')).toBeNull();
+  });
+
+  it('keeps padding controls for unsynced (custom-size) plates', () => {
+    mockLayoutState.layout.drawer = { width: 4, depth: 6, outline: L_OUTLINE } as never;
+    mockLayoutState.layout.baseplateParams = {
+      ...DEFAULT_BASEPLATE_PARAMS,
+      syncWithLayout: false,
+    };
+    render(<BaseplatePanel />);
+    expect(screen.queryByText('baseplate.shapedDrawerNotice')).toBeNull();
+    expect(screen.getByText('baseplate.padding')).toBeInTheDocument();
+  });
+
+  it('keeps padding controls when stack printing wins over the shape', () => {
+    mockLayoutState.layout.drawer = { width: 4, depth: 6, outline: L_OUTLINE } as never;
+    mockLayoutState.layout.baseplateParams = {
+      ...DEFAULT_BASEPLATE_PARAMS,
+      stackPrint: { enabled: true, gapMm: 0.2 },
+    } as never;
+    render(<BaseplatePanel />);
+    expect(screen.queryByText('baseplate.shapedDrawerNotice')).toBeNull();
+  });
+
+  it('shows the shaped notice for STEP even with stacking stored on', () => {
+    // STEP clears stackPrint before buildFullParams, so the exported solid IS
+    // shaped — the panel must follow the format-aware stackEnabled signal.
+    mockLayoutState.layout.drawer = { width: 4, depth: 6, outline: L_OUTLINE } as never;
+    mockLayoutState.layout.baseplateParams = {
+      ...DEFAULT_BASEPLATE_PARAMS,
+      stackPrint: { enabled: true, gapMm: 0.2 },
+    } as never;
+    mockExportFormat = 'step';
+    render(<BaseplatePanel />);
+    expect(screen.getByText('baseplate.shapedDrawerNotice')).toBeInTheDocument();
+  });
+});
