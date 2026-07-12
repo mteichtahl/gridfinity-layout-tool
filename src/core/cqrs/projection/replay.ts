@@ -128,7 +128,28 @@ export function applyEvent(layout: Layout, event: DomainEvent): Layout {
 
     case 'drawer.updated':
       Object.assign(next.drawer, event.payload.changes);
+      // Mirror updateDrawer.apply(): a reset-to-rectangle rides as an
+      // explicitly-undefined outline; the key must end up absent, not
+      // present-undefined, or replayed state diverges from live state.
+      if ('outline' in event.payload.changes && event.payload.changes.outline === undefined) {
+        delete next.drawer.outline;
+      }
       break;
+
+    case 'drawer.outlineSet': {
+      if (event.payload.outline === undefined) {
+        delete next.drawer.outline;
+      } else {
+        next.drawer.outline = event.payload.outline;
+      }
+      const displaced = new Set(event.payload.displacedBinIds);
+      if (displaced.size > 0) {
+        next.bins = next.bins.map((bin) =>
+          displaced.has(bin.id) ? { ...bin, layerId: STAGING_ID } : bin
+        );
+      }
+      break;
+    }
 
     case 'layout.nameSet':
       next.name = event.payload.name;
