@@ -54,6 +54,15 @@ export interface BaseplatePiece {
    * its dovetails end up on the correct world-space sides.
    */
   readonly placementRotationDeg: 0 | 180;
+  /**
+   * Present exactly when the plate outline crosses this piece's window: the
+   * plate-local mm origin of the window (bottom-left), from which
+   * `pieceToBaseplateParams` derives the piece-local outline. Absent =
+   * fully-inside piece, a pure rectangle whose fingerprints, dedup, and
+   * connector behavior are identical to an unshaped plate. One field carries
+   * both the "partial" flag and its data so they can't drift apart.
+   */
+  readonly outlineWindowOriginMm?: { readonly x: number; readonly y: number };
 }
 
 /** Hint suggesting a padding reduction that would eliminate a split. */
