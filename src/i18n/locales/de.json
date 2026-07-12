@@ -2676,5 +2676,12 @@
   "baseplate.library.deleteWarning.description": "Beim Löschen wird diese Grundplatte aus deiner Bibliothek entfernt. Damit verknüpfte Layouts behalten ihre aktuelle Grundplatte, verlieren aber die Verknüpfung.",
   "baseplate.library.deleteWarning.usedByCurrent": "Vom aktuellen Layout verwendet",
   "baseplate.library.deleteWarning.confirm": "Trotzdem löschen",
-  "commandPalette.openBaseplateLibrary": "Grundplatten-Bibliothek öffnen"
+  "commandPalette.openBaseplateLibrary": "Grundplatten-Bibliothek öffnen",
+  "baseplate.magnetAnchor": "Magnetposition",
+  "baseplate.magnetAnchorTooltip": "Wo Magnetlöcher in jeder Zelle bei Rastern größer als 42 mm sitzen. Gilt für Grundplatte, Bins und Deckel gemeinsam, damit ihre Magnete ausgerichtet bleiben.",
+  "baseplate.magnetAnchorEdge": "Ecken",
+  "baseplate.magnetAnchorCenter": "Klassisch",
+  "undo.magnetAnchorChanged": "Magnetposition geändert",
+  "baseplate.magnetAnchorHintCorners": "Magnete bleiben 8 mm vom Zellenrand entfernt – die Standard-Gridfinity-Eckposition.",
+  "baseplate.magnetAnchorHintLegacy": "Magnete 13 mm von der Zellenmitte fixiert – passt zu Teilen, die vor dieser Korrektur gedruckt wurden."
 }

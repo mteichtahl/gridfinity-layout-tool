@@ -2676,5 +2676,12 @@
   "baseplate.library.deleteWarning.description": "Verwijderen haalt deze basisplaat uit je bibliotheek. Gekoppelde layouts behouden hun huidige basisplaat maar verliezen de koppeling.",
   "baseplate.library.deleteWarning.usedByCurrent": "Gebruikt door de huidige layout",
   "baseplate.library.deleteWarning.confirm": "Toch verwijderen",
-  "commandPalette.openBaseplateLibrary": "Basisplaatbibliotheek openen"
+  "commandPalette.openBaseplateLibrary": "Basisplaatbibliotheek openen",
+  "baseplate.magnetAnchor": "Magneetankering",
+  "baseplate.magnetAnchorTooltip": "Waar magneetgaten in elke cel zitten bij rasters groter dan 42 mm. Geldt voor de basisplaat, bakjes en deksels samen zodat hun magneten uitgelijnd blijven.",
+  "baseplate.magnetAnchorEdge": "Hoeken",
+  "baseplate.magnetAnchorCenter": "Klassiek",
+  "undo.magnetAnchorChanged": "Magneetankering gewijzigd",
+  "baseplate.magnetAnchorHintCorners": "Magneten blijven 8 mm van elke celrand — de standaard Gridfinity-hoekpositie.",
+  "baseplate.magnetAnchorHintLegacy": "Magneten op 13 mm vanaf het celmidden — komt overeen met onderdelen die vóór deze correctie zijn geprint."
 }

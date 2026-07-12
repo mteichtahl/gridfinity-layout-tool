@@ -2676,5 +2676,12 @@
   "baseplate.library.deleteWarning.description": "Al eliminarla, esta base se quita de tu biblioteca. Los diseños vinculados conservan su base actual pero pierden el vínculo.",
   "baseplate.library.deleteWarning.usedByCurrent": "Usada por el diseño actual",
   "baseplate.library.deleteWarning.confirm": "Eliminar de Todos Modos",
-  "commandPalette.openBaseplateLibrary": "Abrir biblioteca de bases"
+  "commandPalette.openBaseplateLibrary": "Abrir biblioteca de bases",
+  "baseplate.magnetAnchor": "Anclaje de imanes",
+  "baseplate.magnetAnchorTooltip": "Dónde se ubican los orificios de los imanes en cada celda en rejillas mayores de 42 mm. Se aplica a la placa base, los contenedores y las tapas en conjunto para que sus imanes queden alineados.",
+  "baseplate.magnetAnchorEdge": "Esquinas",
+  "baseplate.magnetAnchorCenter": "Clásico",
+  "undo.magnetAnchorChanged": "Anclaje de imanes cambiado",
+  "baseplate.magnetAnchorHintCorners": "Los imanes se mantienen a 8 mm del borde de cada celda: la posición estándar de esquina de Gridfinity.",
+  "baseplate.magnetAnchorHintLegacy": "Imanes fijados a 13 mm del centro de cada celda: coincide con piezas impresas antes de esta corrección."
 }

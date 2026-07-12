@@ -23,6 +23,8 @@ import { LRUCache } from './lruCache';
 import { buildCacheKey, quantize, compactKey } from './cacheKeyUtils';
 import { resolvePitch, pitchKeySegments, type GridUnitInput } from './gridPitch';
 import { GRIDFINITY } from '@/shared/constants/bin';
+import type { MagnetAnchor } from '@/core/types';
+import { DEFAULT_MAGNET_ANCHOR } from '@/core/types';
 import { clearSocketMeshCache } from './socketMeshCache';
 import { clearTextMetricsMemo } from './textBuilder';
 import {
@@ -134,7 +136,8 @@ export function socketCacheKey(
   gridUnitMm: GridUnitInput = GRIDFINITY.GRID_SIZE,
   maskHash?: string,
   fractionalEdgeX: 'start' | 'end' = 'end',
-  fractionalEdgeY: 'start' | 'end' = 'end'
+  fractionalEdgeY: 'start' | 'end' = 'end',
+  anchor: MagnetAnchor = DEFAULT_MAGNET_ANCHOR
 ): string {
   // Only append when non-default so 'end'/'end' keys stay byte-identical to
   // pre-feature keys (no needless cache invalidation; existing tests stable).
@@ -146,6 +149,17 @@ export function socketCacheKey(
   // for a non-square grid so square keys stay byte-identical.
   const pitch = resolvePitch(gridUnitMm);
   const pitchSegments = pitchKeySegments(pitch, quantize);
+  // Legacy 'center' anchor only shifts magnet holes on a grid larger than the
+  // standard 42mm and only when magnets are cut; otherwise it's byte-identical
+  // to 'edge', so append the segment only then — existing 'edge'/≤42mm keys stay
+  // stable and no cache is needlessly invalidated. Check BOTH axes: an
+  // anisotropic bin grid (e.g. 42×50) shifts only the Y magnets under 'center',
+  // so keying on pitch.x alone would collide edge/center and reuse wrong geometry.
+  const standardPitch = GRIDFINITY.GRID_SIZE;
+  const anchorSegments =
+    anchor === 'center' && withMagnet && (pitch.x > standardPitch || pitch.y > standardPitch)
+      ? ['anchor:center']
+      : [];
   return compactKey(
     buildCacheKey(
       'v2',
@@ -161,7 +175,8 @@ export function socketCacheKey(
       forExport,
       halfSockets,
       maskHash ?? 'rect',
-      ...fracSegments
+      ...fracSegments,
+      ...anchorSegments
     )
   );
 }

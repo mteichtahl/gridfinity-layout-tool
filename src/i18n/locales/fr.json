@@ -2676,5 +2676,12 @@
   "baseplate.library.deleteWarning.description": "La suppression retire cette platine de votre bibliothèque. Les layouts qui y sont liés conservent leur platine actuelle mais perdent le lien.",
   "baseplate.library.deleteWarning.usedByCurrent": "Utilisée par le layout actuel",
   "baseplate.library.deleteWarning.confirm": "Supprimer quand même",
-  "commandPalette.openBaseplateLibrary": "Ouvrir la bibliothèque de platines"
+  "commandPalette.openBaseplateLibrary": "Ouvrir la bibliothèque de platines",
+  "baseplate.magnetAnchor": "Ancrage des aimants",
+  "baseplate.magnetAnchorTooltip": "Emplacement des trous d’aimant dans chaque cellule sur les grilles de plus de 42 mm. S’applique à la plaque de base, aux bacs et aux couvercles ensemble pour que leurs aimants restent alignés.",
+  "baseplate.magnetAnchorEdge": "Coins",
+  "baseplate.magnetAnchorCenter": "Ancien",
+  "undo.magnetAnchorChanged": "Ancrage des aimants modifié",
+  "baseplate.magnetAnchorHintCorners": "Les aimants restent à 8 mm du bord de chaque cellule — la position d’angle Gridfinity standard.",
+  "baseplate.magnetAnchorHintLegacy": "Aimants fixés à 13 mm du centre de chaque cellule — correspond aux pièces imprimées avant cette correction."
 }

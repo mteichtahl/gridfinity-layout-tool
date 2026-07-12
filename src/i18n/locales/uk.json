@@ -2676,5 +2676,12 @@
   "baseplate.library.deleteWarning.description": "Видалення прибирає цю базову плиту з вашої бібліотеки. Пов'язані розкладки збережуть поточну базову плиту, але втратять зв'язок.",
   "baseplate.library.deleteWarning.usedByCurrent": "Використовується поточною розкладкою",
   "baseplate.library.deleteWarning.confirm": "Все одно видалити",
-  "commandPalette.openBaseplateLibrary": "Відкрити бібліотеку базових плит"
+  "commandPalette.openBaseplateLibrary": "Відкрити бібліотеку базових плит",
+  "baseplate.magnetAnchor": "Прив’язка магнітів",
+  "baseplate.magnetAnchorTooltip": "Де розташовані отвори для магнітів у кожній комірці на сітках, більших за 42 мм. Застосовується одночасно до базової плити, контейнерів і кришок, щоб їхні магніти залишалися вирівняними.",
+  "baseplate.magnetAnchorEdge": "Кути",
+  "baseplate.magnetAnchorCenter": "Класична",
+  "undo.magnetAnchorChanged": "Змінено прив’язку магнітів",
+  "baseplate.magnetAnchorHintCorners": "Магніти тримаються за 8 мм від краю кожної комірки — стандартна кутова позиція Gridfinity.",
+  "baseplate.magnetAnchorHintLegacy": "Магніти зафіксовано за 13 мм від центру кожної комірки — відповідає деталям, надрукованим до цього виправлення."
 }
