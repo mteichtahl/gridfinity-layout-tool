@@ -19,6 +19,7 @@ import {
   ChevronDownIcon,
   Collapsible,
 } from '@/design-system';
+import { LabelSizeControl } from '../../controls';
 import type { SelectOption } from '@/design-system';
 import { DESIGNER_CONSTRAINTS } from '../../../constants';
 import type {
@@ -430,6 +431,14 @@ export function LabelTabsSection() {
                   </div>
                 )}
               </div>
+              <LabelSizeControl
+                className="mt-3"
+                labelClassName="text-xs text-content-tertiary"
+                value={state.label.textStyle?.fontSizeOverride}
+                onChange={handlers.setTextSize}
+                min={state.textDefaults.minFontSize}
+                max={state.textDefaults.maxFontSize}
+              />
             </div>
           </Collapsible>
         </>

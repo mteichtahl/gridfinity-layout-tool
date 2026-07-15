@@ -10,7 +10,7 @@ import type {
   CutoutTextAnchor,
   TextMode,
 } from '@/features/bin-designer/types';
-import { TEXT_MAX_LENGTH } from '@/features/bin-designer/types';
+import { TEXT_MAX_LENGTH, withFontSizeOverride } from '@/features/bin-designer/types';
 import { useDesignerStore } from '@/features/bin-designer/store';
 import { resolveCutoutTextAnchor } from '@/shared/utils/cutoutLabel';
 import { useTranslation } from '@/i18n';
@@ -29,6 +29,7 @@ import {
 import type { FitCue } from '../panel/CutoutsSection/cutoutSectionVisibility';
 import { CutoutArrayControls } from '../panel/CutoutsSection/CutoutArrayControls';
 import { CutoutColorControls } from './CutoutColorControls';
+import { LabelSizeControl } from '../controls';
 import { arrayInstanceCount } from '@/shared/utils/cutoutArray';
 import { Button, Collapsible, Input, SliderInput } from '@/design-system';
 
@@ -301,7 +302,14 @@ function CutoutEngraveLabelControls({
   const anchor = resolveCutoutTextAnchor(cutout);
   const offset = cutout.textOffset ?? { x: 0, y: 0 };
   const textMode = useDesignerStore((s) => s.params.textDefaults.mode);
+  const minFontSize = useDesignerStore((s) => s.params.textDefaults.minFontSize);
+  const maxFontSize = useDesignerStore((s) => s.params.textDefaults.maxFontSize);
   const setTextDefaults = useDesignerStore((s) => s.setTextDefaults);
+
+  const fontSizeOverride = cutout.textStyle?.fontSizeOverride;
+  const setFontSizeOverride = (size: number | null) => {
+    onUpdate({ textStyle: withFontSizeOverride(cutout.textStyle, size) });
+  };
   // Through-cut isn't offered for cutouts; show it as engrave so the picker
   // reflects what the generator will actually produce.
   const effectiveMode: 'engrave' | 'emboss' = textMode === 'emboss' ? 'emboss' : 'engrave';
@@ -392,6 +400,13 @@ function CutoutEngraveLabelControls({
           disabled={disabled}
         />
       </div>
+      <LabelSizeControl
+        value={fontSizeOverride}
+        onChange={setFontSizeOverride}
+        min={minFontSize}
+        max={maxFontSize}
+        disabled={disabled}
+      />
     </div>
   );
 }

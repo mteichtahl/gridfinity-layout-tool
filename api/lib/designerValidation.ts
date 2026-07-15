@@ -223,12 +223,12 @@ const ALLOWED_TEXT_DEFAULTS_KEYS = new Set([
  * keeping them server-side now means a crafted share can't smuggle in a
  * `depth: -1` or `maxFontSize: 1e9` that crashes the BREP worker.
  */
-function validateTextDefaults(value: unknown): string | null {
-  if (!isObject(value)) return 'textDefaults must be an object';
+function validateTextDefaults(value: unknown, label = 'textDefaults'): string | null {
+  if (!isObject(value)) return `${label} must be an object`;
 
   for (const key of Object.keys(value)) {
     if (!ALLOWED_TEXT_DEFAULTS_KEYS.has(key)) {
-      return `textDefaults has unknown key: ${key}`;
+      return `${label} has unknown key: ${key}`;
     }
   }
 
@@ -236,31 +236,54 @@ function validateTextDefaults(value: unknown): string | null {
     value.font !== undefined &&
     !VALID_TEXT_FONTS.includes(value.font as (typeof VALID_TEXT_FONTS)[number])
   ) {
-    return `textDefaults.font must be one of: ${VALID_TEXT_FONTS.join(', ')}`;
+    return `${label}.font must be one of: ${VALID_TEXT_FONTS.join(', ')}`;
   }
   if (
     value.mode !== undefined &&
     !VALID_TEXT_MODES.includes(value.mode as (typeof VALID_TEXT_MODES)[number])
   ) {
-    return `textDefaults.mode must be one of: ${VALID_TEXT_MODES.join(', ')}`;
+    return `${label}.mode must be one of: ${VALID_TEXT_MODES.join(', ')}`;
   }
   if (value.depth !== undefined && (!isNumber(value.depth) || !inRange(value.depth, 0, 10))) {
-    return 'textDefaults.depth must be 0-10';
+    return `${label}.depth must be 0-10`;
   }
   if (value.margin !== undefined && (!isNumber(value.margin) || !inRange(value.margin, 0, 50))) {
-    return 'textDefaults.margin must be 0-50';
+    return `${label}.margin must be 0-50`;
   }
   if (
     value.minFontSize !== undefined &&
     (!isNumber(value.minFontSize) || !inRange(value.minFontSize, 0.5, 100))
   ) {
-    return 'textDefaults.minFontSize must be 0.5-100';
+    return `${label}.minFontSize must be 0.5-100`;
   }
   if (
     value.maxFontSize !== undefined &&
     (!isNumber(value.maxFontSize) || !inRange(value.maxFontSize, 0.5, 200))
   ) {
-    return 'textDefaults.maxFontSize must be 0.5-200';
+    return `${label}.maxFontSize must be 0.5-200`;
+  }
+  return null;
+}
+
+/**
+ * Per-instance text style override (cutout labels, label tabs): the same field
+ * caps as `textDefaults` plus `fontSizeOverride`, bounded so a crafted share
+ * can't smuggle a size that crashes the BREP worker. `label` prefixes each
+ * error with the offending path; the shared fields delegate to
+ * `validateTextDefaults`, which also rejects any unknown key.
+ */
+function validateTextStyleOverride(value: unknown, label: string): string | null {
+  if (!isObject(value)) return `${label} must be an object`;
+
+  const { fontSizeOverride, ...shared } = value;
+  const sharedErr = validateTextDefaults(shared, label);
+  if (sharedErr) return sharedErr;
+
+  if (
+    fontSizeOverride !== undefined &&
+    (!isNumber(fontSizeOverride) || !inRange(fontSizeOverride, 0.5, 200))
+  ) {
+    return `${label}.fontSizeOverride must be 0.5-200`;
   }
   return null;
 }
@@ -323,6 +346,10 @@ function validateLabel(label: unknown): string | null {
       ) {
         return `label.inset must be ${CONSTRAINTS.MIN_LABEL_TAB_INSET}-${CONSTRAINTS.MAX_LABEL_TAB_INSET}`;
       }
+    }
+    if (label.textStyle !== undefined) {
+      const styleErr = validateTextStyleOverride(label.textStyle, 'label.textStyle');
+      if (styleErr) return styleErr;
     }
   }
   return null;
@@ -530,6 +557,10 @@ function validateCutouts(value: unknown): string | null {
       )
     ) {
       return `cutouts[${i}].colorScope must be one of: ${VALID_CUTOUT_COLOR_SCOPES.join(', ')}`;
+    }
+    if (c.textStyle !== undefined) {
+      const styleErr = validateTextStyleOverride(c.textStyle, `cutouts[${i}].textStyle`);
+      if (styleErr) return styleErr;
     }
   }
   return null;
