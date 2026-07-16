@@ -81,6 +81,66 @@ describe('computeLayoutMetrics', () => {
       });
       expect(computeLayoutMetrics(customLayout).drawer_is_default).toBe(false);
     });
+
+    it('reports rectangular drawers as unshaped', () => {
+      const metrics = computeLayoutMetrics(createTestLayout());
+
+      expect(metrics.feature_shaped_drawer).toBe(false);
+      expect(metrics.drawer_shape_kind).toBe('rectangle');
+    });
+
+    it('flags layouts with a stored measured drawer size', () => {
+      expect(computeLayoutMetrics(createTestLayout()).feature_measured_mm).toBe(false);
+
+      const layout = createTestLayout({
+        drawer: { width: 10, depth: 8, height: 12, measuredMm: { width: 450, depth: 380 } },
+      });
+      expect(computeLayoutMetrics(layout).feature_measured_mm).toBe(true);
+    });
+
+    // A chamfered front-left corner — non-rectangular, so setDrawerOutline's
+    // isRectangleEquivalent normalization would NOT strip it. Exact-rectangle
+    // outlines never survive a write and would test an unreachable state.
+    const chamferedVertices = [
+      { x: 21, y: 0 },
+      { x: 420, y: 0 },
+      { x: 420, y: 336 },
+      { x: 0, y: 336 },
+      { x: 0, y: 21 },
+    ];
+
+    it('captures the authoring kind of a shaped drawer', () => {
+      const layout = createTestLayout({
+        drawer: {
+          width: 10,
+          depth: 8,
+          height: 12,
+          outline: {
+            vertices: chamferedVertices,
+            authoring: { kind: 'corners' },
+          },
+        },
+      });
+      const metrics = computeLayoutMetrics(layout);
+
+      expect(metrics.feature_shaped_drawer).toBe(true);
+      expect(metrics.drawer_shape_kind).toBe('corners');
+    });
+
+    it('reports outlines with a stripped authoring annotation as custom', () => {
+      const layout = createTestLayout({
+        drawer: {
+          width: 10,
+          depth: 8,
+          height: 12,
+          outline: {
+            vertices: chamferedVertices,
+          },
+        },
+      });
+
+      expect(computeLayoutMetrics(layout).drawer_shape_kind).toBe('custom');
+    });
   });
 
   describe('bin statistics', () => {

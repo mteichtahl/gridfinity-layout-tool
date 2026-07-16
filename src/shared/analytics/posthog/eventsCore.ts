@@ -133,6 +133,62 @@ export function trackBinCreated(props: BinCreatedProperties): void {
   }
 }
 
+/** Which drawer-shape authoring surface an event refers to. */
+export type DrawerShapeEditor = 'cells' | 'corners';
+
+/** Track a drawer-shape editor being opened. */
+export function trackDrawerShapeEditorOpened(editor: DrawerShapeEditor): void {
+  trackEvent('drawer_shape_editor_opened', { editor });
+}
+
+export interface DrawerShapeAppliedProperties {
+  editor: DrawerShapeEditor;
+  /** Bins pushed to staging by the new shape. */
+  displaced_bins: number;
+  /** Cells editor only: the user seeded the grid from the bin layout. */
+  used_trace: boolean;
+  /** The apply resolved to the plain rectangle (corner cuts all 'none'). */
+  cleared: boolean;
+}
+
+/** Track a drawer shape being applied from one of the editors. */
+export function trackDrawerShapeApplied(props: DrawerShapeAppliedProperties): void {
+  trackEvent('drawer_shape_applied', { ...props });
+}
+
+/** Track the sidebar toggle resetting the drawer back to a rectangle. */
+export function trackDrawerShapeReset(): void {
+  trackEvent('drawer_shape_reset', {});
+}
+
+export interface DrawerMeasuredCommittedProperties {
+  /** Leftover mm per axis after fitting the grid (negative = clamped up). */
+  slack_width_mm: number;
+  slack_depth_mm: number;
+  /** Whether a tighter half-unit fit was offered after this commit. */
+  half_fit_offered: boolean;
+  has_height: boolean;
+}
+
+/** Track the user committing a measured drawer size in mm. */
+export function trackDrawerMeasuredCommitted(props: DrawerMeasuredCommittedProperties): void {
+  trackEvent('drawer_measured_committed', {
+    ...props,
+    slack_width_mm: Math.round(props.slack_width_mm * 10) / 10,
+    slack_depth_mm: Math.round(props.slack_depth_mm * 10) / 10,
+  });
+}
+
+/** Track the half-unit fit suggestion being acted on. */
+export function trackDrawerHalfFitSuggestion(action: 'accepted' | 'dismissed'): void {
+  trackEvent('drawer_half_fit_suggestion', { action });
+}
+
+/** Track the stored drawer measurement being cleared. */
+export function trackDrawerMeasurementCleared(): void {
+  trackEvent('drawer_measurement_cleared', {});
+}
+
 export const MILESTONE_THRESHOLDS: Array<{
   key: 'first_bin' | 'engaged' | 'substantial' | 'power_user';
   min: number;

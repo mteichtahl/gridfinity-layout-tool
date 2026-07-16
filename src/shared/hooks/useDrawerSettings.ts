@@ -3,6 +3,7 @@ import { useShallow } from 'zustand/react/shallow';
 import { batch } from '@/core/cqrs';
 import {
   useLayoutStore,
+  useLibraryStore,
   useSettingsStore,
   useToastStore,
   useSelectionStore,
@@ -18,8 +19,14 @@ import {
 } from '@/core/constants';
 import { validateHalfGridModeToggle } from '@/shared/utils/halfGridConstraints';
 import type { HalfGridConstraintViolation } from '@/shared/utils/halfGridConstraints';
+import { fitAxisUnits, halfUnitUpgrade } from '@/shared/utils/drawerFit';
+import {
+  trackDrawerHalfFitSuggestion,
+  trackDrawerMeasuredCommitted,
+  trackDrawerMeasurementCleared,
+} from '@/shared/analytics/posthog';
 import type { STLSearchSite, UserSettings } from '@/core/store/settings';
-import type { Category, GridUnits, HeightUnits } from '@/core/types';
+import type { Category, GridUnits, HeightUnits, MeasuredDrawerMm } from '@/core/types';
 import { binId as toBinId, gridUnits, mm, mmToHeightUnits } from '@/core/types';
 import { isOk, isErr } from '@/core/result';
 import { useTranslation } from '@/i18n';
@@ -28,6 +35,14 @@ import { useTranslation } from '@/i18n';
  * Return type for useDrawerSettings hook.
  * Provides all drawer-related state and handlers needed by settings panels.
  */
+/** A tighter half-unit fit offered after a measured-mm commit. */
+export interface HalfFitSuggestion {
+  width: GridUnits;
+  depth: GridUnits;
+  slackWidthMm: number;
+  slackDepthMm: number;
+}
+
 export interface UseDrawerSettingsReturn {
   // Drawer dimensions
   drawer: {
@@ -39,6 +54,14 @@ export interface UseDrawerSettingsReturn {
     x: 'start' | 'end';
     y: 'start' | 'end';
   };
+
+  // Measured physical drawer (mm-first entry)
+  measuredMm: MeasuredDrawerMm | undefined;
+  halfFitSuggestion: HalfFitSuggestion | null;
+  handleMeasuredCommit: (widthMm: number, depthMm: number, heightMm?: number) => void;
+  acceptHalfFitSuggestion: () => void;
+  dismissHalfFitSuggestion: () => void;
+  clearMeasurement: () => void;
 
   // Computed values
   widthStep: number;
@@ -149,6 +172,16 @@ export function useDrawerSettings(): UseDrawerSettingsReturn {
     null
   );
   const [showSaveCategoriesConfirm, setShowSaveCategoriesConfirm] = useState(false);
+  // The suggestion is anchored to the layout and drawer dims it was computed
+  // against; the effect below discards it the moment either drifts (layout
+  // switch, undo, stepper edit, canvas drag-resize), so accepting can never
+  // apply units derived from a different measurement.
+  const [halfFit, setHalfFit] = useState<{
+    suggestion: HalfFitSuggestion;
+    layoutId: string;
+    baseWidth: number;
+    baseDepth: number;
+  } | null>(null);
 
   // Layout store selectors
   const {
@@ -162,6 +195,7 @@ export function useDrawerSettings(): UseDrawerSettingsReturn {
     drawerHeight,
     fractionalEdgeX,
     fractionalEdgeY,
+    measuredMm,
   } = useLayoutStore(
     useShallow((state) => ({
       layout: state.layout,
@@ -174,6 +208,7 @@ export function useDrawerSettings(): UseDrawerSettingsReturn {
       drawerHeight: state.layout.drawer.height,
       fractionalEdgeX: state.layout.drawer.fractionalEdgeX ?? 'end',
       fractionalEdgeY: state.layout.drawer.fractionalEdgeY ?? 'end',
+      measuredMm: state.layout.drawer.measuredMm,
     }))
   );
 
@@ -188,6 +223,18 @@ export function useDrawerSettings(): UseDrawerSettingsReturn {
 
   // Selection store selectors
   const activeLayerId = useSelectionStore((state) => state.activeLayerId);
+  const activeLayoutId = useLibraryStore((state) => state.library.activeLayoutId);
+
+  // Derived, not effect-cleared: the suggestion only renders while its
+  // anchors still hold, so stale state simply stops showing (and is
+  // replaced on the next commit).
+  const halfFitSuggestion =
+    halfFit !== null &&
+    halfFit.layoutId === activeLayoutId &&
+    halfFit.baseWidth === (drawerWidth as number) &&
+    halfFit.baseDepth === (drawerDepth as number)
+      ? halfFit.suggestion
+      : null;
 
   const { settings, saveCurrentAsDefaults, saveCategoriesAsDefaults, updateSetting } =
     useSettingsStore(
@@ -318,6 +365,95 @@ export function useDrawerSettings(): UseDrawerSettingsReturn {
     [updateDrawer]
   );
 
+  // Measured-mm commit: fit the largest grid that physically fits (floor,
+  // never round up), persist the measurement, and offer a tighter half-unit
+  // fit instead of silently flipping half-grid mode on.
+  const handleMeasuredCommit = useCallback(
+    (widthMm: number, depthMm: number, heightMm?: number) => {
+      const widthFit = fitAxisUnits(widthMm, gridUnitMm, halfGridMode);
+      const depthFit = fitAxisUnits(depthMm, gridUnitMm, halfGridMode);
+      const measured: MeasuredDrawerMm = {
+        width: widthMm,
+        depth: depthMm,
+        ...(heightMm !== undefined ? { height: heightMm } : {}),
+      };
+      // Floor at the 0.01-unit height resolution (mmToHeightUnits rounds,
+      // which could exceed the measured drawer by a hair). The floor clamp
+      // must match drawerUpdateSchema's MIN_LAYER_HEIGHT or validation
+      // silently rejects the whole command, measurement included.
+      const heightUnitsValue =
+        heightMm !== undefined
+          ? (Math.max(
+              CONSTRAINTS.MIN_LAYER_HEIGHT,
+              Math.min(
+                CONSTRAINTS.GRID_MAX,
+                Math.floor((heightMm / heightUnitMm) * 100 + 1e-6) / 100
+              )
+            ) as HeightUnits)
+          : undefined;
+
+      batch(() =>
+        updateDrawer({
+          width: gridUnits(widthFit.units),
+          depth: gridUnits(depthFit.units),
+          ...(heightUnitsValue !== undefined ? { height: heightUnitsValue } : {}),
+          measuredMm: measured,
+        })
+      );
+
+      let suggestion: HalfFitSuggestion | null = null;
+      if (!halfGridMode) {
+        const widthUpgrade = halfUnitUpgrade(widthMm, gridUnitMm, widthFit.units);
+        const depthUpgrade = halfUnitUpgrade(depthMm, gridUnitMm, depthFit.units);
+        if (widthUpgrade !== null || depthUpgrade !== null) {
+          suggestion = {
+            width: gridUnits((widthUpgrade ?? widthFit).units),
+            depth: gridUnits((depthUpgrade ?? depthFit).units),
+            slackWidthMm: (widthUpgrade ?? widthFit).slackMm,
+            slackDepthMm: (depthUpgrade ?? depthFit).slackMm,
+          };
+        }
+      }
+      setHalfFit(
+        suggestion === null
+          ? null
+          : {
+              suggestion,
+              layoutId: activeLayoutId,
+              baseWidth: widthFit.units,
+              baseDepth: depthFit.units,
+            }
+      );
+
+      trackDrawerMeasuredCommitted({
+        slack_width_mm: widthFit.slackMm,
+        slack_depth_mm: depthFit.slackMm,
+        half_fit_offered: suggestion !== null,
+        has_height: heightMm !== undefined,
+      });
+    },
+    [gridUnitMm, halfGridMode, heightUnitMm, updateDrawer, activeLayoutId]
+  );
+
+  const acceptHalfFitSuggestion = useCallback(() => {
+    if (halfFitSuggestion === null) return;
+    setHalfGridMode(true);
+    batch(() => updateDrawer({ width: halfFitSuggestion.width, depth: halfFitSuggestion.depth }));
+    setHalfFit(null);
+    trackDrawerHalfFitSuggestion('accepted');
+  }, [halfFitSuggestion, setHalfGridMode, updateDrawer]);
+
+  const dismissHalfFitSuggestion = useCallback(() => {
+    setHalfFit(null);
+    trackDrawerHalfFitSuggestion('dismissed');
+  }, []);
+
+  const clearMeasurement = useCallback(() => {
+    batch(() => updateDrawer({ measuredMm: null }));
+    setHalfFit(null);
+    trackDrawerMeasurementCleared();
+  }, [updateDrawer]);
+
   // Half-bin mode toggle with validation
   const handleHalfBinToggle = useCallback(() => {
     const result = toggleHalfGridMode();
@@ -413,6 +549,14 @@ export function useDrawerSettings(): UseDrawerSettingsReturn {
       x: fractionalEdgeX,
       y: fractionalEdgeY,
     },
+
+    // Measured physical drawer
+    measuredMm,
+    halfFitSuggestion,
+    handleMeasuredCommit,
+    acceptHalfFitSuggestion,
+    dismissHalfFitSuggestion,
+    clearMeasurement,
 
     // Computed values
     widthStep,

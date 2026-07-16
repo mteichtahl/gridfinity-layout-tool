@@ -29,9 +29,18 @@ export {
   trackFillOperation,
   trackPaintMode,
   trackBinCreated,
+  trackDrawerShapeEditorOpened,
+  trackDrawerShapeApplied,
+  trackDrawerShapeReset,
+  trackDrawerMeasuredCommitted,
+  trackDrawerHalfFitSuggestion,
+  trackDrawerMeasurementCleared,
   MILESTONE_THRESHOLDS,
   type AnalyticsTrigger,
   type BinCreatedProperties,
+  type DrawerMeasuredCommittedProperties,
+  type DrawerShapeAppliedProperties,
+  type DrawerShapeEditor,
 } from './eventsCore';
 export {
   getActivityContext,
