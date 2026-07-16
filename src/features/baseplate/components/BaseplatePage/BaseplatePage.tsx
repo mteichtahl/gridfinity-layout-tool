@@ -22,6 +22,7 @@ import { useResponsive } from '@/shared/hooks/useResponsive';
 import { Button } from '@/design-system';
 import { ToolSwitcher } from '@/shared/components/ToolSwitcher';
 import { HeaderSupportLinks } from '@/shared/components/HeaderSupportLinks';
+import { SaveStatusIndicator } from '@/shared/components/SaveStatusIndicator';
 import { LoadingFallback } from '@/shared/components/LoadingFallback';
 import { lazyWithRetry, namedExport } from '@/shared/utils/lazyWithRetry';
 import { useBaseplateRouting } from '@/shared/hooks/useBaseplateRouting';
@@ -88,11 +89,13 @@ export function BaseplatePage() {
   // Initialize generation bridge
   useBaseplateGeneration();
 
-  // Backfill the library pointer / re-materialize the active design on load.
-  useBaseplateLibraryInit();
+  // Resolves the library pointer, and (autoCreate) guarantees an active design
+  // exists so the header needs no Save/New cluster. autoCreate is /baseplate
+  // only — the planner mount must not mint an entry per layout.
+  useBaseplateLibraryInit({ autoCreate: true });
 
   // Persist edits to the active library design (debounced).
-  useBaseplateAutoSave();
+  const saveStatus = useBaseplateAutoSave();
 
   const showBaseplateLibrary = useViewStore((s) => s.showBaseplateLibrary);
   const setShowBaseplateLibrary = useViewStore((s) => s.setShowBaseplateLibrary);
@@ -238,6 +241,8 @@ export function BaseplatePage() {
         <div className="flex items-center gap-3 min-w-0">
           <ToolSwitcher compact={isMobile} iconOnly={isMobile || isTablet} />
 
+          {!isMobile && <BaseplateSelector />}
+
           <Button
             type="button"
             variant="ghost"
@@ -280,12 +285,11 @@ export function BaseplatePage() {
             )}
             <span className="hidden lg:inline">{t('common.export')}</span>
           </Button>
-
-          {!isMobile && <BaseplateSelector />}
         </div>
 
         {isDesktop && (
           <div className="flex items-center gap-1 flex-shrink-0">
+            <SaveStatusIndicator status={saveStatus} />
             <HeaderSupportLinks />
           </div>
         )}

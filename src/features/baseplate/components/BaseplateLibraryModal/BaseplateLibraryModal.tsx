@@ -12,6 +12,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useShallow } from 'zustand/react/shallow';
 import { useLayoutStore } from '@/core/store/layout';
+import { useToastStore } from '@/core/store/toast';
 import { useMutations } from '@/shared/contexts';
 import { isOk } from '@/core/result';
 import { useTranslation } from '@/i18n';
@@ -21,6 +22,8 @@ import type { BaseplateDesignId } from '@/core/types';
 import type { SavedBaseplateDesign } from '@/features/baseplate/types/library';
 import { listDesigns } from '@/features/baseplate/storage/BaseplateStorage';
 import { useBaseplateLibrary } from '@/features/baseplate/hooks/useBaseplateLibrary';
+import { nextBaseplateName } from '@/features/baseplate/utils/baseplateName';
+import { DEFAULT_BASEPLATE_PARAMS } from '@/core/constants';
 import { DeleteBaseplateWarningDialog } from '../DeleteBaseplateWarningDialog';
 
 interface BaseplateLibraryModalProps {
@@ -35,7 +38,8 @@ export function BaseplateLibraryModal({ isOpen, onClose }: BaseplateLibraryModal
 
 function BaseplateLibraryModalContent({ onClose }: { onClose: () => void }) {
   const t = useTranslation();
-  const { switchActive, renameDesign, duplicateDesign, deleteDesign } = useBaseplateLibrary();
+  const { list, switchActive, saveCurrentAsNew, renameDesign, duplicateDesign, deleteDesign } =
+    useBaseplateLibrary();
   const { activeBaseplateId, baseplateParams } = useLayoutStore(
     useShallow((s) => ({
       activeBaseplateId: s.layout.activeBaseplateId ?? null,
@@ -43,9 +47,25 @@ function BaseplateLibraryModalContent({ onClose }: { onClose: () => void }) {
     }))
   );
   const mutations = useMutations();
+  const addToast = useToastStore((s) => s.addToast);
 
   const [designs, setDesigns] = useState<SavedBaseplateDesign[]>([]);
+  const [creating, setCreating] = useState(false);
   const [pendingDelete, setPendingDelete] = useState<SavedBaseplateDesign | null>(null);
+
+  const handleNew = useCallback(async () => {
+    setCreating(true);
+    const result = await saveCurrentAsNew(nextBaseplateName(list), { ...DEFAULT_BASEPLATE_PARAMS });
+    setCreating(false);
+    if (!isOk(result)) {
+      // Say so rather than leaving the modal open with a re-enabled button and
+      // no explanation. Stays open on purpose so the click can be retried.
+      addToast(t('toast.baseplateSaveFailed'), 'error');
+      return;
+    }
+    mutations.setActiveBaseplate(result.value.id, result.value.params);
+    onClose();
+  }, [list, saveCurrentAsNew, mutations, onClose, addToast, t]);
 
   const modalRef = useRef<HTMLDivElement>(null);
   const closeButtonRef = useRef<HTMLButtonElement>(null);
@@ -147,16 +167,26 @@ function BaseplateLibraryModalContent({ onClose }: { onClose: () => void }) {
           <h2 id="baseplate-library-title" className="text-2xl font-bold text-content">
             {t('baseplate.library.title')}
           </h2>
-          <IconButton
-            ref={closeButtonRef}
-            size="sm"
-            touchTarget={false}
-            onClick={onClose}
-            className="text-content-secondary hover:bg-surface hover:text-content"
-            aria-label={t('baseplate.library.closeDialog')}
-          >
-            <XIcon className="w-5 h-5" />
-          </IconButton>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="secondary"
+              onClick={() => void handleNew()}
+              disabled={creating}
+              className="h-8 px-2.5 text-sm"
+            >
+              {t('baseplate.library.newBaseplate')}
+            </Button>
+            <IconButton
+              ref={closeButtonRef}
+              size="sm"
+              touchTarget={false}
+              onClick={onClose}
+              className="text-content-secondary hover:bg-surface hover:text-content"
+              aria-label={t('baseplate.library.closeDialog')}
+            >
+              <XIcon className="w-5 h-5" />
+            </IconButton>
+          </div>
         </div>
 
         {/* Content */}
