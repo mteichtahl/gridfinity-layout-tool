@@ -19,6 +19,7 @@ import {
   MobileSettingsPanel,
   MobileLayoutsPanel,
   BinContextMenuWrapper,
+  MobileAboutStrip,
 } from '@/shell/Mobile';
 import type { SaveStatus } from '@/shared/hooks';
 import { useOnboarding } from '@/features/onboarding';
@@ -68,6 +69,8 @@ export function MobileLayout({
         <Grid shouldShowDrawTutorial={shouldShowDrawTutorial} />
         <Staging />
       </main>
+
+      <MobileAboutStrip />
 
       {/* Bottom Navigation */}
       <BottomNavBar />
