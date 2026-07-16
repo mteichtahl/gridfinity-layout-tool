@@ -338,7 +338,6 @@ const en: Record<string, string> = {
   'rightPanel.historyTab': 'History',
 
   // Snapshots / Version History
-  'snapshots.title': 'Version history',
   'snapshots.empty': 'No snapshots yet',
   'snapshots.emptyDescription': 'Snapshots are saved automatically every 2 minutes',
   'snapshots.restore': 'Restore',
@@ -676,7 +675,7 @@ const en: Record<string, string> = {
   'share.useShareLinkInstead': 'Use share link instead',
 
   // Layout Library
-  'layouts.newLayout': 'New Layout',
+  'layouts.newLayout': 'New layout',
   'layouts.createNewLayoutHint': 'Start with a blank canvas',
   'layouts.shareLayout': 'Share Layout',
   'layouts.searchPlaceholder': 'Search layouts...',
@@ -1203,6 +1202,7 @@ const en: Record<string, string> = {
   'mobile.layouts.deleteShare': 'Delete share',
   'mobile.layouts.getIdeasForYourDrawer': 'Get ideas for your drawer',
   'mobile.layouts.layoutCount': '{count} layouts',
+  'mobile.layouts.layoutCountOne': '1 layout',
   'mobile.layouts.permission': 'Permission',
   'mobile.layouts.previewBins': '{count} bins',
   'mobile.layouts.renameLayout': 'Rename layout',
@@ -2568,7 +2568,8 @@ const en: Record<string, string> = {
   'collab.cursors.viewing': '{count} viewing',
   'collab.mobileButton.ariaLabel': '{count} collaborators - tap to see all',
   'collab.mobileButton.title': '{count} collaborators',
-  'collab.participantCount': '{count} {count, plural, one {person} other {people}}',
+  'collab.participantCount': '{count} people',
+  'collab.participantCountOne': '1 person',
 
   // Mobile Tabs
   'mobile.tabs.tools': 'Tools',
