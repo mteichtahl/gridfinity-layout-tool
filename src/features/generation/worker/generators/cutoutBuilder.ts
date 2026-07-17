@@ -980,6 +980,16 @@ export function buildCutoutCuts(
   innerD: number,
   wallHeight: number
 ): CutoutTools {
+  // Color ordinals MUST come from the full cutout list — the paint layer
+  // enumerates ALL cutouts (incl. mesh imprints), so filtering first would
+  // shift every subsequent unit's tag and recolor the wrong cavities.
+  const colorOrdinal = new Map(enumerateCutoutColorUnits(params.cutouts).map((u, i) => [u.key, i]));
+
+  // Mesh imprints are not profile-extrudable: they subtract post-tessellation
+  // in the mesh domain (meshImprint stage), never through the BREP cut path.
+  if (params.cutouts.some((c) => c.shape === 'mesh')) {
+    params = { ...params, cutouts: params.cutouts.filter((c) => c.shape !== 'mesh') };
+  }
   if (params.cutouts.length === 0) return { cutTools: [], fuseTools: [] };
 
   // Cutout x,y are relative to interior bottom-left corner (0,0).
@@ -1002,7 +1012,6 @@ export function buildCutoutCuts(
   // cutout is tagged (colored or not), so recoloring stays a pure read-side
   // change that never regenerates geometry.
   const rawTags: number[] = [];
-  const colorOrdinal = new Map(enumerateCutoutColorUnits(params.cutouts).map((u, i) => [u.key, i]));
   const cavityTag = (cutout: Cutout): number =>
     cutoutColorTag(colorOrdinal.get(cutoutUnitKey(cutout)) ?? 0);
   const pushRaw = (shape: Shape3D, tag: number): void => {

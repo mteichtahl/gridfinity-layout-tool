@@ -658,6 +658,26 @@ export function migrateParams(params: MigrateParamsInput): BinParams {
     heightUnits * heightUnitMm + migrateExtraWallHeightMm(params.extraWallHeightMm)
   );
 
+  // A mesh cutout without its asset can't generate anything — drop orphans
+  // (crafted/corrupt designs) instead of erroring downstream; symmetrically,
+  // drop assets no cutout references so they can't ride along via `...rest`
+  // and bloat the design forever.
+  const migratedCutouts = (params.cutouts ?? DEFAULT_BIN_PARAMS.cutouts)
+    .map((c) => migrateCutout(c as Cutout & LegacyCutoutFields))
+    .filter(
+      (c) =>
+        c.shape !== 'mesh' ||
+        (c.meshId !== undefined && params.meshAssets?.[c.meshId] !== undefined)
+    );
+  const referencedMeshIds = new Set(
+    migratedCutouts.filter((c) => c.shape === 'mesh').map((c) => c.meshId)
+  );
+  const migratedMeshAssets = params.meshAssets
+    ? Object.fromEntries(
+        Object.entries(params.meshAssets).filter(([id]) => referencedMeshIds.has(id))
+      )
+    : undefined;
+
   return {
     ...DEFAULT_BIN_PARAMS,
     ...rest,
@@ -671,9 +691,10 @@ export function migrateParams(params: MigrateParamsInput): BinParams {
     slotConfig,
     dividerPieces,
     inserts: params.inserts ?? DEFAULT_BIN_PARAMS.inserts,
-    cutouts: (params.cutouts ?? DEFAULT_BIN_PARAMS.cutouts).map((c) =>
-      migrateCutout(c as Cutout & LegacyCutoutFields)
-    ),
+    cutouts: migratedCutouts,
+    ...(migratedMeshAssets && Object.keys(migratedMeshAssets).length > 0
+      ? { meshAssets: migratedMeshAssets }
+      : { meshAssets: undefined }),
     cutoutConfig,
     wallPattern: wallPatternConfig,
     featureColors: migrateFeatureColors(params.featureColors, wallHeightMm),
@@ -735,6 +756,10 @@ export const STYLE_DEFAULT_OMIT_KEYS = [
   'cellMask',
   'compartments',
   'cutouts',
+  // Mesh imprint assets are per-design geometry AND large (100KB+ compressed
+  // STL data) — carrying them into "default for new bins" would bloat every
+  // subsequent design.
+  'meshAssets',
   'inserts',
   'handles',
   'walls',
