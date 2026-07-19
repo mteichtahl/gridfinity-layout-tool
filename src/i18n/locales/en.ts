@@ -2044,6 +2044,23 @@ const en: Record<string, string> = {
   'binDesigner.cutouts.stlImport.oversizeWarning':
     'This model is larger than the bin interior. It will be placed anyway — enlarge the bin or use a smaller model for a full pocket.',
   'binDesigner.cutouts.stlImport.place': 'Place in bin',
+  'binDesigner.importBin.title': 'Import STL as bin',
+  'binDesigner.importBin.widthUnits': 'Width (units)',
+  'binDesigner.importBin.depthUnits': 'Depth (units)',
+  'binDesigner.importBin.heightUnits': 'Height (units)',
+  'binDesigner.importBin.lipDetected': 'Stacking lip detected in mesh height',
+  'binDesigner.importBin.offGridWarning':
+    'This model deviates more than {mm}mm from standard Gridfinity dimensions. Check the size and orientation — the claimed footprint only affects layout planning, the mesh is never scaled.',
+  'binDesigner.importBin.save': 'Import as bin design',
+  'binDesigner.importBin.saveFailed': 'Could not save the imported design',
+  'binDesigner.importBin.success': 'Imported "{name}" as a bin design',
+  'binDesigner.importedMesh.group': 'Imported bin',
+  'binDesigner.importedMesh.source': 'Imported from {file}',
+  'binDesigner.importedMesh.footprintHelp':
+    'These set the grid footprint the layout planner reserves for this bin. The mesh itself is never resized.',
+  'binDesigner.importedMesh.exportStl': 'Export STL',
+  'binDesigner.importedMesh.export3mf': '3MF',
+  'binDesigner.importedMesh.exportFailed': 'Export failed — try again',
   'binDesigner.cutouts.scanImport.title': 'Scan with your phone',
   'binDesigner.cutouts.scanImport.buttonLabel': 'Scan',
   'binDesigner.cutouts.scanImport.hint':
