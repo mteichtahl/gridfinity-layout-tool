@@ -667,6 +667,8 @@
   "binDesigner.itemKind.bin.description": "Власний контейнер Gridfinity",
   "binDesigner.itemKind.toolRack": "Тримач інструментів",
   "binDesigner.itemKind.toolRack.description": "Похилий тримач для плоскогубців, пінцетів і ручних інструментів",
+  "binDesigner.itemKind.importedMesh": "Імпортований контейнер",
+  "binDesigner.itemKind.importedMesh.description": "Контейнер, імпортований зі STL-файлу",
   "binDesigner.labelTabs": "Виступи для міток",
   "binDesigner.labelTabs.depthAria": "Глибина вкладки",
   "binDesigner.labelTabs.heightAria": "Висота вкладки",

@@ -1757,6 +1757,8 @@ const en: Record<string, string> = {
   'binDesigner.itemKind.bin.description': 'Custom Gridfinity storage bin',
   'binDesigner.itemKind.toolRack': 'Tool rack',
   'binDesigner.itemKind.toolRack.description': 'Angled rack for pliers, tweezers, and hand tools',
+  'binDesigner.itemKind.importedMesh': 'Imported bin',
+  'binDesigner.itemKind.importedMesh.description': 'Bin imported from an STL file',
   'binDesigner.newToolRack': 'New tool rack (experimental)',
   'binDesigner.newBin': 'New bin',
   'binDesigner.rack.group': 'Tool rack',

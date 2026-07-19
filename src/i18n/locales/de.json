@@ -667,6 +667,8 @@
   "binDesigner.itemKind.bin.description": "Individueller Gridfinity-Aufbewahrungsbehälter",
   "binDesigner.itemKind.toolRack": "Werkzeughalter",
   "binDesigner.itemKind.toolRack.description": "Schräger Halter für Zangen, Pinzetten und Handwerkzeuge",
+  "binDesigner.itemKind.importedMesh": "Importierter Behälter",
+  "binDesigner.itemKind.importedMesh.description": "Aus einer STL-Datei importierter Behälter",
   "binDesigner.labelTabs": "Etikettenhalter",
   "binDesigner.labelTabs.depthAria": "Tab-Tiefe",
   "binDesigner.labelTabs.heightAria": "Tab-Höhe",

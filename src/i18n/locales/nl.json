@@ -667,6 +667,8 @@
   "binDesigner.itemKind.bin.description": "Aangepaste Gridfinity-opbergbak",
   "binDesigner.itemKind.toolRack": "Gereedschapsrek",
   "binDesigner.itemKind.toolRack.description": "Schuin rek voor tangen, pincetten en handgereedschap",
+  "binDesigner.itemKind.importedMesh": "Geïmporteerde bak",
+  "binDesigner.itemKind.importedMesh.description": "Bak geïmporteerd uit een STL-bestand",
   "binDesigner.labelTabs": "Labeltabs",
   "binDesigner.labelTabs.depthAria": "Tabdiepte",
   "binDesigner.labelTabs.heightAria": "Tabhoogte",

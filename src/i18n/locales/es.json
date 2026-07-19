@@ -667,6 +667,8 @@
   "binDesigner.itemKind.bin.description": "Contenedor Gridfinity personalizado",
   "binDesigner.itemKind.toolRack": "Soporte de herramientas",
   "binDesigner.itemKind.toolRack.description": "Soporte inclinado para alicates, pinzas y herramientas manuales",
+  "binDesigner.itemKind.importedMesh": "Contenedor importado",
+  "binDesigner.itemKind.importedMesh.description": "Contenedor importado desde un archivo STL",
   "binDesigner.labelTabs": "Pestañas de etiqueta",
   "binDesigner.labelTabs.depthAria": "Profundidad de la pestaña",
   "binDesigner.labelTabs.heightAria": "Altura de la pestaña",

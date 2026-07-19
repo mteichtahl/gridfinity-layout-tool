@@ -667,6 +667,8 @@
   "binDesigner.itemKind.bin.description": "Bin portaoggetti Gridfinity personalizzato",
   "binDesigner.itemKind.toolRack": "Rastrelliera per utensili",
   "binDesigner.itemKind.toolRack.description": "Rastrelliera inclinata per pinze, pinzette e utensili a mano",
+  "binDesigner.itemKind.importedMesh": "Contenitore importato",
+  "binDesigner.itemKind.importedMesh.description": "Contenitore importato da un file STL",
   "binDesigner.labelTabs": "Linguette etichetta",
   "binDesigner.labelTabs.depthAria": "Profondità linguetta",
   "binDesigner.labelTabs.heightAria": "Altezza linguetta",
