@@ -1,11 +1,18 @@
 import { describe, it, expect } from 'vitest';
+import type { SlotConfig } from '@/shared/types/bin';
 import {
   calculateSlotPositions,
   calculateDividerHeight,
   calculateDividerLength,
+  calculateShortDividerLengths,
+  calculateShortDividerSpans,
   getEffectiveSlotDimensions,
+  getReceptacleDepth,
   resolveCompartmentDividerHeight,
+  resolveCrossDividerMode,
   MIN_COMPARTMENT_DIVIDER_HEIGHT,
+  MIN_DIVIDER_FOR_RECEPTACLES,
+  RECEPTACLE_DEPTH_RATIO,
 } from './slotMath';
 
 describe('calculateSlotPositions', () => {
@@ -179,5 +186,105 @@ describe('getEffectiveSlotDimensions', () => {
     const { slotDepth } = getEffectiveSlotDimensions(0.4, 1.2, 0.1);
     expect(slotDepth).toBeCloseTo(0.32, 10);
     expect(slotDepth).toBeLessThan(0.4);
+  });
+});
+
+describe('getReceptacleDepth', () => {
+  it('scales with divider thickness and leaves a 40% web', () => {
+    expect(getReceptacleDepth(1.6)).toBeCloseTo(0.48, 10);
+    expect(1.6 - 2 * getReceptacleDepth(1.6)).toBeCloseTo(
+      1.6 * (1 - 2 * RECEPTACLE_DEPTH_RATIO),
+      10
+    );
+  });
+});
+
+describe('calculateShortDividerSpans', () => {
+  it('returns null spans with no long dividers', () => {
+    expect(calculateShortDividerSpans([], 80, 1.6)).toEqual({ interior: null, edge: null });
+  });
+
+  it('returns only an edge span with a single long divider', () => {
+    const spans = calculateShortDividerSpans([0], 80, 1.6);
+    expect(spans.interior).toBeNull();
+    // wall face at -40 to divider face at -0.8
+    expect(spans.edge).toBeCloseTo(39.2, 10);
+  });
+
+  it('computes interior and edge spans for evenly spaced dividers', () => {
+    // 80mm at 20mm spacing → dividers at -20, 0, +20
+    const spans = calculateShortDividerSpans([-20, 0, 20], 80, 1.6);
+    expect(spans.interior).toBeCloseTo(18.4, 10);
+    expect(spans.edge).toBeCloseTo(19.2, 10);
+  });
+
+  it('sorts unordered positions before measuring', () => {
+    const spans = calculateShortDividerSpans([20, -20, 0], 80, 1.6);
+    expect(spans.interior).toBeCloseTo(18.4, 10);
+    expect(spans.edge).toBeCloseTo(19.2, 10);
+  });
+
+  it('uses the minimum gap for non-uniform positions', () => {
+    // Gaps of 15 and 25 → the piece must fit the 15mm compartment
+    const spans = calculateShortDividerSpans([-20, -5, 20], 80, 1.6);
+    expect(spans.interior).toBeCloseTo(15 - 1.6, 10);
+  });
+});
+
+describe('calculateShortDividerLengths', () => {
+  it('adds receptacle tabs on interior ends and symmetric min-tabs on edge pieces', () => {
+    // receptacle depth 0.48, clearance 0.25 → tab clamps to 0.3 minimum;
+    // wall slot depth 1.0 → wall tab = 0.45, but edge pieces use
+    // min(wallTab, receptacleTab) on BOTH ends so they fit either way round
+    const lengths = calculateShortDividerLengths({ interior: 18.4, edge: 19.2 }, 1.0, 0.48, 0.25);
+    expect(lengths.interior).toBeCloseTo(18.4 + 0.6, 10);
+    expect(lengths.edge).toBeCloseTo(19.2 + 0.6, 10);
+  });
+
+  it('passes through null spans', () => {
+    const lengths = calculateShortDividerLengths({ interior: null, edge: null }, 1.0, 0.48, 0.25);
+    expect(lengths).toEqual({ interior: null, edge: null });
+  });
+});
+
+describe('resolveCrossDividerMode', () => {
+  const bothConfig = (overrides: Partial<SlotConfig> = {}): SlotConfig => ({
+    x: { enabled: true, pitch: 20 },
+    y: { enabled: true, pitch: 20 },
+    width: 2.0,
+    depth: 1.0,
+    ...overrides,
+  });
+
+  it('defaults to lap with longAxis y when fields are absent', () => {
+    expect(resolveCrossDividerMode(bothConfig(), 1.6)).toEqual({ style: 'lap', longAxis: 'y' });
+  });
+
+  it('honors insert when the divider is thick enough', () => {
+    expect(
+      resolveCrossDividerMode(bothConfig({ crossStyle: 'insert', longAxis: 'x' }), 1.6)
+    ).toEqual({ style: 'insert', longAxis: 'x' });
+  });
+
+  it('degrades insert to lap below the receptacle thickness floor', () => {
+    expect(
+      resolveCrossDividerMode(
+        bothConfig({ crossStyle: 'insert' }),
+        MIN_DIVIDER_FOR_RECEPTACLES - 0.1
+      )
+    ).toEqual({ style: 'lap', longAxis: 'y' });
+  });
+
+  it('ignores insert when only one axis is enabled', () => {
+    const single = bothConfig({ crossStyle: 'insert', y: { enabled: false, pitch: 20 } });
+    expect(resolveCrossDividerMode(single, 1.6).style).toBe('lap');
+  });
+
+  it('clamps corrupted persisted values to safe defaults', () => {
+    const corrupted = bothConfig({
+      crossStyle: 'diagonal' as never,
+      longAxis: 'z' as never,
+    });
+    expect(resolveCrossDividerMode(corrupted, 1.6)).toEqual({ style: 'lap', longAxis: 'y' });
   });
 });

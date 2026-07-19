@@ -6,6 +6,7 @@
  */
 
 import { GRIDFINITY } from '@/shared/constants/bin';
+import type { CrossDividerStyle, SlotConfig } from '@/shared/types/bin';
 
 const LIP_SMALL_TAPER = GRIDFINITY.LIP_SMALL_TAPER;
 
@@ -113,8 +114,112 @@ export function calculateDividerLength(
   slotDepth: number,
   clearance: number
 ): number {
-  const tabDepth = Math.max(MIN_TAB_ENGAGEMENT, slotDepth - clearance - DIVIDER_LENGTH_CLEARANCE);
-  return innerDim + 2 * tabDepth;
+  return innerDim + 2 * tabEngagement(slotDepth, clearance);
+}
+
+/** Tab engagement depth for one divider end given the receiving slot depth. */
+export function tabEngagement(slotDepth: number, clearance: number): number {
+  return Math.max(MIN_TAB_ENGAGEMENT, slotDepth - clearance - DIVIDER_LENGTH_CLEARANCE);
+}
+
+/**
+ * Receptacle groove depth per divider face, as a fraction of divider
+ * thickness. Grooves are cut into BOTH faces at each position, so this
+ * ratio leaves a 40% web (1 − 2 × 0.3) between opposing grooves.
+ */
+export const RECEPTACLE_DEPTH_RATIO = 0.3;
+
+/**
+ * Minimum divider thickness for functional face receptacles (mm).
+ * Below this the per-face groove (thickness × RECEPTACLE_DEPTH_RATIO)
+ * is too shallow to register a short divider, and the remaining web
+ * becomes fragile.
+ */
+export const MIN_DIVIDER_FOR_RECEPTACLES = 1.2;
+
+/** Per-face receptacle groove depth for a given divider thickness. */
+export function getReceptacleDepth(dividerThickness: number): number {
+  return dividerThickness * RECEPTACLE_DEPTH_RATIO;
+}
+
+/**
+ * Resolve the effective cross-divider mode for a slot configuration.
+ *
+ * Returns 'lap' unless both axes are enabled, 'insert' was requested, and
+ * the divider is thick enough to carry face receptacles — geometry and UI
+ * share this so a too-thin divider degrades identically everywhere.
+ */
+export function resolveCrossDividerMode(
+  slotConfig: SlotConfig,
+  dividerThickness: number
+): { style: CrossDividerStyle; longAxis: 'x' | 'y' } {
+  // Clamp persisted values: imported configs merge unvalidated, and a bad
+  // longAxis would otherwise be used as an index into slotConfig.
+  const longAxis = slotConfig.longAxis === 'x' ? 'x' : 'y';
+  const bothAxes = slotConfig.x.enabled && slotConfig.y.enabled;
+  const style: CrossDividerStyle =
+    bothAxes &&
+    (slotConfig.crossStyle ?? 'lap') === 'insert' &&
+    dividerThickness >= MIN_DIVIDER_FOR_RECEPTACLES
+      ? 'insert'
+      : 'lap';
+  return { style, longAxis };
+}
+
+/**
+ * Compartment spans along the short-divider direction, measured face-to-face.
+ *
+ * `longPositions` are the full-length divider centers (relative to the
+ * interior center, as returned by calculateSlotPositions). Interior spans
+ * separate two dividers; edge spans run from the bin wall face to the
+ * nearest divider face, so they differ by thickness/2 plus any edge inset
+ * baked into the positions.
+ *
+ * Returns null spans when that compartment kind doesn't exist
+ * (interior needs ≥2 dividers, edge needs ≥1).
+ */
+export function calculateShortDividerSpans(
+  longPositions: readonly number[],
+  innerDim: number,
+  dividerThickness: number
+): { interior: number | null; edge: number | null } {
+  if (longPositions.length === 0) return { interior: null, edge: null };
+  const sorted = [...longPositions].sort((a, b) => a - b);
+  // calculateSlotPositions spaces dividers uniformly, but take the minimum
+  // gap so a single interior piece stays safe in every compartment even if
+  // positions ever become non-uniform.
+  let minGap = Infinity;
+  for (let i = 1; i < sorted.length; i++) {
+    minGap = Math.min(minGap, sorted[i] - sorted[i - 1]);
+  }
+  const interior = sorted.length >= 2 ? minGap - dividerThickness : null;
+  const edge = sorted[0] + innerDim / 2 - dividerThickness / 2;
+  return { interior, edge };
+}
+
+/**
+ * Short divider piece lengths from compartment spans.
+ *
+ * Interior pieces engage a face receptacle on both ends. Edge pieces
+ * engage a wall slot on one end and a receptacle on the other, but use
+ * the SHALLOWER of the two tab depths on both ends: a symmetric piece
+ * can be installed in either orientation, whereas a longer wall tab
+ * would bottom out in the receptacle groove when flipped and hold the
+ * piece proud of the wall.
+ */
+export function calculateShortDividerLengths(
+  spans: { interior: number | null; edge: number | null },
+  wallSlotDepth: number,
+  receptacleDepth: number,
+  clearance: number
+): { interior: number | null; edge: number | null } {
+  const wallTab = tabEngagement(wallSlotDepth, clearance);
+  const receptacleTab = tabEngagement(receptacleDepth, clearance);
+  const edgeTab = Math.min(wallTab, receptacleTab);
+  return {
+    interior: spans.interior !== null ? spans.interior + 2 * receptacleTab : null,
+    edge: spans.edge !== null ? spans.edge + 2 * edgeTab : null,
+  };
 }
 
 /**

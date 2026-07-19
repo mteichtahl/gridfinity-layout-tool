@@ -17,12 +17,17 @@ import {
   calculateSlotPositions,
   calculateDividerLength,
   calculateDividerHeight,
+  calculateShortDividerLengths,
+  calculateShortDividerSpans,
   getEffectiveSlotDimensions,
+  getReceptacleDepth,
+  resolveCrossDividerMode,
+  MIN_DIVIDER_FOR_RECEPTACLES,
   MIN_WALL_FOR_SLOTS,
 } from '@/shared/utils/slotMath';
 import { clamp } from '@/shared/utils/math';
 import { useTranslation } from '@/i18n';
-import type { DividerPieceConfig } from '../../types';
+import type { CrossDividerStyle, DividerPieceConfig } from '../../types';
 
 type SlotDirection = 'vertical' | 'horizontal' | 'both';
 type SlotAxis = 'x' | 'y';
@@ -65,13 +70,27 @@ export function SlotConfigurator() {
   );
 
   const slotCount = useMemo(() => {
-    return enabledAxes.reduce(
-      (sum, axis) =>
-        sum +
-        calculateSlotPositions(axisInnerDim(axis), slotConfig[axis].pitch, lipOverhang).length,
-      0
-    );
-  }, [enabledAxes, slotConfig, axisInnerDim, lipOverhang]);
+    const axisCount = (axis: SlotAxis): number =>
+      calculateSlotPositions(axisInnerDim(axis), slotConfig[axis].pitch, lipOverhang).length;
+
+    // Insert mode: one axis holds long dividers; the other's rows hold one
+    // short divider PER COMPARTMENT, so count rows × (longCount + 1).
+    const mode = resolveCrossDividerMode(slotConfig, dividerPieces.thickness);
+    if (activeDirection === 'both' && mode.style === 'insert') {
+      const shortAxis: SlotAxis = mode.longAxis === 'y' ? 'x' : 'y';
+      const longCount = axisCount(mode.longAxis);
+      if (longCount > 0) return longCount + axisCount(shortAxis) * (longCount + 1);
+    }
+
+    return enabledAxes.reduce((sum, axis) => sum + axisCount(axis), 0);
+  }, [
+    enabledAxes,
+    slotConfig,
+    axisInnerDim,
+    lipOverhang,
+    activeDirection,
+    dividerPieces.thickness,
+  ]);
 
   const setDirection = useCallback(
     (direction: SlotDirection) => {
@@ -127,22 +146,98 @@ export function SlotConfigurator() {
     dividerPieces.clearance
   ).slotDepth;
 
-  // Divider length per enabled axis: X-axis dividers span the width,
-  // Y-axis dividers span the depth.
-  const dividerLengths = useMemo(
-    () =>
-      enabledAxes.map((axis) => ({
-        axis,
-        length: calculateDividerLength(
-          axis === 'x' ? innerW : innerD,
-          effectiveSlotDepth,
-          dividerPieces.clearance
-        ),
-      })),
-    [enabledAxes, innerW, innerD, effectiveSlotDepth, dividerPieces.clearance]
+  // ── Cross divider mode (both-axes only) ─────────────────────────────
+  const requestedCrossStyle: CrossDividerStyle = slotConfig.crossStyle ?? 'lap';
+  const longAxis: SlotAxis = slotConfig.longAxis === 'x' ? 'x' : 'y';
+  const effectiveCrossMode = resolveCrossDividerMode(slotConfig, dividerPieces.thickness);
+  const insertTooThin =
+    activeDirection === 'both' &&
+    requestedCrossStyle === 'insert' &&
+    dividerPieces.thickness < MIN_DIVIDER_FOR_RECEPTACLES;
+
+  const setCrossStyle = useCallback(
+    (crossStyle: CrossDividerStyle) => {
+      setParam('slotConfig', { ...slotConfig, crossStyle });
+    },
+    [slotConfig, setParam]
   );
 
+  const setLongAxis = useCallback(
+    (axis: SlotAxis) => {
+      setParam('slotConfig', { ...slotConfig, longAxis: axis });
+    },
+    [slotConfig, setParam]
+  );
+
+  // Piece dimension readout entries, per effective mode. Lap/single-axis
+  // bins list one full-length piece per enabled axis; insert mode lists
+  // the grooved long piece plus the short compartment pieces.
+  const pieceLengths = useMemo(() => {
+    const fullLength = (axis: SlotAxis): number =>
+      calculateDividerLength(
+        axis === 'x' ? innerW : innerD,
+        effectiveSlotDepth,
+        dividerPieces.clearance
+      );
+    const fullLengthEntries = (): { key: string; length: number }[] =>
+      enabledAxes.map((axis) => ({ key: axis, length: fullLength(axis) }));
+
+    if (activeDirection !== 'both' || effectiveCrossMode.style !== 'insert') {
+      return fullLengthEntries();
+    }
+
+    const effectiveLongAxis = effectiveCrossMode.longAxis;
+    const shortAxis: SlotAxis = effectiveLongAxis === 'y' ? 'x' : 'y';
+    const shortSpanDim = shortAxis === 'x' ? innerW : innerD;
+    const longPositions = calculateSlotPositions(
+      shortSpanDim,
+      slotConfig[effectiveLongAxis].pitch,
+      lipOverhang
+    );
+    if (longPositions.length === 0) {
+      return fullLengthEntries();
+    }
+    const entries: { key: string; length: number }[] = [
+      { key: effectiveLongAxis, length: fullLength(effectiveLongAxis) },
+    ];
+    // Short pieces only exist where the short axis has rows to seat them
+    const rows = calculateSlotPositions(
+      effectiveLongAxis === 'y' ? innerD : innerW,
+      slotConfig[shortAxis].pitch,
+      lipOverhang
+    );
+    if (rows.length === 0) return entries;
+
+    const spans = calculateShortDividerSpans(longPositions, shortSpanDim, dividerPieces.thickness);
+    const lengths = calculateShortDividerLengths(
+      spans,
+      effectiveSlotDepth,
+      getReceptacleDepth(dividerPieces.thickness),
+      dividerPieces.clearance
+    );
+    if (lengths.interior !== null && lengths.interior > 0) {
+      entries.push({ key: 'short-interior', length: lengths.interior });
+    }
+    if (lengths.edge !== null && lengths.edge > 0) {
+      entries.push({ key: 'short-edge', length: lengths.edge });
+    }
+    return entries;
+  }, [
+    activeDirection,
+    effectiveCrossMode,
+    enabledAxes,
+    slotConfig,
+    innerW,
+    innerD,
+    effectiveSlotDepth,
+    dividerPieces.thickness,
+    dividerPieces.clearance,
+    lipOverhang,
+  ]);
+
   const directions: SlotDirection[] = ['vertical', 'horizontal', 'both'];
+  const crossStyles: CrossDividerStyle[] = ['lap', 'insert'];
+  const longAxisOptions: SlotAxis[] = ['y', 'x'];
   const directionLabel = useCallback(
     (direction: SlotDirection) =>
       direction === 'vertical'
@@ -187,6 +282,63 @@ export function SlotConfigurator() {
           ))}
         </div>
       </div>
+
+      {/* Cross divider style (both directions only) */}
+      {activeDirection === 'both' && (
+        <>
+          <div className="flex items-center justify-between">
+            <span className="text-xs text-content-tertiary">{t('binDesigner.slotCrossStyle')}</span>
+            <div className="flex gap-0.5">
+              {crossStyles.map((style) => (
+                <Button
+                  key={style}
+                  type="button"
+                  variant="ghost"
+                  onClick={() => setCrossStyle(style)}
+                  className={`rounded px-2 py-0.5 text-[11px] font-medium transition-colors ${
+                    requestedCrossStyle === style
+                      ? 'bg-accent text-on-accent hover:bg-accent'
+                      : 'border border-stroke-subtle bg-surface-elevated text-content-secondary hover:bg-surface-hover'
+                  }`}
+                >
+                  {style === 'lap'
+                    ? t('binDesigner.slotCrossLap')
+                    : t('binDesigner.slotCrossInsert')}
+                </Button>
+              ))}
+            </div>
+          </div>
+          {requestedCrossStyle === 'insert' && (
+            <div className="flex items-center justify-between">
+              <span className="text-xs text-content-tertiary">
+                {t('binDesigner.slotLongDirection')}
+              </span>
+              <div className="flex gap-0.5">
+                {longAxisOptions.map((axis) => (
+                  <Button
+                    key={axis}
+                    type="button"
+                    variant="ghost"
+                    onClick={() => setLongAxis(axis)}
+                    className={`rounded px-2 py-0.5 text-[11px] font-medium transition-colors ${
+                      longAxis === axis
+                        ? 'bg-accent text-on-accent hover:bg-accent'
+                        : 'border border-stroke-subtle bg-surface-elevated text-content-secondary hover:bg-surface-hover'
+                    }`}
+                  >
+                    {axisLabel(axis)}
+                  </Button>
+                ))}
+              </div>
+            </div>
+          )}
+          {insertTooThin && (
+            <p className="rounded bg-warning/10 px-2 py-1.5 text-[11px] text-warning">
+              {t('binDesigner.slotInsertTooThin', { min: MIN_DIVIDER_FOR_RECEPTACLES })}
+            </p>
+          )}
+        </>
+      )}
 
       {/* Slot count summary */}
       <div className="text-xs text-content-tertiary">
@@ -349,14 +501,21 @@ export function SlotConfigurator() {
       <div className="flex items-center gap-1.5 text-xs text-content-tertiary">
         <RulerIcon size="xs" />
         <span className="tabular-nums">
-          {dividerLengths.length > 0
-            ? dividerLengths
-                .map(({ axis, length }) => {
+          {pieceLengths.length > 0
+            ? pieceLengths
+                .map(({ key, length }) => {
                   const dims = t('binDesigner.dividerDimensions', {
                     length: String(Math.round(length * 10) / 10),
                     height: String(Math.round(dividerHeight * 10) / 10),
                   });
-                  return dividerLengths.length > 1 ? `${axisLabel(axis)}: ${dims}` : dims;
+                  if (pieceLengths.length === 1) return dims;
+                  const label =
+                    key === 'short-interior'
+                      ? t('binDesigner.dividerShortInterior')
+                      : key === 'short-edge'
+                        ? t('binDesigner.dividerShortEdge')
+                        : axisLabel(key as SlotAxis);
+                  return `${label}: ${dims}`;
                 })
                 .join(' · ')
             : t('binDesigner.dividerHeightOnly', {
