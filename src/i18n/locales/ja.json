@@ -667,6 +667,8 @@
   "binDesigner.itemKind.bin.description": "カスタム Gridfinity 収納ビン",
   "binDesigner.itemKind.toolRack": "ツールラック",
   "binDesigner.itemKind.toolRack.description": "プライヤー、ピンセット、手工具向けの傾斜ラック",
+  "binDesigner.itemKind.importedMesh": "インポートしたビン",
+  "binDesigner.itemKind.importedMesh.description": "STLファイルからインポートしたビン",
   "binDesigner.labelTabs": "ラベルタブ",
   "binDesigner.labelTabs.depthAria": "タブの奥行き",
   "binDesigner.labelTabs.heightAria": "タブの高さ",

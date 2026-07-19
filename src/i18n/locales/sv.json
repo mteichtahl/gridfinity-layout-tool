@@ -667,6 +667,8 @@
   "binDesigner.itemKind.bin.description": "Anpassad Gridfinity-förvaringslåda",
   "binDesigner.itemKind.toolRack": "Verktygsställ",
   "binDesigner.itemKind.toolRack.description": "Lutande ställ för tänger, pincetter och handverktyg",
+  "binDesigner.itemKind.importedMesh": "Importerad låda",
+  "binDesigner.itemKind.importedMesh.description": "Låda importerad från en STL-fil",
   "binDesigner.labelTabs": "Etikettflikar",
   "binDesigner.labelTabs.depthAria": "Flikdjup",
   "binDesigner.labelTabs.heightAria": "Flikhöjd",

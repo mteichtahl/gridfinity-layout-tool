@@ -667,6 +667,8 @@
   "binDesigner.itemKind.bin.description": "Bac de rangement Gridfinity personnalisé",
   "binDesigner.itemKind.toolRack": "Porte-outils",
   "binDesigner.itemKind.toolRack.description": "Support incliné pour pinces, brucelles et outils à main",
+  "binDesigner.itemKind.importedMesh": "Bac importé",
+  "binDesigner.itemKind.importedMesh.description": "Bac importé depuis un fichier STL",
   "binDesigner.labelTabs": "Onglets d'étiquette",
   "binDesigner.labelTabs.depthAria": "Profondeur de l'onglet",
   "binDesigner.labelTabs.heightAria": "Hauteur de l'onglet",

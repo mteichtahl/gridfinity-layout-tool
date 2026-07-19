@@ -667,6 +667,8 @@
   "binDesigner.itemKind.bin.description": "Caixa de armazenamento Gridfinity personalizada",
   "binDesigner.itemKind.toolRack": "Suporte de ferramentas",
   "binDesigner.itemKind.toolRack.description": "Suporte inclinado para alicates, pinças e ferramentas manuais",
+  "binDesigner.itemKind.importedMesh": "Compartimento importado",
+  "binDesigner.itemKind.importedMesh.description": "Compartimento importado de um arquivo STL",
   "binDesigner.labelTabs": "Abas de etiqueta",
   "binDesigner.labelTabs.depthAria": "Profundidade da aba",
   "binDesigner.labelTabs.heightAria": "Altura da aba",

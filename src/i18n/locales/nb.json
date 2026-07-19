@@ -667,6 +667,8 @@
   "binDesigner.itemKind.bin.description": "Egendefinert Gridfinity-oppbevaringsboks",
   "binDesigner.itemKind.toolRack": "Verktøystativ",
   "binDesigner.itemKind.toolRack.description": "Skrått stativ for tenger, pinsetter og håndverktøy",
+  "binDesigner.itemKind.importedMesh": "Importert boks",
+  "binDesigner.itemKind.importedMesh.description": "Boks importert fra en STL-fil",
   "binDesigner.labelTabs": "Etikettfaner",
   "binDesigner.labelTabs.depthAria": "Tab-dybde",
   "binDesigner.labelTabs.heightAria": "Tab-høyde",
