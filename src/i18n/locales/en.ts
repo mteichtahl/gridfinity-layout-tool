@@ -2382,11 +2382,25 @@ const en: Record<string, string> = {
   'binDesigner.tags.addPlaceholder': 'Add a tag…',
   'binDesigner.tags.max': 'Up to {count} tags',
   'binDesigner.tags.remove': 'Remove tag {tag}',
+  'binDesigner.tags.suggestionsLabel': 'Existing tags',
+  'binDesigner.tags.addExisting': 'Add tag {tag}',
   'binDesigner.tags.editAction': 'Edit tags',
   'binDesigner.tags.editForDesign': 'Edit tags for {name}',
   'binDesigner.tags.save': 'Save',
   'binDesigner.tags.filterLabel': 'Filter by tag',
   'binDesigner.tags.clearFilter': 'Clear filters',
+
+  // Tag manager (global icon/color per tag)
+  'binDesigner.tagManager.menuItem': 'Manage tags…',
+  'binDesigner.tagManager.title': 'Manage tags',
+  'binDesigner.tagManager.empty': 'No tags yet — add tags to a design first.',
+  'binDesigner.tagManager.customize': 'Customize tag {tag}',
+  'binDesigner.tagManager.iconLabel': 'Icon',
+  'binDesigner.tagManager.colorLabel': 'Color',
+  'binDesigner.tagManager.none': 'None',
+  'binDesigner.tagManager.setIcon': 'Use icon {icon} for {tag}',
+  'binDesigner.tagManager.setColor': 'Use color {name} for {tag}',
+  'binDesigner.tagManager.clear': 'Reset appearance of {tag}',
 
   // Bulk selection / actions
   'binDesigner.select': 'Select',
