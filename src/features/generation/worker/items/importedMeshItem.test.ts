@@ -3,7 +3,7 @@ import { unwrap } from '@/core/result';
 import { encodeMeshData, MAX_MESH_ASSET_TRIANGLES } from '@/shared/generation/meshAsset';
 import { parseSTL } from '@/shared/generation/stlParser';
 import type { GridfinityItem, ImportedMeshStructure, ItemEnvelope } from '@/shared/types/item';
-import '@/shared/items/registerDescriptors';
+
 import { clearImportedMeshCache, importedMeshGeneratorModule } from './importedMeshItem';
 
 /** 40×20×10mm tetrahedron-ish solid: 4 triangles, bbox min at origin. */

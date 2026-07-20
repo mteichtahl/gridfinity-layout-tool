@@ -15,7 +15,10 @@ import type { GridfinityItem } from '@/shared/types/item';
 import type { MeshData } from '../../bridge/types';
 import type { ItemExportResult, ItemGeneratorModule } from './generatorRegistry';
 import { buildSTLBufferFromIndexed } from '../../export/stlExporter';
-import { getItemDescriptor } from '@/shared/items/registry';
+// Direct descriptor import, NOT the registry: the worker bundle never runs
+// registerDescriptors() (that's a main-thread module), so a registry lookup
+// here would throw at export time.
+import { importedMeshDescriptor } from '@/shared/items/importedMesh/descriptor';
 
 /** Decoded assets kept per worker, content-keyed by the GMA1 payload string. */
 const MAX_DECODED_ASSETS = 4;
@@ -108,10 +111,7 @@ export const importedMeshGeneratorModule: ItemGeneratorModule = {
     }
     const { asset } = item.structure;
     const decoded = await decodeCached(asset.data);
-    const fileName = getItemDescriptor('importedMesh').exportFileName(
-      item.envelope,
-      item.structure
-    );
+    const fileName = importedMeshDescriptor.exportFileName(item.envelope, item.structure);
     // Exported STL keeps the stored origin-normalized frame (bbox min at
     // 0,0,0 — bottom on the build plate), which is what slicers expect.
     const data = buildSTLBufferFromIndexed(

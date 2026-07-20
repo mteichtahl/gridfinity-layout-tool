@@ -111,6 +111,10 @@ export function useImportBinDesign(
           const outcome = await bridge.importMesh(buffer.slice(0), fileNameRef.current, rotation);
           if (isCancelled()) return;
           if (!outcome.ok) {
+            // The toast is generic; keep the worker's real error reachable for
+            // debugging (it distinguishes parse errors from WASM-load or
+            // pipeline failures that share the parse_failed reason).
+            console.warn('[BinImport] import failed:', outcome.reason, outcome.message);
             addToast(t(ERROR_TOAST_KEYS[outcome.reason]), 'error');
             trackEvent('stl_bin_import', { success: false, error_code: outcome.reason });
             bufferRef.current = null;
@@ -135,8 +139,9 @@ export function useImportBinDesign(
         } finally {
           bridgeManager.release();
         }
-      } catch {
+      } catch (e) {
         if (isCancelled()) return;
+        console.warn('[BinImport] worker failed:', e);
         addToast(t('toast.stlImport.parseFailed'), 'error');
         trackEvent('stl_bin_import', { success: false, error_code: 'worker_failed' });
         bufferRef.current = null;
