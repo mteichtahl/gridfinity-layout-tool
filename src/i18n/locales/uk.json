@@ -916,6 +916,8 @@
   "binDesigner.tags.filterLabel": "Фільтрувати за тегом",
   "binDesigner.tags.max": "До {count} тегів",
   "binDesigner.tags.remove": "Видалити тег {tag}",
+  "binDesigner.tags.suggestionsLabel": "Наявні теги",
+  "binDesigner.tags.addExisting": "Додати тег {tag}",
   "binDesigner.tags.save": "Зберегти",
   "binDesigner.textDepth": "Глибина тексту",
   "binDesigner.textSize": "Розмір тексту",

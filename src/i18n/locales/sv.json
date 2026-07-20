@@ -916,6 +916,8 @@
   "binDesigner.tags.filterLabel": "Filtrera efter tagg",
   "binDesigner.tags.max": "Upp till {count} taggar",
   "binDesigner.tags.remove": "Ta bort tagg {tag}",
+  "binDesigner.tags.suggestionsLabel": "Befintliga taggar",
+  "binDesigner.tags.addExisting": "Lägg till tagg {tag}",
   "binDesigner.tags.save": "Spara",
   "binDesigner.textDepth": "Textdjup",
   "binDesigner.textSize": "Textstorlek",

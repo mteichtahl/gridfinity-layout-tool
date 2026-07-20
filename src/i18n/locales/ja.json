@@ -916,6 +916,8 @@
   "binDesigner.tags.filterLabel": "タグで絞り込む",
   "binDesigner.tags.max": "最大{count}個のタグ",
   "binDesigner.tags.remove": "タグ{tag}を削除",
+  "binDesigner.tags.suggestionsLabel": "既存のタグ",
+  "binDesigner.tags.addExisting": "タグ{tag}を追加",
   "binDesigner.tags.save": "保存",
   "binDesigner.textDepth": "文字の深さ",
   "binDesigner.textSize": "文字サイズ",
