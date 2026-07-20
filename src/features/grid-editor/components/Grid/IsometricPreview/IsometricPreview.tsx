@@ -15,6 +15,7 @@ import { BinMarginExtensions } from './BinMarginExtensions';
 import { MergedBinMeshes } from './MergedBinMeshes';
 import { ExplodedLayerGroup } from './ExplodedLayerGroup';
 import { useExplodedLayerView } from '@/shared/hooks/useExplodedLayerView';
+import { useLinkedDesignDividers } from '@/shared/hooks/useLinkedDesignDividers';
 import { useTranslation } from '@/i18n';
 import { useSettingsStore } from '@/core/store/settings';
 import { useBinsToRender } from './useBinsToRender';
@@ -153,6 +154,10 @@ export function IsometricPreview({ inline = false }: IsometricPreviewProps) {
     [printBedSize, printBedDepth, gridUnitMm]
   );
 
+  // Compartment dividers for bins linked to saved designs (loaded async
+  // from designer storage; bins render as plain boxes until specs arrive)
+  const designDividers = useLinkedDesignDividers(bins, gridUnitMm);
+
   const binsToRender = useBinsToRender({
     bins,
     layers,
@@ -160,6 +165,7 @@ export function IsometricPreview({ inline = false }: IsometricPreviewProps) {
     activeLayerIndex,
     layerViewMode,
     heightToGridScale,
+    designDividers,
   });
 
   // Animated bin transitions (spring drop-in, shrink+fade exit).
@@ -238,6 +244,7 @@ export function IsometricPreview({ inline = false }: IsometricPreviewProps) {
     activeLayerId,
     isExplodedView,
     isExitAnimating: isExplodeExiting,
+    designDividers,
   });
 
   // Pre-split exploded groups into selected/non-selected bins (avoids .filter() in JSX)
@@ -350,6 +357,7 @@ export function IsometricPreview({ inline = false }: IsometricPreviewProps) {
                   color={binData.color}
                   opacity={binData.opacity}
                   isSelected={true}
+                  dividers={binData.dividers}
                 />
               ))}
 
