@@ -35,6 +35,8 @@ import { ItemListShell } from '@/shared/components';
 import { DesignGridItem } from '../DesignGridItem';
 import { DesignListItem } from '../DesignListItem';
 import { DesignImportView } from '../DesignImportView';
+import { ImportBinDialog, useImportBinDesign } from '../ImportBinDialog';
+import { useFeatureFlag } from '@/shared/hooks/useFeatureFlag';
 import type { SavedDesign, BinParams } from '../../types';
 import { designFootprint } from '../../utils/designKind';
 import { useThumbnailRegeneration } from '../../hooks/useThumbnailRegeneration';
@@ -112,6 +114,17 @@ export function DesignListDialog({ open, onClose }: DesignListDialogProps) {
   const currentDesignId = useDesignerStore((s) => s.currentDesignId);
   const { navigateToDesign, syncUrlToDesign } = useDesignerRouting();
   const addToast = useToastStore((s) => s.addToast);
+
+  const stlBinImportEnabled = useFeatureFlag('stl_bin_import');
+  const handleImportedBinSaved = useCallback(
+    (design: SavedDesign) => {
+      navigateToDesign(design.id);
+      setShowImport(false);
+      onClose();
+    },
+    [navigateToDesign, onClose]
+  );
+  const binImport = useImportBinDesign(handleImportedBinSaved);
 
   const handleDownloadJSON = useCallback(
     (design: SavedDesign) => {
@@ -610,7 +623,22 @@ export function DesignListDialog({ open, onClose }: DesignListDialogProps) {
         {/* Design list or import view */}
         <div className="flex-1 min-h-0 flex flex-col px-5 py-3" aria-busy={loading}>
           {showImport ? (
-            <DesignImportView onImport={handleImportDesign} onCancel={() => setShowImport(false)} />
+            <>
+              <DesignImportView
+                onImport={handleImportDesign}
+                onCancel={() => setShowImport(false)}
+                onStlFile={stlBinImportEnabled ? binImport.handleFile : undefined}
+              />
+              <ImportBinDialog
+                pending={binImport.pending}
+                importing={binImport.importing}
+                claim={binImport.claim}
+                onClaimChange={binImport.setClaim}
+                onRotate={binImport.setAxisRotation}
+                onSave={() => void binImport.save()}
+                onCancel={binImport.cancel}
+              />
+            </>
           ) : loading ? (
             <div className="space-y-2 py-2">
               {[1, 2, 3].map((i) => (
