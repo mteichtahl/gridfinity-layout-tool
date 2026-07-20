@@ -21,7 +21,7 @@ describe('tagAppearanceKey', () => {
 
 describe('tagTint', () => {
   it('appends an alpha suffix to 6-digit hex colors', () => {
-    expect(tagTint('#f87171')).toBe('#f871712e');
+    expect(tagTint('#f87171')).toBe('#f8717145');
   });
 
   it('passes non-hex values through untouched', () => {

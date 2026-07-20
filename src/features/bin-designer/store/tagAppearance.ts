@@ -60,10 +60,12 @@ export function tagAppearanceKey(tag: string): string {
 
 /**
  * Translucent background tint for a colored chip. Only 6-digit hex colors get
- * an alpha suffix; anything else passes through untouched.
+ * an alpha suffix; anything else passes through untouched. The alpha (~27%) is
+ * tuned so the tint stays legible on a dark surface without competing with the
+ * chip text.
  */
 export function tagTint(color: string): string {
-  return /^#[0-9a-fA-F]{6}$/.test(color) ? `${color}2e` : color;
+  return /^#[0-9a-fA-F]{6}$/.test(color) ? `${color}45` : color;
 }
 
 /** Validate one stored entry; null drops malformed or empty records. */
