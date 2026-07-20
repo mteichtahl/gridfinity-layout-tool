@@ -576,6 +576,7 @@
   "binDesigner.downloadFormat": "{format}をダウンロード",
   "binDesigner.downloadJSON": "JSONをダウンロード",
   "binDesigner.dragDropDesignJson": "デザインJSONファイルをここにドラッグ&ドロップ",
+  "binDesigner.dragDropDesignFile": "デザインのJSONまたはSTLファイルをここにドラッグ＆ドロップ",
   "binDesigner.dragToOrbit": "ドラッグで視点を回転",
   "binDesigner.editCutouts": "切り欠きエディター",
   "binDesigner.editCutoutsSubtitle": "長方形、円、ペンパスを描画",

@@ -576,6 +576,7 @@
   "binDesigner.downloadFormat": "Ladda ner {format}",
   "binDesigner.downloadJSON": "Ladda ner JSON",
   "binDesigner.dragDropDesignJson": "Dra och släpp en design-JSON-fil här",
+  "binDesigner.dragDropDesignFile": "Dra och släpp en design-JSON- eller STL-fil här",
   "binDesigner.dragToOrbit": "Dra för att kretsa",
   "binDesigner.editCutouts": "Klippredigerare",
   "binDesigner.editCutoutsSubtitle": "Rita rektanglar, cirklar och pennstigar",

@@ -576,6 +576,7 @@
   "binDesigner.downloadFormat": "Завантажити {format}",
   "binDesigner.downloadJSON": "Завантажити JSON",
   "binDesigner.dragDropDesignJson": "Перетягніть файл JSON дизайну сюди",
+  "binDesigner.dragDropDesignFile": "Перетягніть сюди JSON- або STL-файл дизайну",
   "binDesigner.dragToOrbit": "Перетягніть, щоб обертати",
   "binDesigner.editCutouts": "Редактор вирізів",
   "binDesigner.editCutoutsSubtitle": "Малюйте прямокутники, кола та контури пером",

@@ -576,6 +576,7 @@
   "binDesigner.downloadFormat": "Scarica {format}",
   "binDesigner.downloadJSON": "Scarica JSON",
   "binDesigner.dragDropDesignJson": "Trascina qui un file JSON di design",
+  "binDesigner.dragDropDesignFile": "Trascina qui un file JSON o STL del design",
   "binDesigner.dragToOrbit": "Trascina per orbitare",
   "binDesigner.editCutouts": "Editor tagli",
   "binDesigner.editCutoutsSubtitle": "Disegna rettangoli, cerchi e tracciati a penna",

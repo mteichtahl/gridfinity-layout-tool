@@ -576,6 +576,7 @@
   "binDesigner.downloadFormat": "{format} downloaden",
   "binDesigner.downloadJSON": "JSON downloaden",
   "binDesigner.dragDropDesignJson": "Sleep een ontwerp-JSON-bestand hierheen",
+  "binDesigner.dragDropDesignFile": "Sleep een ontwerp-JSON- of STL-bestand hierheen",
   "binDesigner.dragToOrbit": "Sleep om te draaien",
   "binDesigner.editCutouts": "Snij-editor",
   "binDesigner.editCutoutsSubtitle": "Teken vormen, paden en rasteruitlijning met de volledige editor",

@@ -576,6 +576,7 @@
   "binDesigner.downloadFormat": "Descargar {format}",
   "binDesigner.downloadJSON": "Descargar JSON",
   "binDesigner.dragDropDesignJson": "Arrastra y suelta un archivo JSON de diseño aquí",
+  "binDesigner.dragDropDesignFile": "Arrastra y suelta aquí un archivo JSON o STL de diseño",
   "binDesigner.dragToOrbit": "Arrastra para orbitar",
   "binDesigner.editCutouts": "Editor de cortes",
   "binDesigner.editCutoutsSubtitle": "Dibuja formas, trazados y alineación a cuadrícula con el editor completo",
