@@ -59,12 +59,25 @@ export function clearLinkedDesignMeshCache(): void {
   resolveChain = Promise.resolve();
 }
 
+// Insert an entry, evicting the least-recently-used on overflow. Recency is
+// refreshed on read by getCachedMesh, so a still-visible design is never
+// evicted by an unrelated insert (matches designGeometryCache's LRU policy).
 function setCachedMesh(key: string, entry: LinkedDesignMesh | null): void {
   if (meshCache.size >= MAX_CACHE_ENTRIES && !meshCache.has(key)) {
     const oldestKey = meshCache.keys().next().value;
     if (oldestKey !== undefined) meshCache.delete(oldestKey);
   }
   meshCache.set(key, entry);
+}
+
+// Read a cached entry (including a cached null miss), promoting it to
+// most-recently-used. Returns undefined when the key is absent.
+function getCachedMesh(key: string): LinkedDesignMesh | null | undefined {
+  if (!meshCache.has(key)) return undefined;
+  const entry = meshCache.get(key) ?? null;
+  meshCache.delete(key);
+  meshCache.set(key, entry);
+  return entry;
 }
 
 /** Re-frame a stored imported mesh (bbox min at origin) to XY-centered. */
@@ -187,7 +200,7 @@ export function useLinkedDesignMeshes(bins: Bin[]): Map<DesignId, LinkedDesignMe
     void loadTick;
     const meshes = new Map<DesignId, LinkedDesignMesh>();
     for (const [id, key] of linkedRefs) {
-      const entry = meshCache.get(key);
+      const entry = getCachedMesh(key);
       if (entry) meshes.set(id, entry);
     }
     return meshes;

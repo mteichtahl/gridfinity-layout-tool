@@ -27,12 +27,25 @@ import type { BinDividersSpec } from '@/shared/hooks/useBinGeometry';
 const dividerCache = new Map<string, BinDividersSpec | null>();
 const MAX_CACHE_SIZE = 200;
 
+// Insert an entry, evicting the least-recently-used on overflow. Recency is
+// refreshed on read by getCachedSpec, so a still-visible design is never
+// evicted by an unrelated insert (matches designGeometryCache's LRU policy).
 function setCachedSpec(key: string, spec: BinDividersSpec | null): void {
   if (dividerCache.size >= MAX_CACHE_SIZE && !dividerCache.has(key)) {
     const oldestKey = dividerCache.keys().next().value;
     if (oldestKey !== undefined) dividerCache.delete(oldestKey);
   }
   dividerCache.set(key, spec);
+}
+
+// Read a cached entry (including a cached null miss), promoting it to
+// most-recently-used. Returns undefined when the key is absent.
+function getCachedSpec(key: string): BinDividersSpec | null | undefined {
+  if (!dividerCache.has(key)) return undefined;
+  const spec = dividerCache.get(key) ?? null;
+  dividerCache.delete(key);
+  dividerCache.set(key, spec);
+  return spec;
 }
 
 /** Reset the module cache. @internal — for tests only. */
@@ -117,7 +130,7 @@ export function useLinkedDesignDividers(
     void loadTick;
     const specs = new Map<DesignId, BinDividersSpec>();
     for (const [id, key] of linkedRefs) {
-      const spec = dividerCache.get(key);
+      const spec = getCachedSpec(key);
       if (spec) specs.set(id, spec);
     }
     return specs;
