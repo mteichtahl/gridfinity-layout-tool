@@ -45,6 +45,7 @@ export type { UseBinDefaults } from './hooks/useBinDefaults';
 // would drag three core onto first paint (this module is eagerly imported by App
 // and the sync flows). fileNaming is three-free.
 export { generateFileName } from './utils/fileNaming';
+export { designFootprint, isBinDesign } from './utils/designKind';
 
 // --- Sync ---
 // Exposed for `shared/sync/` to wire into the sync engine without reaching
