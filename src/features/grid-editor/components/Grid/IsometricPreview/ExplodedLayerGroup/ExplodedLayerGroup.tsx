@@ -98,6 +98,7 @@ export function ExplodedLayerGroup({
           color={binData.color}
           opacity={binData.opacity}
           isSelected={true}
+          dividers={binData.dividers}
         />
       ))}
 
