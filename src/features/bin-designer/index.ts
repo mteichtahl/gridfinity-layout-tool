@@ -48,6 +48,7 @@ export { generateFileName } from './utils/fileNaming';
 // Exposed for the layout 3D preview (shared/hooks/useLinkedDesignDividers) to
 // derive compartment divider walls for bins linked to saved designs.
 export { deriveWallSegments } from './utils/compartments';
+export { designFootprint, isBinDesign } from './utils/designKind';
 
 // --- Sync ---
 // Exposed for `shared/sync/` to wire into the sync engine without reaching
