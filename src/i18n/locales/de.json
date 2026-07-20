@@ -916,6 +916,8 @@
   "binDesigner.tags.filterLabel": "Nach Tag filtern",
   "binDesigner.tags.max": "Bis zu {count} Tags",
   "binDesigner.tags.remove": "Tag {tag} entfernen",
+  "binDesigner.tags.suggestionsLabel": "Vorhandene Tags",
+  "binDesigner.tags.addExisting": "Tag {tag} hinzufügen",
   "binDesigner.tags.save": "Speichern",
   "binDesigner.textDepth": "Texttiefe",
   "binDesigner.textSize": "Textgröße",

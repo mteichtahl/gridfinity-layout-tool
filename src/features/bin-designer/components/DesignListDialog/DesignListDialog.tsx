@@ -798,6 +798,7 @@ export function DesignListDialog({ open, onClose }: DesignListDialogProps) {
               : t('binDesigner.tags.editForDesign', { name: tagEdit.design?.name ?? '' })
           }
           initialTags={tagEdit.mode === 'single' ? (tagEdit.design?.tags ?? []) : []}
+          suggestions={allTags}
           saveLabel={
             tagEdit.mode === 'bulk' ? t('binDesigner.bulk.tagApply') : t('binDesigner.tags.save')
           }

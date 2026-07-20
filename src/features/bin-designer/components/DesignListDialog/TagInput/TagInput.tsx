@@ -1,12 +1,14 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useMemo } from 'react';
 import type { KeyboardEvent } from 'react';
 import { useTranslation } from '@/i18n';
-import { Input, IconButton, XIcon } from '@/design-system';
+import { Input, IconButton, XIcon, PlusIcon } from '@/design-system';
 import { MAX_TAGS, normalizeTags } from '@/features/bin-designer/utils/tags';
 
 interface TagInputProps {
   value: readonly string[];
   onChange: (tags: string[]) => void;
+  /** Tags already in use elsewhere, offered as one-click suggestions. */
+  suggestions?: readonly string[];
 }
 
 /**
@@ -15,10 +17,20 @@ interface TagInputProps {
  * storage layer via `normalizeTags`, so the editor can't produce a tag the
  * store would reject.
  */
-export function TagInput({ value, onChange }: TagInputProps) {
+export function TagInput({ value, onChange, suggestions }: TagInputProps) {
   const t = useTranslation();
   const [draft, setDraft] = useState('');
   const atMax = value.length >= MAX_TAGS;
+
+  const availableSuggestions = useMemo(() => {
+    if (!suggestions || suggestions.length === 0) return [];
+    const applied = new Set(value.map((tag) => tag.toLowerCase()));
+    const query = draft.trim().toLowerCase();
+    return suggestions.filter((tag) => {
+      const key = tag.toLowerCase();
+      return !applied.has(key) && (query === '' || key.includes(query));
+    });
+  }, [suggestions, value, draft]);
 
   const commit = useCallback(
     (raw: string) => {
@@ -80,6 +92,33 @@ export function TagInput({ value, onChange }: TagInputProps) {
         }
         aria-label={t('binDesigner.tags.addPlaceholder')}
       />
+      {!atMax && availableSuggestions.length > 0 && (
+        <div className="mt-2">
+          <p className="mb-1 text-xs font-medium text-content-tertiary">
+            {t('binDesigner.tags.suggestionsLabel')}
+          </p>
+          <ul className="flex flex-wrap gap-1.5">
+            {availableSuggestions.map((tag) => (
+              <li key={tag}>
+                <button
+                  type="button"
+                  // Keep focus in the input so its onBlur doesn't commit a
+                  // half-typed draft before the suggestion click lands.
+                  onMouseDown={(e) => e.preventDefault()}
+                  onClick={() => commit(tag)}
+                  className="inline-flex items-center gap-1 rounded-full border border-stroke bg-surface py-0.5 pl-1.5 pr-2.5 text-xs font-medium text-content-secondary transition-colors hover:bg-surface-hover hover:text-content"
+                  aria-label={t('binDesigner.tags.addExisting', { tag })}
+                >
+                  <PlusIcon className="h-3 w-3" aria-hidden="true" />
+                  <span className="max-w-[10rem] truncate" title={tag}>
+                    {tag}
+                  </span>
+                </button>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
     </div>
   );
 }

@@ -2333,6 +2333,8 @@ const en: Record<string, string> = {
   'binDesigner.tags.addPlaceholder': 'Add a tag…',
   'binDesigner.tags.max': 'Up to {count} tags',
   'binDesigner.tags.remove': 'Remove tag {tag}',
+  'binDesigner.tags.suggestionsLabel': 'Existing tags',
+  'binDesigner.tags.addExisting': 'Add tag {tag}',
   'binDesigner.tags.editAction': 'Edit tags',
   'binDesigner.tags.editForDesign': 'Edit tags for {name}',
   'binDesigner.tags.save': 'Save',

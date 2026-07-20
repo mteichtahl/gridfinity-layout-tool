@@ -916,6 +916,8 @@
   "binDesigner.tags.filterLabel": "Filteren op label",
   "binDesigner.tags.max": "Maximaal {count} labels",
   "binDesigner.tags.remove": "Label {tag} verwijderen",
+  "binDesigner.tags.suggestionsLabel": "Bestaande labels",
+  "binDesigner.tags.addExisting": "Label {tag} toevoegen",
   "binDesigner.tags.save": "Opslaan",
   "binDesigner.textDepth": "Tekstdiepte",
   "binDesigner.textSize": "Tekstgrootte",
