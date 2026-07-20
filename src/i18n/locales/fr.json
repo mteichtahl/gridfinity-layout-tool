@@ -576,6 +576,7 @@
   "binDesigner.downloadFormat": "Télécharger {format}",
   "binDesigner.downloadJSON": "Télécharger JSON",
   "binDesigner.dragDropDesignJson": "Glissez-déposez un fichier JSON de design ici",
+  "binDesigner.dragDropDesignFile": "Glissez-déposez ici un fichier JSON ou STL de design",
   "binDesigner.dragToOrbit": "Glisser pour orbiter",
   "binDesigner.editCutouts": "Éditeur de découpes",
   "binDesigner.editCutoutsSubtitle": "Dessinez des formes, tracés et alignement grille avec l'éditeur complet",

@@ -576,6 +576,7 @@
   "binDesigner.downloadFormat": "Last ned {format}",
   "binDesigner.downloadJSON": "Last ned JSON",
   "binDesigner.dragDropDesignJson": "Dra og slipp en design JSON-fil her",
+  "binDesigner.dragDropDesignFile": "Dra og slipp en design-JSON- eller STL-fil her",
   "binDesigner.dragToOrbit": "Dra for å rotere",
   "binDesigner.editCutouts": "Kuttredigering",
   "binDesigner.editCutoutsSubtitle": "Tegn former, stier og rutenettjustering med den fullstendige editoren",

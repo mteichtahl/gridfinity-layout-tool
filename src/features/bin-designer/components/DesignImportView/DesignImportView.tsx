@@ -190,7 +190,11 @@ export function DesignImportView({ onImport, onCancel, onStlFile }: DesignImport
         </svg>
 
         <p className="text-content-secondary mb-2">
-          {isDragging ? t('layouts.dropFileHere') : t('binDesigner.dragDropDesignJson')}
+          {isDragging
+            ? t('layouts.dropFileHere')
+            : onStlFile
+              ? t('binDesigner.dragDropDesignFile')
+              : t('binDesigner.dragDropDesignJson')}
         </p>
         <p className="text-content-tertiary text-sm mb-4">{t('layouts.or')}</p>
         <Button

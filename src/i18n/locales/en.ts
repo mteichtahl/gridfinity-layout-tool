@@ -1561,6 +1561,7 @@ const en: Record<string, string> = {
   'binDesigner.invalidDesignFile': 'Invalid design file',
   'binDesigner.pasteDesignJson': 'or paste design JSON',
   'binDesigner.dragDropDesignJson': 'Drag & drop a design JSON file here',
+  'binDesigner.dragDropDesignFile': 'Drag & drop a design JSON or STL file here',
   'binDesigner.designJson': 'Design JSON',
   'binDesigner.readyToImportDesign': 'Ready to import design',
   'binDesigner.importAndLoad': 'Import & Load',
