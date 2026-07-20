@@ -1,7 +1,12 @@
 // @vitest-environment jsdom
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { TagInput } from './TagInput';
+import { useTagAppearanceStore } from '@/features/bin-designer/store/tagAppearance';
+
+beforeEach(() => {
+  useTagAppearanceStore.setState({ appearances: {} });
+});
 
 describe('TagInput', () => {
   it('commits a tag on Enter and clears the draft', () => {
@@ -60,5 +65,14 @@ describe('TagInput', () => {
   it('renders no suggestion section without suggestions', () => {
     render(<TagInput value={[]} onChange={vi.fn()} />);
     expect(screen.queryByText(/existing tags/i)).not.toBeInTheDocument();
+  });
+
+  it('shows tag icons on applied chips and suggestions', () => {
+    useTagAppearanceStore.setState({
+      appearances: { kitchen: { icon: '🔧' }, screws: { icon: '✂️' } },
+    });
+    render(<TagInput value={['kitchen']} onChange={vi.fn()} suggestions={['screws']} />);
+    expect(screen.getByText('🔧')).toBeInTheDocument();
+    expect(screen.getByText('✂️')).toBeInTheDocument();
   });
 });

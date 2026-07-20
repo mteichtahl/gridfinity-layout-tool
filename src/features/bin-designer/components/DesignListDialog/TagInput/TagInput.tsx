@@ -3,6 +3,12 @@ import type { KeyboardEvent } from 'react';
 import { useTranslation } from '@/i18n';
 import { Input, IconButton, XIcon, PlusIcon } from '@/design-system';
 import { MAX_TAGS, normalizeTags } from '@/features/bin-designer/utils/tags';
+import {
+  tagAppearanceKey,
+  tagTint,
+  useTagAppearanceStore,
+} from '@/features/bin-designer/store/tagAppearance';
+import { TagGlyph } from '../../TagGlyph';
 
 interface TagInputProps {
   value: readonly string[];
@@ -20,6 +26,7 @@ interface TagInputProps {
 export function TagInput({ value, onChange, suggestions }: TagInputProps) {
   const t = useTranslation();
   const [draft, setDraft] = useState('');
+  const appearances = useTagAppearanceStore((s) => s.appearances);
   const atMax = value.length >= MAX_TAGS;
 
   const availableSuggestions = useMemo(() => {
@@ -58,25 +65,36 @@ export function TagInput({ value, onChange, suggestions }: TagInputProps) {
     <div>
       {value.length > 0 && (
         <ul className="mb-2 flex flex-wrap gap-1.5">
-          {value.map((tag) => (
-            <li key={tag}>
-              <span className="inline-flex items-center gap-1 rounded-full bg-surface-elevated py-0.5 pl-2.5 pr-1 text-xs font-medium text-content">
-                <span className="max-w-[10rem] truncate" title={tag}>
-                  {tag}
-                </span>
-                <IconButton
-                  type="button"
-                  size="sm"
-                  touchTarget={false}
-                  onClick={() => removeTag(tag)}
-                  className="h-auto w-auto rounded-full p-0.5 text-content-tertiary hover:bg-surface hover:text-content"
-                  aria-label={t('binDesigner.tags.remove', { tag })}
+          {value.map((tag) => {
+            const appearance = appearances[tagAppearanceKey(tag)];
+            return (
+              <li key={tag}>
+                <span
+                  className="inline-flex items-center gap-1 rounded-full bg-surface-elevated py-0.5 pl-2.5 pr-1 text-xs font-medium text-content"
+                  style={
+                    appearance?.color !== undefined
+                      ? { backgroundColor: tagTint(appearance.color) }
+                      : undefined
+                  }
                 >
-                  <XIcon className="h-3 w-3" />
-                </IconButton>
-              </span>
-            </li>
-          ))}
+                  <TagGlyph appearance={appearance} />
+                  <span className="max-w-[10rem] truncate" title={tag}>
+                    {tag}
+                  </span>
+                  <IconButton
+                    type="button"
+                    size="sm"
+                    touchTarget={false}
+                    onClick={() => removeTag(tag)}
+                    className="h-auto w-auto rounded-full p-0.5 text-content-tertiary hover:bg-surface hover:text-content"
+                    aria-label={t('binDesigner.tags.remove', { tag })}
+                  >
+                    <XIcon className="h-3 w-3" />
+                  </IconButton>
+                </span>
+              </li>
+            );
+          })}
         </ul>
       )}
       <Input
@@ -110,6 +128,7 @@ export function TagInput({ value, onChange, suggestions }: TagInputProps) {
                   aria-label={t('binDesigner.tags.addExisting', { tag })}
                 >
                   <PlusIcon className="h-3 w-3" aria-hidden="true" />
+                  <TagGlyph appearance={appearances[tagAppearanceKey(tag)]} />
                   <span className="max-w-[10rem] truncate" title={tag}>
                     {tag}
                   </span>
